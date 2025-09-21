@@ -1,0 +1,73 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.env
+.env*
+*.sqlite3
+*.db
+*.log
+*.pot
+*.mo
+*.pyc
+*.mypy_cache/
+*.pytest_cache/
+*.coverage
+.coverage
+.cache
+
+# FastAPI/SQLAlchemy
+instance/
+
+# Jupyter
+.ipynb_checkpoints
+
+# VSCode
+.vscode/
+
+# Docker
+*.pid
+docker-compose.override.yml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node.js (for frontend)
+node_modules/
+*.tsbuildinfo
+
+# Static/Build
+staticfiles/
+build/
+dist/
+
+# Test output
+htmlcov/
+coverage.xml
+
+# Misc
+*.bak
+*.swp
+*.swo
+
+# Project custom
+app/static/js/site.js.map
+
+# Ignore secrets
+secrets.json
+
+# Ignore local dev files
+local_settings.py
+
+# Ignore migrations
+migrations/
+
+# Ignore temp files
+*.tmp
+*.temp
+
+# Ignore generated files
+*.generated.*
+.venv/

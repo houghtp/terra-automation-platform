@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Alert</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            {% if severity == 'critical' %}
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            {% elif severity == 'error' %}
+            background: linear-gradient(135deg, #fd7e14 0%, #e55a00 100%);
+            {% elif severity == 'warning' %}
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            {% else %}
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            {% endif %}
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background: #fff;
+            padding: 30px 20px;
+            border: 1px solid #e1e5e9;
+            border-radius: 0 0 8px 8px;
+        }
+        .alert-box {
+            {% if severity == 'critical' %}
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            {% elif severity == 'error' %}
+            background: #ffe8d4;
+            border: 1px solid #ffc9a6;
+            {% elif severity == 'warning' %}
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            {% else %}
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            {% endif %}
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+            margin-top: 30px;
+        }
+        .severity {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 12px;
+            {% if severity == 'critical' %}
+            background: #dc3545;
+            {% elif severity == 'error' %}
+            background: #fd7e14;
+            {% elif severity == 'warning' %}
+            background: #ffc107;
+            color: #212529;
+            {% else %}
+            background: #17a2b8;
+            {% endif %}
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚨 System Alert</h1>
+        <p><span class="severity">{{ severity }}</span></p>
+    </div>
+
+    <div class="content">
+        <h2>{{ alert_type|title }} Alert</h2>
+
+        <div class="alert-box">
+            <p><strong>Alert Details:</strong></p>
+            <p>{{ message }}</p>
+        </div>
+
+        <p><strong>System Information:</strong></p>
+        <ul>
+            <li><strong>Tenant:</strong> {{ tenant_id }}</li>
+            <li><strong>Timestamp:</strong> {{ timestamp }}</li>
+            <li><strong>Severity:</strong> {{ severity|title }}</li>
+            <li><strong>Alert Type:</strong> {{ alert_type|title }}</li>
+        </ul>
+
+        {% if severity in ['critical', 'error'] %}
+        <div style="background: #f8d7da; padding: 15px; border-radius: 6px; margin: 20px 0;">
+            <strong>⚠️ Action Required:</strong>
+            <p>This is a {{ severity }} alert that may require immediate attention. Please review the system and take appropriate action.</p>
+        </div>
+        {% endif %}
+
+        <p>Please investigate this alert and take appropriate action if necessary.</p>
+
+        <p>Best regards,<br>System Monitoring</p>
+    </div>
+
+    <div class="footer">
+        <p>This is an automated system alert. Generated at {{ timestamp }}.</p>
+    </div>
+</body>
+</html>

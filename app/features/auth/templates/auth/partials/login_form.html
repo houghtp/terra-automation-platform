@@ -1,0 +1,68 @@
+<form hx-post="/auth/login/form" hx-target="#login-form-container" class="my-4">
+    <!-- Email field -->
+    <div class="mb-3">
+        <label for="email" class="form-label">
+            Email address
+        </label>
+        <input
+            type="email"
+            id="email"
+            name="email"
+            required
+            value="{{ email or '' }}"
+            class="form-control"
+            placeholder="Enter your email"
+        />
+    </div>
+
+    <!-- Password field -->
+    <div class="mb-3">
+        <label for="password" class="form-label">
+            Password
+        </label>
+        <input
+            type="password"
+            id="password"
+            name="password"
+            required
+            class="form-control"
+            placeholder="Enter your password"
+        />
+    </div>
+
+    <!-- Remember me checkbox -->
+    <div class="mb-3">
+        <div class="form-check">
+            <input type="checkbox" id="remember_me" name="remember_me" class="form-check-input" />
+            <label class="form-check-label" for="remember_me">
+                Remember me
+            </label>
+        </div>
+    </div>
+
+    <!-- Submit button -->
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary w-100">
+            Sign in
+        </button>
+    </div>
+
+    <!-- Forgot password link -->
+    <div class="text-center mb-3">
+        <a href="/auth/forgot-password" class="text-decoration-none">
+            Forgot your password?
+        </a>
+    </div>
+
+    <!-- Error display area -->
+    {% if error %}
+    <div id="login-error" class="alert alert-danger">
+        <p id="login-error-message" class="mb-0">{{ error }}</p>
+    </div>
+    {% else %}
+    <div id="login-error" class="alert alert-danger d-none">
+        <p id="login-error-message" class="mb-0"></p>
+    </div>
+    {% endif %}
+</form>
+

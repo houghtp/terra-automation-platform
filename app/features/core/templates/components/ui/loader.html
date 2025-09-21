@@ -1,0 +1,48 @@
+<!-- Simple loader partial for HTMX -->
+<div class="loader-overlay">
+    <div class="loader-content">
+        <div class="spinner"></div>
+        <div class="loader-text">{{ message or "Loading..." }}</div>
+    </div>
+</div>
+
+<style>
+.loader-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.loader-content {
+    text-align: center;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e5e7eb;
+    border-top: 3px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+
+<!-- Usage:
+hx-indicator="#my-loader"
+hx-target="#content"
+hx-swap="innerHTML show:#my-loader:top"
+-->

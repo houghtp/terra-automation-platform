@@ -1,0 +1,131 @@
+<div class="modal-header">
+  <h5 class="modal-title">{{ 'Edit' if user else 'Create' }} User</h5>
+</div>
+
+<form
+  id="user-form"
+  hx-post="{{ '/auth/new' if not user else '/auth/' ~ user.id ~ '/edit' }}"
+  autocomplete="off"
+>
+  <div class="modal-body">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Name *</label>
+        <input
+          name="name"
+          value="{{ user.name if user else '' }}"
+          required
+          class="form-control"
+        />
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Email *</label>
+        <input
+          name="email"
+          type="email"
+          value="{{ user.email if user else '' }}"
+          required
+          class="form-control"
+        />
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-control">
+          <option value="active" {{ 'selected' if user and user.status == 'active' else '' }}>Active</option>
+          <option value="inactive" {{ 'selected' if user and user.status == 'inactive' else '' }}>Inactive</option>
+          <option value="pending" {{ 'selected' if user and user.status == 'pending' else '' }}>Pending</option>
+        </select>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Due Date</label>
+        <input
+          name="due_date"
+          type="date"
+          value="{{ user.due_date.strftime('%Y-%m-%d') if user and user.due_date else '' }}"
+          class="form-control"
+        />
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Assignee</label>
+        <select name="assignee" class="form-control">
+          <option value="">Unassigned</option>
+          {% for a in (available_assignees if (available_assignees is defined) else []) %}
+            {% if a is string %}
+              <option value="{{ a }}" {{ 'selected' if user and user.assignee == a else '' }}>{{ a }}</option>
+            {% else %}
+              <option value='{{ a | tojson }}' {{ 'selected' if user and user.assignee and user.assignee.name == a.name else '' }}>{{ a.name or a.id }}</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+
+      {# Modern toggle switch for enabled field #}
+      <div class="col-md-6">
+        <label class="form-label">Enabled</label>
+        {% set toggle_config = {
+          'name': 'enabled',
+          'id': 'enabled-toggle',
+          'checked': user.enabled if user else true,
+          'label': 'Enabled',
+          'size': 'normal'
+        } %}
+        {% include 'partials/toggle_switch.html' %}
+      </div>
+
+      {# Reusable tag selector component #}
+      {% set tag_options = [
+        {'value': 'urgent', 'label': 'Urgent'},
+        {'value': 'priority', 'label': 'Priority'},
+        {'value': 'client', 'label': 'Client Work'},
+        {'value': 'internal', 'label': 'Internal'},
+        {'value': 'review', 'label': 'Needs Review'},
+        {'value': 'archived', 'label': 'Archived'}
+      ] %}
+      {% set selected_values = user.tags if user and user.tags else [] %}
+      {% include 'core/templates/components/ui/tag_selector.html' %}
+
+      <div class="col-12">
+        <label class="form-label">Description</label>
+        <textarea
+          name="description"
+          rows="3"
+          class="form-control"
+        >{{ user.description if user else '' }}</textarea>
+      </div>
+
+      {% if not user %}
+      <div class="col-md-6">
+        <label class="form-label">Password *</label>
+        <input
+          name="password"
+          type="password"
+          required
+          class="form-control"
+        />
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Confirm Password *</label>
+        <input
+          name="confirm_password"
+          type="password"
+          required
+          class="form-control"
+        />
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+      <i class="ti ti-x icon"></i>
+      Cancel
+    </button>
+    <button type="submit" class="btn btn-outline-primary">
+      <i class="ti ti-check icon"></i>
+      {{ 'Update' if user else 'Create' }}
+    </button>
+  </div>
+</form>

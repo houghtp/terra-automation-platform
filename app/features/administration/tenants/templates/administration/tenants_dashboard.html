@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Tenant Management{% endblock %}
+{% block page_title %}Tenant Management{% endblock %}
+{% block head %}
+<script src="/features/core/static/js/table-base.js"></script>
+{% endblock %}
+{% block content %}
+<div id="tenant-area">
+  {% include "administration/tenants/list_content.html" %}
+</div>
+
+<!-- Tabler Modal -->
+<div class="modal modal-blur fade" id="modal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div id="modal-body">
+        <!-- Modal content will be loaded here via HTMX -->
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- Tenant table configuration -->
+<script src="/features/administration/tenants/static/js/tenant-table.js"></script>
+
+<script>
+  document.body.addEventListener("htmx:afterSwap", (e) => {
+    if (e.target.id === "tenant-area") {
+      setTimeout(() => {
+        window.initializeTenantManagementTable?.();
+      }, 0);
+    }
+  });
+
+  // Handle form submissions for modal close and table refresh
+  document.body.addEventListener("htmx:afterRequest", (e) => {
+    if (e.target.id === "tenant-form") {
+      // Check if request was successful (status 200-299)
+      if (e.detail.xhr.status >= 200 && e.detail.xhr.status < 300) {
+        // Show success toast
+        showToast("Tenant saved successfully", "success");
+
+        // Close the modal with proper focus restoration
+        if (window.closeModal) {
+          window.closeModal();
+        }
+
+        // Refresh the table after a short delay
+        setTimeout(() => {
+          if (window.refreshTable) {
+            window.refreshTable('tenant-table');
+          }
+        }, 100);
+      } else {
+        // Handle specific error cases
+        let errorMessage = "Operation failed. Please try again.";
+
+        if (e.detail.xhr.status === 422) {
+          // Validation error
+          errorMessage = "Please check your input and try again.";
+        } else if (e.detail.xhr.status === 404) {
+          errorMessage = "Tenant not found.";
+        } else if (e.detail.xhr.status >= 500) {
+          errorMessage = "Server error. Please try again later.";
+        }
+
+        // Show error toast
+        showToast(errorMessage, "error");
+      }
+    }
+  });
+</script>
+{% endblock %}

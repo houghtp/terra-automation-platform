@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastAPI Template - {% block title %}Home{% endblock %}</title>
+
+    <!-- Tabler CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/css/tabler.min.css" rel="stylesheet"/>
+    <!-- Tabler Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" rel="stylesheet"/>
+    <!-- Bootstrap (included in Tabler) -->
+
+    <!-- Google Fonts - Inter (commented out to use Tabler's default) -->
+    <!-- <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"> -->
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+
+
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.13.0/dist/cdn.min.js"></script>
+
+    <!-- Tabulator CSS (official CDN, must come before any custom styles) -->
+    <link href="https://unpkg.com/tabulator-tables@6.3.0/dist/css/tabulator_semanticui.min.css" rel="stylesheet">
+
+    <!-- Tabulator custom styling -->
+    <link href="/static/css/tabulator-unified.css" rel="stylesheet">
+
+    <!-- Unified loader system -->
+        <!-- Chart, Table, and Unified Component Styles -->
+    <link href="/features/core/static/css/unified-loaders.css" rel="stylesheet">
+    <link href="/features/core/static/css/simple-loader.css" rel="stylesheet">
+
+    <!-- Chart widgets styling -->
+    <link href="/static/css/chart-widgets.css" rel="stylesheet">
+
+    <!-- Custom modal and toast styles -->
+    <link href="/static/css/modal.css" rel="stylesheet">
+
+    <script src="https://unpkg.com/tabulator-tables@6.3.0/dist/js/tabulator.min.js"></script>
+    <!-- ECharts (global, if used on most pages) -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+
+    <!-- Shared site utilities (global) -->
+    <script src="/static/js/site.js"></script>
+
+    <!-- Core form validation utilities -->
+    <script src="/features/core/static/js/form-validation.js"></script>    {% block head %}{% endblock %}
+</head>
+
+<body>
+    <!-- Tabler Theme Script -->
+    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/js/tabler-theme.min.js"></script>
+    <!-- Page wrapper -->
+    <div class="page">
+        <!-- Sidebar -->
+        <aside class="navbar navbar-vertical navbar-expand-lg navbar-dark bg-dark" data-bs-theme="dark" style="background-color: #1e293b !important;">
+            <div class="container-fluid">
+                <!-- Logo section -->
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <h1 class="navbar-brand navbar-brand-autodark">
+                    <a href="/" class="d-flex align-items-center text-decoration-none">
+                        <div class="d-flex align-items-center justify-content-center bg-primary rounded me-3" style="width: 32px; height: 32px;">
+                            <span class="text-white fw-bold">FT</span>
+                        </div>
+                        <span class="text-white fs-4 fw-semibold">FastAPI Template</span>
+                    </a>
+                </h1>
+                <!-- Nav links -->
+                <div class="collapse navbar-collapse" id="sidebar-menu">
+                    <ul class="navbar-nav pt-lg-3">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="ti ti-home icon"></i>
+                                </span>
+                                <span class="nav-link-title">Dashboard</span>
+                            </a>
+                        </li>
+
+                        <!-- Connectors collapsible section -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path.startswith('/connectors') %}{% else %}collapsed{% endif %}"
+                                href="#connectors-menu"
+                                data-bs-toggle="collapse"
+                                role="button"
+                                aria-expanded="{% if request.path.startswith('/connectors') %}true{% else %}false{% endif %}"
+                                aria-controls="connectors-menu">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                <i class="ti ti-plug icon"></i>
+                                </span>
+                                <span class="nav-link-title">Connectors</span>
+                            </a>
+                        </li>
+
+                        <!-- Automations collapsible section -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path.startswith('/automations') %}{% else %}collapsed{% endif %}"
+                                href="#automations-menu"
+                                data-bs-toggle="collapse"
+                                role="button"
+                                aria-expanded="{% if request.path.startswith('/automations') %}true{% else %}false{% endif %}"
+                                aria-controls="automations-menu">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                <i class="ti ti-robot icon"></i>
+                                </span>
+                                <span class="nav-link-title">Business Automations</span>
+                            </a>
+                            <div class="collapse {% if request.path.startswith('/automations') %}show{% endif %}" id="automations-menu">
+                                <ul class="nav nav-sm flex-column ms-3">
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/automations/meeting-intelligence' %} active{% endif %}" href="/automations/meeting-intelligence">
+                                        <i class="ti ti-microphone icon me-2"></i> Meeting Intelligence
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/automations/content-broadcaster' %} active{% endif %}" href="/automations/content-broadcaster">
+                                        <i class="ti ti-broadcast icon me-2"></i> Content Broadcaster
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/automations/sales-outreach' %} active{% endif %}" href="/automations/sales-outreach">
+                                        <i class="ti ti-briefcase icon me-2"></i> Sales Outreach Prep
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/automations/community-guard' %} active{% endif %}" href="/automations/community-guard">
+                                        <i class="ti ti-shield icon me-2"></i> Community Guard
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/automations/social-listening' %} active{% endif %}" href="/automations/social-listening">
+                                        <i class="ti ti-brand-twitter icon me-2"></i> Social Listening
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/business-automations/demo/items' %} active{% endif %}" href="/business-automations/demo/items">
+                                        <i class="ti ti-users icon me-2"></i> Demo
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <!-- MSP collapsible section -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path.startswith('/msp') %}{% else %}collapsed{% endif %}"
+                                href="#msp-menu"
+                                data-bs-toggle="collapse"
+                                role="button"
+                                aria-expanded="{% if request.path.startswith('/msp') %}true{% else %}false{% endif %}"
+                                aria-controls="msp-menu">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                <i class="ti ti-server icon"></i>
+                                </span>
+                                <span class="nav-link-title">MSP</span>
+                            </a>
+                            <div class="collapse {% if request.path.startswith('/msp') %}show{% endif %}" id="msp-menu">
+                                <ul class="nav nav-sm flex-column ms-3">
+                                <li class="nav-item">
+                                    <a class="nav-link{% if request.path == '/msp/security-trust' %} active{% endif %}" href="/msp/security-trust">
+                                    <i class="ti ti-lock icon me-2"></i> Security & Trust
+                                    </a>
+                                </li>
+                                <!-- Add more MSP features here later -->
+                                </ul>
+                            </div>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link" href="/docs">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="ti ti-book icon"></i>
+                                </span>
+                                <span class="nav-link-title">API Docs</span>
+                            </a>
+                        </li>
+                        <!-- Administration collapsible section -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path.startswith('/administration') %}{% else %}collapsed{% endif %}"
+                                href="#admin-menu"
+                                data-bs-toggle="collapse"
+                                role="button"
+                                aria-expanded="{% if request.path.startswith('/administration') %}true{% else %}false{% endif %}"
+                                aria-controls="admin-menu">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                <i class="ti ti-settings icon"></i>
+                                </span>
+                                <span class="nav-link-title">Administration</span>
+                            </a>
+                            <div class="collapse {% if request.path.startswith('/administration') %}show{% endif %}" id="admin-menu">
+                                <ul class="nav nav-sm flex-column ms-3">
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/administration/secrets' %} active{% endif %}" href="/features/administration/secrets">
+                                        <i class="ti ti-key icon me-2"></i> Secrets Management
+                                        </a>
+                                    </li>
+                                    <li class="nav-item" id="tenants-menu-item">
+                                        <a class="nav-link{% if request.path == '/administration/tenants' %} active{% endif %}" href="/features/administration/tenants">
+                                        <i class="ti ti-building icon me-2"></i> Tenants
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/administration/users' %} active{% endif %}" href="/features/administration/users">
+                                        <i class="ti ti-user-cog icon me-2"></i> Users & Roles
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/administration/audit' %} active{% endif %}" href="/features/administration/audit">
+                                        <i class="ti ti-clipboard-text icon me-2"></i> Audit Logs
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/administration/logs' %} active{% endif %}" href="/features/administration/logs">
+                                        <i class="ti ti-file-text icon me-2"></i> Application Logs
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/administration/smtp' %} active{% endif %}" href="/features/administration/smtp">
+                                        <i class="ti ti-mail icon me-2"></i> SMTP Configuration
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Page wrapper -->
+        <div class="page-wrapper">
+            <!-- Page header with user menu -->
+            <div class="page-header d-print-none">
+                <div class="container-fluid">
+                    <div class="row g-2 align-items-center">
+                        <div class="col">
+                            <!-- Page title can be set in individual templates -->
+                        </div>
+                        <div class="col-auto ms-auto d-print-none">
+                            <!-- User menu -->
+                            <div class="btn-list">
+                                <div class="dropdown">
+                                    <a href="#" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="ti ti-user me-1"></i>
+                                        <span class="d-none d-sm-inline">Account</span>
+                                    </a>
+                                    <div class="dropdown-menu dropdown-menu-end">
+                                        <a class="dropdown-item" href="/auth/me">
+                                            <i class="ti ti-user me-2"></i>
+                                            Profile
+                                        </a>
+                                        <a class="dropdown-item" href="/features/administration/users">
+                                            <i class="ti ti-settings me-2"></i>
+                                            Settings
+                                        </a>
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item text-danger" href="#" onclick="logout()">
+                                            <i class="ti ti-logout me-2"></i>
+                                            Logout
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page body -->
+            <div class="page-body">
+                <div class="container-fluid px-4">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabler Core JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/js/tabler.min.js"></script>
+
+    <!-- Logout functionality -->
+    <script>
+        async function logout() {
+            try {
+                // Call logout endpoint
+                const response = await fetch('/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`
+                    }
+                });
+
+                // Clear tokens regardless of response
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+
+                // Clear cookies
+                document.cookie = 'access_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+                document.cookie = 'refresh_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+
+                // Redirect to login page
+                window.location.href = '/auth/login';
+            } catch (error) {
+                console.error('Logout error:', error);
+                // Still clear tokens and redirect on error
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+                document.cookie = 'access_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+                document.cookie = 'refresh_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+                window.location.href = '/auth/login';
+            }
+        }
+    </script>
+
+    <!-- User role-based UI script -->
+    <script>
+        // Check user role and hide tenants menu if not global admin
+        async function checkUserRoleAndHideMenu() {
+            try {
+                const response = await fetch('/auth/status');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.authenticated && data.user) {
+                        // Hide tenants menu if user is not global admin
+                        if (data.user.role !== 'global_admin') {
+                            const tenantsMenuItem = document.getElementById('tenants-menu-item');
+                            if (tenantsMenuItem) {
+                                tenantsMenuItem.style.display = 'none';
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.log('Error checking user role:', error);
+                // Hide tenants menu by default on error
+                const tenantsMenuItem = document.getElementById('tenants-menu-item');
+                if (tenantsMenuItem) {
+                    tenantsMenuItem.style.display = 'none';
+                }
+            }
+        }
+
+        // Run on page load
+        document.addEventListener('DOMContentLoaded', checkUserRoleAndHideMenu);
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

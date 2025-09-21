@@ -1,0 +1,26 @@
+{#
+  MINIMAL toggle switch component for debugging
+
+  Usage:
+  {% set toggle_config = {
+    'name': 'enabled',
+    'id': 'enabled-toggle',
+    'checked': demo_item.enabled if demo_item else true,
+    'label': 'Enabled',
+    'size': 'normal'  # 'normal' or 'small'
+  } %}
+  (Use include statement to include this component)
+#}
+
+{%- set toggle_name = toggle_config.name -%}
+{%- set toggle_id = toggle_config.id -%}
+{%- set toggle_checked = toggle_config.checked -%}
+{%- set toggle_label = toggle_config.label -%}
+
+<!-- MINIMAL checkbox for debugging alignment -->
+<input type="checkbox"
+       id="{{ toggle_id }}"
+       name="{{ toggle_name }}"
+       value="true"
+       {{ 'checked' if toggle_checked else '' }}>
+<label for="{{ toggle_id }}">{{ toggle_checked | title }}</label>

@@ -1,0 +1,1 @@
+🚨 {{ severity|title }} Alert: {{ alert_type|title }}

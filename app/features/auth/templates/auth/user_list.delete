@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+{% block page_title %}User Management{% endblock %}
+{% block head %}
+<script src="/core/static/js/table-base.js"></script>
+{% endblock %}
+{% block content %}
+<div id="user-area">
+  {% include "auth/partials/list_content.html" %}
+</div>
+
+<!-- Tabler Modal -->
+<div class="modal modal-blur fade" id="modal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div id="modal-body">
+        <!-- Modal content will be loaded here via HTMX -->
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- User table configuration -->
+<script src="/auth/static/js/user-table.js"></script>
+<script>
+  document.body.addEventListener("htmx:afterSwap", (e) => {
+    if (e.target.id === "user-area") {
+      setTimeout(() => {
+        window.initializeUserManagementTable?.();
+      }, 0);
+    }
+  });
+
+  // Handle form submissions for modal close and table refresh
+  document.body.addEventListener("htmx:afterRequest", (e) => {
+    if (e.target.id === "user-form") {
+      // Check if request was successful (status 200-299)
+      if (e.detail.xhr.status >= 200 && e.detail.xhr.status < 300) {
+        // Determine if it was create or edit based on the form action
+        const formAction = e.target.getAttribute('hx-post');
+        const isCreate = formAction && formAction.includes('/new');
+        const isEdit = formAction && formAction.includes('/edit');
+
+        // Show success toast
+        if (isCreate) {
+          showToast("User created successfully", "success");
+        } else if (isEdit) {
+          showToast("User updated successfully", "success");
+        } else {
+          showToast("Operation completed successfully", "success");
+        }
+
+        // Close the modal with proper focus restoration
+        if (window.closeModal) {
+          window.closeModal();
+        }
+
+        // Refresh the table after a short delay
+        setTimeout(() => {
+          if (window.refreshTable) {
+            window.refreshTable('user-table');
+          }
+
+          // Additional focus restoration if the modal close didn't handle it properly
+          setTimeout(() => {
+            if (window.lastFocusedElement && typeof window.lastFocusedElement.focus === 'function') {
+              try {
+                window.lastFocusedElement.focus();
+                window.lastFocusedElement = null;
+              } catch (err) {
+                // If focus fails, focus the table or first button as fallback
+                const fallbackElement = document.querySelector('#user-table, .btn');
+                if (fallbackElement) {
+                  fallbackElement.focus();
+                }
+              }
+            }
+          }, 200);
+        }, 100);
+      } else {
+        // Handle specific error cases
+        let errorMessage = "Operation failed. Please try again.";
+
+        if (e.detail.xhr.status === 422) {
+          // Validation error - try to get specific message
+          try {
+            const response = JSON.parse(e.detail.xhr.responseText);
+            if (response.detail) {
+              errorMessage = response.detail;
+            }
+          } catch (err) {
+            // Fallback to generic validation message
+            errorMessage = "Please check your input and try again.";
+          }
+        } else if (e.detail.xhr.status === 404) {
+          errorMessage = "User not found.";
+        } else if (e.detail.xhr.status >= 500) {
+          errorMessage = "Server error. Please try again later.";
+        }
+
+        // Show error toast
+        showToast(errorMessage, "error");
+      }
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,198 @@
+<div class="modal-header">
+  <h5 class="modal-title">{{ 'Edit' if tenant else 'Create' }} Tenant</h5>
+</div>
+
+<form
+  id="tenant-form"
+  {% if not tenant %}
+  hx-post="/features/administration/tenants/"
+  {% else %}
+  hx-put="/features/administration/tenants/{{ tenant.id }}/"
+  {% endif %}
+  hx-disabled-elt="this"
+  hx-indicator="#submit-spinner"
+  autocomplete="off"
+>
+  <div class="modal-body">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Tenant Name *</label>
+        <input
+          name="name"
+          value="{{ form_data.name if form_data else (tenant.name if tenant else '') }}"
+          required
+          class="form-control {{ 'is-invalid' if errors and 'name' in errors else '' }}"
+          placeholder="Organization name"
+          hx-post="/features/administration/tenants/validate/name"
+          hx-trigger="blur changed delay:500ms"
+          hx-target="#name-validation"
+          hx-include="[name='name']"
+        />
+        <div id="name-validation">
+          {% if errors and 'name' in errors %}
+            <span class="invalid-feedback d-block">{{ errors.name[0] }}</span>
+          {% endif %}
+        </div>
+      </div>
+      {# Use new core select field for status #}
+      {% set field_config = {
+        'name': 'status',
+        'label': 'Status',
+        'options': [
+          {'value': 'active', 'label': 'Active'},
+          {'value': 'inactive', 'label': 'Inactive'},
+          {'value': 'suspended', 'label': 'Suspended'},
+          {'value': 'pending', 'label': 'Pending'}
+        ],
+        'selected_value': tenant.status if tenant else 'active'
+      } %}
+      {% include 'components/forms/select_field.html' with context %}
+
+      {# Use new core select field for tier #}
+      {% set field_config = {
+        'name': 'tier',
+        'label': 'Tier/Plan',
+        'options': [
+          {'value': 'free', 'label': 'Free'},
+          {'value': 'basic', 'label': 'Basic'},
+          {'value': 'professional', 'label': 'Professional'},
+          {'value': 'enterprise', 'label': 'Enterprise'}
+        ],
+        'selected_value': tenant.tier if tenant else 'free'
+      } %}
+      {% include 'components/forms/select_field.html' with context %}
+
+      <div class="col-md-6">
+        <label class="form-label">Max Users</label>
+        <input
+          name="max_users"
+          type="number"
+          min="1"
+          value="{{ tenant.max_users if tenant else '10' }}"
+          class="form-control"
+          placeholder="10"
+        />
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Contact Email</label>
+        <input
+          name="contact_email"
+          type="email"
+          value="{{ form_data.contact_email if form_data else (tenant.contact_email if tenant else '') }}"
+          class="form-control {{ 'is-invalid' if errors and 'contact_email' in errors else '' }}"
+          placeholder="admin@organization.com"
+          hx-post="/features/administration/tenants/validate/contact_email"
+          hx-trigger="blur changed delay:500ms"
+          hx-target="#contact-email-validation"
+          hx-include="[name='contact_email']"
+        />
+        <div id="contact-email-validation">
+          {% if errors and 'contact_email' in errors %}
+            <span class="invalid-feedback d-block">{{ errors.contact_email[0] }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Contact Name</label>
+        <input
+          name="contact_name"
+          value="{{ tenant.contact_name if tenant else '' }}"
+          class="form-control"
+          placeholder="John Doe"
+        />
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">Website</label>
+        <input
+          name="website"
+          type="url"
+          value="{{ tenant.website if tenant else '' }}"
+          class="form-control"
+          placeholder="https://organization.com"
+        />
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">Description</label>
+        <textarea
+          name="description"
+          rows="3"
+          class="form-control"
+          placeholder="Brief description of the organization"
+        >{{ tenant.description if tenant else '' }}</textarea>
+      </div>
+
+      <!-- Feature flags section -->
+      <div class="col-12">
+        <label class="form-label">Features</label>
+        <div class="row">
+          <div class="col-md-6">
+            {% set toggle_config = {
+              'name': 'features[api_access]',
+              'id': 'feature-api-access',
+              'checked': (tenant.features and tenant.features.get('api_access')) if tenant else false,
+              'label': 'API Access',
+              'size': 'small'
+            } %}
+            {% include 'components/ui/toggle_switch.html' %}
+          </div>
+          <div class="col-md-6">
+            {% set toggle_config = {
+              'name': 'features[advanced_analytics]',
+              'id': 'feature-analytics',
+              'checked': (tenant.features and tenant.features.get('advanced_analytics')) if tenant else false,
+              'label': 'Advanced Analytics',
+              'size': 'small'
+            } %}
+            {% include 'components/ui/toggle_switch.html' %}
+          </div>
+          <div class="col-md-6">
+            {% set toggle_config = {
+              'name': 'features[white_label]',
+              'id': 'feature-white-label',
+              'checked': (tenant.features and tenant.features.get('white_label')) if tenant else false,
+              'label': 'White Label',
+              'size': 'small'
+            } %}
+            {% include 'components/ui/toggle_switch.html' %}
+          </div>
+          <div class="col-md-6">
+            {% set toggle_config = {
+              'name': 'features[priority_support]',
+              'id': 'feature-support',
+              'checked': (tenant.features and tenant.features.get('priority_support')) if tenant else false,
+              'label': 'Priority Support',
+              'size': 'small'
+            } %}
+            {% include 'components/ui/toggle_switch.html' %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+      <i class="ti ti-x icon"></i>
+      Cancel
+    </button>
+    <button type="submit" class="btn btn-outline-primary">
+      <i class="ti ti-check icon"></i>
+      <span id="submit-spinner" class="htmx-indicator spinner-border spinner-border-sm me-2" role="status"></span>
+      {{ 'Update' if tenant else 'Create' }}
+    </button>
+  </div>
+</form>
+
+<script>
+document.getElementById('tenant-form').addEventListener('htmx:afterRequest', function(evt) {
+  if (evt.detail.xhr.status === 204) {
+    // Success - close modal and refresh page
+    closeModal();
+    setTimeout(() => location.reload(), 300);
+  }
+});
+</script>

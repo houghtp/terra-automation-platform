@@ -1,0 +1,339 @@
+<div class="modal-header">
+  <h5 class="modal-title">{{ 'Edit' if config else 'Create' }} SMTP Configuration</h5>
+</div>
+
+<form
+  id="smtp-form"
+  {% if not config %}
+  hx-post="/features/administration/smtp/"
+  {% else %}
+  hx-post="/features/administration/smtp/{{ config.id }}"
+  {% endif %}
+  hx-disabled-elt="this"
+  hx-indicator="#submit-spinner"
+  autocomplete="off"
+>
+  <div class="modal-body">
+    <div class="row g-3">
+      {# Name field with HTMX validation #}
+      <div class="col-md-6">
+        <label class="form-label">Configuration Name *</label>
+        <input
+          name="name"
+          value="{{ form_data.name if form_data else (config.name if config else '') }}"
+          required
+          class="form-control {{ 'is-invalid' if errors and 'name' in errors else '' }}"
+          placeholder="Enter configuration name"
+          hx-post="/features/administration/smtp/validate/name"
+          hx-trigger="blur changed delay:500ms"
+          hx-target="#name-validation"
+          hx-include="[name='name']"
+        />
+        <div id="name-validation">
+          {% if errors and 'name' in errors %}
+            <span class="invalid-feedback d-block">{{ errors.name[0] }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Description field #}
+      <div class="col-md-6">
+        <label class="form-label">Description</label>
+        <input
+          name="description"
+          value="{{ form_data.description if form_data else (config.description if config else '') }}"
+          class="form-control {{ 'is-invalid' if errors and 'description' in errors else '' }}"
+          placeholder="Enter description (optional)"
+        />
+        {% if errors and 'description' in errors %}
+          <span class="invalid-feedback d-block">{{ errors.description[0] }}</span>
+        {% endif %}
+      </div>
+
+      {# SMTP Host field #}
+      <div class="col-md-6">
+        <label class="form-label">SMTP Host *</label>
+        <input
+          name="host"
+          value="{{ form_data.host if form_data else (config.host if config else '') }}"
+          required
+          class="form-control {{ 'is-invalid' if errors and 'host' in errors else '' }}"
+          placeholder="smtp.gmail.com"
+          hx-post="/features/administration/smtp/validate/host"
+          hx-trigger="blur changed delay:500ms"
+          hx-target="#host-validation"
+          hx-include="[name='host']"
+        />
+        <div id="host-validation">
+          {% if errors and 'host' in errors %}
+            <span class="invalid-feedback d-block">{{ errors.host[0] }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      {# SMTP Port field #}
+      <div class="col-md-6">
+        <label class="form-label">SMTP Port *</label>
+        <input
+          name="port"
+          type="number"
+          value="{{ form_data.port if form_data else (config.port if config else '587') }}"
+          required
+          min="1"
+          max="65535"
+          class="form-control {{ 'is-invalid' if errors and 'port' in errors else '' }}"
+          placeholder="587"
+        />
+        {% if errors and 'port' in errors %}
+          <span class="invalid-feedback d-block">{{ errors.port[0] }}</span>
+        {% endif %}
+      </div>
+
+      {# Username field #}
+      <div class="col-md-6">
+        <label class="form-label">Username *</label>
+        <input
+          name="username"
+          value="{{ form_data.username if form_data else (config.username if config else '') }}"
+          required
+          class="form-control {{ 'is-invalid' if errors and 'username' in errors else '' }}"
+          placeholder="Enter SMTP username"
+        />
+        {% if errors and 'username' in errors %}
+          <span class="invalid-feedback d-block">{{ errors.username[0] }}</span>
+        {% endif %}
+      </div>
+
+      {# Password field #}
+      <div class="col-md-6">
+        <label class="form-label">Password {{ '*' if not config else '(leave blank to keep current)' }}</label>
+        <input
+          name="password"
+          type="password"
+          {{ 'required' if not config else '' }}
+          class="form-control {{ 'is-invalid' if errors and 'password' in errors else '' }}"
+          placeholder="{{ 'Enter SMTP password' if not config else 'Enter new password or leave blank' }}"
+          hx-post="/features/administration/smtp/validate/password"
+          hx-trigger="blur changed delay:500ms"
+          hx-target="#password-validation"
+          hx-include="[name='password'], [name='confirm_password']"
+        />
+        <div id="password-validation">
+          {% if errors and 'password' in errors %}
+            <span class="invalid-feedback d-block">{{ errors.password[0] }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Confirm Password field #}
+      <div class="col-md-6">
+        <label class="form-label">Confirm Password {{ '*' if not config else '' }}</label>
+        <input
+          name="confirm_password"
+          type="password"
+          {{ 'required' if not config else '' }}
+          class="form-control {{ 'is-invalid' if errors and 'confirm_password' in errors else '' }}"
+          placeholder="{{ 'Confirm SMTP password' if not config else 'Confirm new password' }}"
+          hx-post="/features/administration/smtp/validate/password"
+          hx-trigger="blur changed delay:500ms"
+          hx-target="#password-validation"
+          hx-include="[name='password'], [name='confirm_password']"
+        />
+        {% if errors and 'confirm_password' in errors %}
+          <span class="invalid-feedback d-block">{{ errors.confirm_password[0] }}</span>
+        {% endif %}
+      </div>
+
+      {# From Email field #}
+      <div class="col-md-6">
+        <label class="form-label">From Email *</label>
+        <input
+          name="from_email"
+          type="email"
+          value="{{ form_data.from_email if form_data else (config.from_email if config else '') }}"
+          required
+          class="form-control {{ 'is-invalid' if errors and 'from_email' in errors else '' }}"
+          placeholder="noreply@yourcompany.com"
+          hx-post="/features/administration/smtp/validate/from_email"
+          hx-trigger="blur changed delay:500ms"
+          hx-target="#from-email-validation"
+          hx-include="[name='from_email']"
+        />
+        <div id="from-email-validation">
+          {% if errors and 'from_email' in errors %}
+            <span class="invalid-feedback d-block">{{ errors.from_email[0] }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      {# From Name field #}
+      <div class="col-md-6">
+        <label class="form-label">From Name *</label>
+        <input
+          name="from_name"
+          value="{{ form_data.from_name if form_data else (config.from_name if config else '') }}"
+          required
+          class="form-control {{ 'is-invalid' if errors and 'from_name' in errors else '' }}"
+          placeholder="Your Company Name"
+        />
+        {% if errors and 'from_name' in errors %}
+          <span class="invalid-feedback d-block">{{ errors.from_name[0] }}</span>
+        {% endif %}
+      </div>
+
+      {# Reply-To Email field #}
+      <div class="col-md-6">
+        <label class="form-label">Reply-To Email</label>
+        <input
+          name="reply_to"
+          type="email"
+          value="{{ form_data.reply_to if form_data else (config.reply_to if config else '') }}"
+          class="form-control {{ 'is-invalid' if errors and 'reply_to' in errors else '' }}"
+          placeholder="support@yourcompany.com (optional)"
+        />
+        {% if errors and 'reply_to' in errors %}
+          <span class="invalid-feedback d-block">{{ errors.reply_to[0] }}</span>
+        {% endif %}
+      </div>
+
+      {# Status select field #}
+      <div class="col-md-6">
+        {% set field_config = {
+          'name': 'status',
+          'label': 'Status',
+          'options': [
+            {'value': 'inactive', 'label': 'Inactive'},
+            {'value': 'active', 'label': 'Active'},
+            {'value': 'testing', 'label': 'Testing'},
+            {'value': 'failed', 'label': 'Failed'}
+          ],
+          'selected_value': config.status if config else 'inactive'
+        } %}
+        {% include 'components/forms/select_field.html' with context %}
+      </div>
+
+      {# Encryption options #}
+      <div class="col-12">
+        <label class="form-label">Encryption</label>
+        <div class="row g-2">
+          <div class="col-md-6">
+            <label class="form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                name="use_tls"
+                value="true"
+                {{ 'checked' if (form_data.use_tls if form_data else (config.use_tls if config else true)) }}
+              />
+              <span class="form-check-label">Use TLS (recommended)</span>
+            </label>
+          </div>
+          <div class="col-md-6">
+            <label class="form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                name="use_ssl"
+                value="true"
+                {{ 'checked' if (form_data.use_ssl if form_data else (config.use_ssl if config else false)) }}
+              />
+              <span class="form-check-label">Use SSL</span>
+            </label>
+          </div>
+        </div>
+        {% if errors and ('use_tls' in errors or 'use_ssl' in errors) %}
+          <span class="invalid-feedback d-block">{{ errors.use_tls[0] if 'use_tls' in errors else errors.use_ssl[0] }}</span>
+        {% endif %}
+        <small class="form-hint">Choose TLS or SSL, but not both. TLS is recommended for most providers.</small>
+      </div>
+
+      {# Enable toggle #}
+      <div class="col-md-6">
+        <label class="form-check form-switch">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            name="enabled"
+            value="true"
+            {{ 'checked' if (form_data.enabled if form_data else (config.enabled if config else true)) }}
+          />
+          <span class="form-check-label">Configuration Enabled</span>
+        </label>
+      </div>
+
+      {# Test email field #}
+      {% if config %}
+      <div class="col-12">
+        <hr>
+        <h6>Test Configuration</h6>
+        <div class="row g-2 align-items-end">
+          <div class="col-md-8">
+            <label class="form-label">Test Email Address</label>
+            <input
+              name="test_email"
+              type="email"
+              class="form-control"
+              placeholder="Enter email to send test message"
+              id="test-email-input"
+            />
+          </div>
+          <div class="col-md-4">
+            <button
+              type="button"
+              class="btn btn-outline-primary"
+              hx-post="/features/administration/smtp/{{ config.id }}/test"
+              hx-include="#test-email-input"
+              hx-target="#test-result"
+              hx-indicator="#test-spinner"
+            >
+              <span id="test-spinner" class="spinner-border spinner-border-sm me-2" style="display: none;"></span>
+              Test Connection
+            </button>
+          </div>
+        </div>
+        <div id="test-result" class="mt-2"></div>
+      </div>
+      {% endif %}
+
+      {# Tags field #}
+      <div class="col-12">
+        {% set field_config = {
+          'name': 'tags',
+          'label': 'Tags',
+          'placeholder': 'Enter tags separated by commas',
+          'value': (config.tags | join(', ')) if config and config.tags else ''
+        } %}
+        {% include 'components/ui/tag_selector.html' with context %}
+      </div>
+
+      {# General error messages #}
+      {% if errors and 'general' in errors %}
+        <div class="col-12">
+          <div class="alert alert-danger">
+            {% for error in errors.general %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <div class="w-100">
+      <div class="row">
+        <div class="col">
+          <button type="button" class="btn w-100" data-bs-dismiss="modal">
+            Cancel
+          </button>
+        </div>
+        <div class="col">
+          <button type="submit" class="btn btn-primary w-100">
+            <span id="submit-spinner" class="spinner-border spinner-border-sm me-2" style="display: none;"></span>
+            {{ 'Update' if config else 'Create' }} Configuration
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>

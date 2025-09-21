@@ -1,0 +1,36 @@
+{#
+  Core Select Field Component
+  Usage: {% set field_config = {name: 'status', label: 'Status', options: [{'value': 'active', 'label': 'Active'}]} %}
+         (Use include statement to include this component)
+#}
+<div class="{{ field_wrapper_class|default('col-md-6') }}">
+  <label class="form-label">{{ field_config.label|default('Select') }} {{ '*' if field_config.required|default(false) else '' }}</label>
+  <select
+    name="{{ field_config.name }}"
+    id="{{ field_config.id|default(field_config.name) }}"
+    class="form-control"
+    {{ 'required' if field_config.required|default(false) else '' }}
+  >
+    {% if field_config.placeholder %}
+    <option value="">{{ field_config.placeholder }}</option>
+    {% endif %}
+
+    {% for option in field_config.options|default([]) %}
+      {% if option is mapping %}
+        <option value="{{ option.value }}" {{ 'selected' if option.value == field_config.selected_value else '' }}>
+          {{ option.label }}
+        </option>
+      {% else %}
+        <option value="{{ option }}" {{ 'selected' if option == field_config.selected_value else '' }}>
+          {{ option }}
+        </option>
+      {% endif %}
+    {% endfor %}
+  </select>
+  <div id="{{ field_config.id|default(field_config.name) }}-error" class="invalid-feedback" style="display: none;">
+    {{ field_config.error_message|default('Please select a valid option') }}
+  </div>
+  {% if field_config.help_text %}
+  <div class="form-text">{{ field_config.help_text }}</div>
+  {% endif %}
+</div>

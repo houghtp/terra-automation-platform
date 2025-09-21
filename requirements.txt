@@ -1,0 +1,61 @@
+fastapi>=0.104.0,<0.105.0
+uvicorn>=0.23.0,<0.24.0
+sqlalchemy>=2.0.23,<2.1.0
+asyncpg>=0.28.0  # PostgreSQL async driver - primary database
+jinja2>=3.1.2
+python-multipart>=0.0.6
+httpx>=0.24.0
+pydantic>=2.0.0,<3.0.0
+pydantic-settings>=2.0.0          # Settings management for Pydantic v2
+typing-extensions>=4.8.0
+psycopg2-binary>=2.9.9  # PostgreSQL sync driver (for migrations and scripts)
+alembic>=1.16.5
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
+pytest-httpx>=0.30.0
+pandas>=2.0.0
+plotly>=5.14.0
+requests>=2.28.0
+openpyxl>=3.1.0
+python-dotenv>=1.0.0
+openai>=1.1.0
+beautifulsoup4>=4.12.0
+firecrawl-py>=0.1.0  # Firecrawl API Python SDK
+youtube-transcript-api>=0.6.0
+# Authentication dependencies
+python-jose[cryptography]>=3.3.0  # JWT handling
+passlib[bcrypt]>=1.7.4            # Password hashing
+email-validator>=2.0.0            # Email validation for Pydantic
+cryptography>=41.0.0              # Encryption for sensitive data (SMTP passwords)
+qrcode>=7.4.2                     # QR code generation for MFA
+pyotp>=2.9.0                      # TOTP/HOTP generation for MFA
+
+# Optional cloud secrets management dependencies
+# Uncomment based on your deployment environment:
+
+# AWS Secrets Manager
+# boto3>=1.28.0                    # AWS SDK for Python
+
+# Azure Key Vault
+# azure-keyvault-secrets>=4.7.0   # Azure Key Vault client
+# azure-identity>=1.14.0          # Azure authentication
+
+# Background task processing
+celery>=5.3.0                     # Distributed task queue
+redis>=4.5.0                      # Redis broker and result backend
+kombu>=5.3.0                      # Celery messaging library
+
+# System monitoring (for enhanced health checks)
+# psutil>=5.9.0                    # System and process monitoring
+
+# Monitoring and metrics
+prometheus-client>=0.17.0         # Prometheus metrics client
+structlog>=23.1.0                 # Structured logging
+
+# Testing and UI testing
+playwright>=1.40.0                # Browser automation for UI tests
+pytest-playwright>=0.4.0          # Playwright pytest plugin
+factory-boy>=3.3.0                # Test data factories
+faker>=25.0.0                     # Fake data generation
+
+# Optional packages - commented by default, uncomment if needed

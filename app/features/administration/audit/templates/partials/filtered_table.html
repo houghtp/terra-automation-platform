@@ -1,0 +1,140 @@
+<div class="card">
+  <div class="card-header">
+    <div class="table-actions-header">
+      <div class="table-header-content">
+        <div class="table-title-section">
+          <h3 class="table-title">
+            <i class="ti ti-shield-check"></i>
+            Audit Logs
+            {% if filters %}
+              <span class="badge bg-primary ms-2">Filtered</span>
+            {% endif %}
+          </h3>
+          <p class="table-description">
+            {% if logs %}
+              Showing {{ logs|length }} filtered audit log{% if logs|length != 1 %}s{% endif %}
+            {% else %}
+              No audit logs match the current filters
+            {% endif %}
+          </p>
+        </div>
+
+        <div class="table-actions-section">
+          <div class="table-actions-group">
+            <!-- Refresh/Clear Filter button -->
+            <button type="button"
+                    class="table-action-btn table-action-add"
+                    hx-get="/features/administration/audit/partials/filtered_list"
+                    hx-target="#audit-table-container">
+              <i class="ti ti-refresh"></i>
+              <span>Refresh</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-body p-0">
+    {% if logs %}
+      <div class="table-responsive">
+        <table class="table table-vcenter">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Category</th>
+              <th>Action</th>
+              <th>User</th>
+              <th>Severity</th>
+              <th>IP Address</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in logs %}
+            <tr>
+              <td>
+                <div class="d-flex flex-column">
+                  <div class="text-truncate">
+                    {{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+                  </div>
+                  <div class="text-muted small">
+                    {{ log.timestamp.strftime('%Z') if log.timestamp.tzinfo else 'UTC' }}
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="badge bg-{{ 'primary' if log.category == 'AUTH' else 'info' if log.category == 'DATA' else 'warning' if log.category == 'ADMIN' else 'secondary' }}">
+                  {{ log.category }}
+                </span>
+              </td>
+              <td>
+                <div class="text-truncate" style="max-width: 200px;" title="{{ log.action }}">
+                  {{ log.action }}
+                </div>
+              </td>
+              <td>
+                <div class="d-flex align-items-center">
+                  <div class="avatar avatar-sm me-2 text-white" style="background-color: var(--tblr-primary);">
+                    {{ log.user_email[0]|upper if log.user_email else 'S' }}
+                  </div>
+                  <div class="d-flex flex-column">
+                    <div class="text-truncate" style="max-width: 150px;">
+                      {{ log.user_email or 'System' }}
+                    </div>
+                    {% if log.user_email and log.user_email != 'system' %}
+                      <div class="text-muted small">User</div>
+                    {% else %}
+                      <div class="text-muted small">System</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="badge bg-{{ 'danger' if log.severity == 'CRITICAL' else 'warning' if log.severity == 'ERROR' else 'info' if log.severity == 'WARNING' else 'success' }}">
+                  {{ log.severity }}
+                </span>
+              </td>
+              <td>
+                <code class="text-muted">{{ log.ip_address or 'N/A' }}</code>
+              </td>
+              <td>
+                <div class="btn-group" role="group">
+                  <button type="button"
+                          class="btn btn-sm btn-outline-primary"
+                          hx-get="/features/administration/audit/partials/log_details?log_id={{ log.id }}"
+                          hx-target="#modal-body"
+                          data-bs-toggle="modal"
+                          data-bs-target="#modal"
+                          title="View Details">
+                    <i class="ti ti-eye"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty">
+        <div class="empty-icon">
+          <i class="ti ti-search"></i>
+        </div>
+        <p class="empty-title">No audit logs found</p>
+        <p class="empty-subtitle text-muted">
+          No audit logs match your current filter criteria. Try adjusting your filters or clearing them to see more results.
+        </p>
+        <div class="empty-action">
+          <button type="button"
+                  class="btn btn-primary"
+                  hx-get="/features/administration/audit/partials/filtered_list"
+                  hx-target="#audit-table-container">
+            <i class="ti ti-refresh"></i>
+            Clear Filters
+          </button>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>

@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% block title %}Audit Logs{% endblock %}
+{% block page_title %}Audit Logs{% endblock %}
+{% block head %}
+<!-- Chart Widget Web Component -->
+<script src="/dashboard/static/js/chart-widget.js"></script>
+<!-- Stats Card Web Component -->
+<script src="/dashboard/static/js/stats-card.js"></script>
+<!-- Audit Dashboard Styles -->
+<link rel="stylesheet" href="/features/administration/audit/static/css/audit-dashboard.css">
+<!-- Table Base JavaScript -->
+<script src="/features/core/static/js/table-base.js"></script>
+{% endblock %}
+{% block content %}
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-sm-6 col-lg-3">
+        <stats-card
+            id="total-logs-card"
+            title="Total Logs"
+            description="All audit entries"
+            icon="ti ti-file-text"
+            color="blue"
+            data-url="/features/administration/audit/api/stats"
+            data-key="total_logs"
+            auto-refresh="300000">
+        </stats-card>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <stats-card
+            id="recent-24h-card"
+            title="Last 24 Hours"
+            description="Recent activity"
+            icon="ti ti-clock"
+            color="green"
+            data-url="/features/administration/audit/api/stats"
+            data-key="recent_24h"
+            auto-refresh="300000">
+        </stats-card>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <stats-card
+            id="security-events-card"
+            title="Security Events"
+            description="Warnings & errors"
+            icon="ti ti-shield-alert"
+            color="red"
+            data-url="/features/administration/audit/api/stats"
+            data-key="security_events"
+            auto-refresh="300000">
+        </stats-card>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <stats-card
+            id="categories-card"
+            title="Categories"
+            description="Activity types"
+            icon="ti ti-category"
+            color="primary"
+            data-url="/features/administration/audit/api/stats"
+            data-key="categories_count"
+            auto-refresh="300000">
+        </stats-card>
+    </div>
+</div>
+
+<!-- Security Alert -->
+<div class="alert alert-warning d-none" id="security-alert">
+    <div class="d-flex">
+        <div>
+            <i class="ti ti-shield-alert alert-icon"></i>
+        </div>
+        <div>
+            <h4 class="alert-title">Security Events Detected!</h4>
+            <div class="text-muted">
+                <span id="security-alert-count">0</span> security event(s) require attention.
+                <a href="#"
+                   hx-get="/features/administration/audit/partials/filtered_list?severity=WARNING,ERROR,CRITICAL"
+                   hx-target="#audit-table-container"
+                   class="alert-link">Review now</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Advanced Filters -->
+<div class="card audit-filters mb-4">
+    <div class="card-body">
+        <h5 class="card-title mb-3">Advanced Filters</h5>
+        <form hx-get="/features/administration/audit/partials/filtered_list"
+              hx-target="#audit-table-container"
+              hx-trigger="submit, change delay:500ms from:input, change from:select"
+              hx-include="this"
+              _="on htmx:afterRequest
+                 wait 100ms
+                 then call updateTimelineChart()">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Category</label>
+                    <select class="form-select" name="category">
+                        <option value="">All Categories</option>
+                        <option value="AUTH">Authentication</option>
+                        <option value="DATA">Data Operations</option>
+                        <option value="ADMIN">Administration</option>
+                        <option value="API">API Access</option>
+                        <option value="SYSTEM">System Events</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Severity</label>
+                    <select class="form-select" name="severity">
+                        <option value="">All Severity</option>
+                        <option value="INFO">Info</option>
+                        <option value="WARNING">Warning</option>
+                        <option value="ERROR">Error</option>
+                        <option value="CRITICAL">Critical</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Date From</label>
+                    <input type="date" class="form-control" name="date_from">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Date To</label>
+                    <input type="date" class="form-control" name="date_to">
+                </div>
+            </div>
+            <div class="row g-3 mt-2">
+                <div class="col-md-6">
+                    <label class="form-label">User</label>
+                    <input type="text" class="form-control" name="user" placeholder="Filter by user email...">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Action</label>
+                    <input type="text" class="form-control" name="action" placeholder="Filter by action...">
+                </div>
+            </div>
+            <div class="mt-3">
+                <button type="reset" class="btn btn-outline-secondary"
+                        onclick="clearFiltersAndRefresh()">
+                    <i class="ti ti-x me-2"></i>Clear Filters
+                </button>
+                <small class="text-muted ms-3">
+                    <i class="ti ti-info-circle me-1"></i>
+                    Filters apply automatically as you type
+                </small>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Activity Timeline Chart -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div id="timeline-chart-container">
+            <chart-widget
+                id="timeline-chart"
+                type="line"
+                title="Activity Timeline"
+                icon="ti ti-chart-line"
+                data-url="/features/administration/audit/api/timeline?days=7"
+                height="300"
+                description="Audit activity breakdown by category over the last 7 days"
+                class="chart-widget">
+            </chart-widget>
+        </div>
+    </div>
+</div>
+
+<div id="audit-area">
+  <div id="audit-table-container">
+    {% include "partials/list_content.html" %}
+  </div>
+</div>
+
+<!-- Tabler Modal -->
+<div class="modal modal-blur fade" id="modal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div id="modal-body">
+        <!-- Modal content will be loaded here via HTMX -->
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- Audit table configuration (Tabulator operations) -->
+<script src="/features/administration/audit/static/js/audit-table.js"></script>
+
+<!-- Timeline Chart Filter Integration -->
+<script>
+function updateTimelineChart() {
+    // Get filter form data
+    const form = document.querySelector('.audit-filters form');
+    const formData = new FormData(form);
+
+    // Build query parameters
+    const params = new URLSearchParams();
+    params.append('days', '7'); // Default 7 days
+
+    // Add filter parameters
+    for (const [key, value] of formData.entries()) {
+        if (value && value.trim() !== '') {
+            params.append(key, value);
+        }
+    }
+
+    // Update chart data URL
+    const chartWidget = document.getElementById('timeline-chart');
+    if (chartWidget) {
+        const newDataUrl = `/features/administration/audit/api/timeline?${params.toString()}`;
+        chartWidget.setAttribute('data-url', newDataUrl);
+
+        // Trigger chart refresh
+        if (chartWidget.refresh) {
+            chartWidget.refresh();
+        } else {
+            // Fallback: dispatch custom event to refresh chart
+            chartWidget.dispatchEvent(new CustomEvent('refresh-chart'));
+        }
+    }
+}
+
+function clearFiltersAndRefresh() {
+    // Clear the form
+    const form = document.querySelector('.audit-filters form');
+    if (form) {
+        form.reset();
+    }
+
+    // Refresh table with no filters
+    htmx.ajax('GET', '/features/administration/audit/partials/filtered_list', {
+        target: '#audit-table-container'
+    });
+
+    // Refresh chart with no filters
+    setTimeout(updateTimelineChart, 100);
+}
+
+// Auto-update chart when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Update chart when filters change
+    const form = document.querySelector('.audit-filters form');
+    if (form) {
+        form.addEventListener('change', function() {
+            setTimeout(updateTimelineChart, 600); // Slight delay after table update
+        });
+
+        // Also update on input for text fields
+        const textInputs = form.querySelectorAll('input[type="text"], input[type="date"]');
+        textInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                setTimeout(updateTimelineChart, 800); // Longer delay for text input
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

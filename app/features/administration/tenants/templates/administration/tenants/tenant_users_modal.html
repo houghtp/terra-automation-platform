@@ -1,0 +1,125 @@
+<div class="modal-header">
+  <h5 class="modal-title">{{ tenant.name }} - Users ({{ users|length }})</h5>
+</div>
+
+<div class="modal-body">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="text-muted">
+      <strong>{{ users|length }}</strong> users / <strong>{{ tenant.max_users }}</strong> max
+      {% set utilization = (users|length / tenant.max_users * 100) if tenant.max_users > 0 else 0 %}
+      <span class="ms-2 badge {% if utilization > 80 %}bg-danger{% elif utilization > 60 %}bg-warning{% else %}bg-success{% endif %}">
+        {{ "%.0f"|format(utilization) }}% capacity
+      </span>
+    </div>
+    <button 
+      class="btn btn-primary btn-sm"
+      onclick="showUserAssignment({{ tenant.id }})"
+      {% if users|length >= tenant.max_users %}disabled{% endif %}
+    >
+      <i class="ti ti-plus icon"></i>
+      Assign User
+    </button>
+  </div>
+
+  {% if users %}
+  <div class="table-responsive">
+    <table class="table table-vcenter">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th width="100">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td>
+            <strong>{{ user.name }}</strong>
+          </td>
+          <td>{{ user.email }}</td>
+          <td>
+            <span class="badge bg-primary">{{ user.role|title }}</span>
+          </td>
+          <td>
+            <span class="badge {% if user.enabled %}bg-success{% else %}bg-danger{% endif %}">
+              {{ 'Enabled' if user.enabled else 'Disabled' }}
+            </span>
+          </td>
+          <td>{{ user.created_at[:10] if user.created_at else 'N/A' }}</td>
+          <td>
+            <div class="btn-group" role="group">
+              <button 
+                type="button" 
+                class="btn btn-sm btn-outline-danger"
+                onclick="removeUserFromTenant('{{ user.id }}', {{ tenant.id }})"
+                title="Remove from tenant"
+              >
+                <i class="ti ti-user-minus"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <div class="empty-img"><img src="/static/illustrations/undraw_empty.svg" height="128" alt="">
+    </div>
+    <p class="empty-title">No users assigned</p>
+    <p class="empty-subtitle text-muted">
+      This tenant doesn't have any users yet. Click "Assign User" to add users.
+    </p>
+  </div>
+  {% endif %}
+</div>
+
+<div class="modal-footer">
+  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+    <i class="ti ti-x icon"></i>
+    Close
+  </button>
+</div>
+
+<script>
+function removeUserFromTenant(userId, tenantId) {
+  if (confirm('Are you sure you want to remove this user from the tenant?')) {
+    fetch(`/admin/tenants/${tenantId}/users/${userId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+    .then(response => {
+      if (response.ok) {
+        showToast('User removed from tenant successfully', 'success');
+        // Refresh the modal content
+        htmx.ajax('GET', `/admin/tenants/${tenantId}/users`, { 
+          target: "#modal-body", 
+          swap: "innerHTML" 
+        });
+        // Refresh the main table
+        if (window.refreshTable) {
+          window.refreshTable('tenant-table');
+        }
+      } else {
+        throw new Error('Failed to remove user');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showToast('Failed to remove user from tenant', 'error');
+    });
+  }
+}
+
+function showUserAssignment(tenantId) {
+  // This will be implemented when we add user assignment functionality
+  showToast('User assignment functionality coming soon', 'info');
+}
+</script>

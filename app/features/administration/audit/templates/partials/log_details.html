@@ -1,0 +1,343 @@
+<!-- Audit Log Details Modal -->
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="ti ti-shield-check me-2"></i>
+        Audit Log Details
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<div class="modal-body">
+    <!-- Overview Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="ti ti-info-circle me-2"></i>
+                Overview
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Action</label>
+                        <div>
+                            <span class="badge bg-primary">{{ log.action.replace('_', ' ').title() }}</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Category</label>
+                        <div>
+                            <span class="badge bg-{{ 'primary' if log.category == 'AUTH' else 'info' if log.category == 'DATA' else 'warning' if log.category == 'ADMIN' else 'secondary' }}">
+                                <i class="ti ti-{{ 'lock' if log.category == 'AUTH' else 'database' if log.category == 'DATA' else 'settings' if log.category == 'ADMIN' else 'api' if log.category == 'API' else 'server' }} me-1"></i>
+                                {{ log.category }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Severity</label>
+                        <div>
+                            <span class="badge bg-{{ 'danger' if log.severity == 'CRITICAL' else 'warning' if log.severity == 'ERROR' else 'info' if log.severity == 'WARNING' else 'success' }}">
+                                <i class="ti ti-{{ 'alert-triangle' if log.severity in ['CRITICAL', 'ERROR'] else 'info-circle' if log.severity == 'WARNING' else 'check-circle' }} me-1"></i>
+                                {{ log.severity }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Timestamp</label>
+                        <div class="d-flex align-items-center">
+                            <i class="ti ti-clock me-2 text-muted"></i>
+                            <span>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp else 'N/A' }}</span>
+                        </div>
+                        <small class="text-muted">{{ log.timestamp.strftime('%Z') if log.timestamp and log.timestamp.tzinfo else 'UTC' }}</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Log ID</label>
+                        <div>
+                            <code class="text-primary">#{{ log.id }}</code>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Tenant</label>
+                        <div>
+                            <code class="text-muted">{{ log.tenant_id }}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Information Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="ti ti-user me-2"></i>
+                User Information
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label text-muted">User Email</label>
+                        <div class="d-flex align-items-center">
+                            {% if log.user_email %}
+                                <div class="avatar avatar-sm me-2 text-white" style="background-color: var(--tblr-primary);">
+                                    {{ log.user_email[0]|upper }}
+                                </div>
+                                <span>{{ log.user_email }}</span>
+                            {% else %}
+                                <span class="text-muted">System Action</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">User Role</label>
+                        <div>
+                            {% if log.user_role %}
+                                <span class="badge bg-outline-secondary">{{ log.user_role }}</span>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label text-muted">IP Address</label>
+                        <div class="d-flex align-items-center">
+                            <i class="ti ti-world me-2 text-muted"></i>
+                            <code class="text-info">{{ log.ip_address or 'N/A' }}</code>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Session ID</label>
+                        <div>
+                            {% if log.session_id %}
+                                <code class="text-muted">{{ log.session_id[:16] }}...</code>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Request Information Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="ti ti-world-www me-2"></i>
+                Request Information
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label text-muted">HTTP Method</label>
+                        <div>
+                            {% if log.method %}
+                                <span class="badge bg-{{ 'success' if log.method == 'GET' else 'primary' if log.method == 'POST' else 'warning' if log.method in ['PUT', 'PATCH'] else 'danger' if log.method == 'DELETE' else 'secondary' }}">
+                                    {{ log.method }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Endpoint</label>
+                        <div>
+                            {% if log.endpoint %}
+                                <code class="text-primary">{{ log.endpoint }}</code>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Source Module</label>
+                        <div>
+                            {% if log.source_module %}
+                                <span class="badge bg-outline-secondary">{{ log.source_module }}</span>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Request ID</label>
+                        <div>
+                            {% if log.request_id %}
+                                <code class="text-muted">{{ log.request_id[:16] }}...</code>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resource Information Card -->
+    {% if log.resource_type or log.resource_id %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="ti ti-box me-2"></i>
+                Resource Information
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Resource Type</label>
+                        <div>
+                            {% if log.resource_type %}
+                                <span class="badge bg-outline-primary">{{ log.resource_type }}</span>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Resource ID</label>
+                        <div>
+                            {% if log.resource_id %}
+                                <code class="text-info">{{ log.resource_id }}</code>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Description Card -->
+    {% if log.description %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="ti ti-file-text me-2"></i>
+                Description
+            </h3>
+        </div>
+        <div class="card-body">
+            <p class="mb-0">{{ log.description }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- User Agent Card -->
+    {% if log.user_agent %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="ti ti-browser me-2"></i>
+                User Agent
+            </h3>
+        </div>
+        <div class="card-body">
+            <small class="text-muted font-monospace">{{ log.user_agent }}</small>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Data Changes Card -->
+    {% if log.old_values or log.new_values %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="ti ti-git-compare me-2"></i>
+                Data Changes
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% if log.old_values %}
+                <div class="col-md-6">
+                    <h4 class="text-danger mb-3">
+                        <i class="ti ti-minus me-1"></i>
+                        Previous Values
+                    </h4>
+                    <div class="bg-light rounded p-3">
+                        <pre class="mb-0"><code class="language-json">{{ log.old_values | tojson(indent=2) if log.old_values else 'None' }}</code></pre>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if log.new_values %}
+                <div class="col-md-6">
+                    <h4 class="text-success mb-3">
+                        <i class="ti ti-plus me-1"></i>
+                        New Values
+                    </h4>
+                    <div class="bg-light rounded p-3">
+                        <pre class="mb-0"><code class="language-json">{{ log.new_values | tojson(indent=2) if log.new_values else 'None' }}</code></pre>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Additional Metadata Card -->
+    {% if log.extra_data %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="ti ti-code me-2"></i>
+                Additional Metadata
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="bg-light rounded p-3">
+                <pre class="mb-0"><code class="language-json">{{ log.extra_data | tojson(indent=2) }}</code></pre>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Security Notice -->
+    <div class="alert alert-info">
+        <div class="d-flex">
+            <div>
+                <i class="ti ti-shield-lock alert-icon"></i>
+            </div>
+            <div>
+                <h4 class="alert-title">Security & Compliance Notice</h4>
+                <div class="text-muted">
+                    Audit logs are immutable and cannot be modified or deleted to maintain data integrity and compliance requirements.
+                    All timestamps are recorded in UTC. This log entry provides a complete audit trail for security and compliance purposes.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <i class="ti ti-x me-2"></i>
+        Close
+    </button>
+    <button type="button" class="btn btn-primary" onclick="window.print()">
+        <i class="ti ti-printer me-2"></i>
+        Print
+    </button>
+</div>

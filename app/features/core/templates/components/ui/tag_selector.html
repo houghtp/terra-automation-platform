@@ -1,0 +1,69 @@
+{#
+  Reusable tag selector component
+
+  Usage:
+  {% set tag_options = [
+    {'value': 'urgent', 'label': 'Urgent'},
+    {'value': 'priority', 'label': 'Priority'},
+    {'value': 'client', 'label': 'Client Work'},
+    {'value': 'internal', 'label': 'Internal'},
+    {'value': 'review', 'label': 'Needs Review'},
+    {'value': 'archived', 'label': 'Archived'}
+  ] %}
+
+  Parameters:
+  - selector_id: Unique ID for the selector (default: 'tagSelector')
+  - field_name: Name attribute for checkboxes (default: 'tags')
+  - label: Field label (default: 'Tags')
+  - placeholder: Placeholder text (default: 'Select tags...')
+  - tag_options: Array of {value, label} objects
+  - selected_values: Array of currently selected values (from model)
+  - help_text: Help text below field (default: 'Click to select multiple tags')
+  - col_class: Bootstrap column class (default: 'col-md-6')
+#}
+
+{% set selector_id = selector_id or 'tagSelector' %}
+{% set field_name = field_name or 'tags' %}
+{% set label = label or 'Tags' %}
+{% set placeholder = placeholder or 'Select tags...' %}
+{% set help_text = help_text or 'Click to select multiple tags' %}
+{% set col_class = col_class or 'col-md-6' %}
+{% set selected_values = selected_values or [] %}
+
+<div class="{{ col_class }}">
+  <label class="form-label">{{ label }}</label>
+  <div class="dropdown">
+    <div class="form-control tag-selector" id="{{ selector_id }}" data-bs-toggle="dropdown" aria-expanded="false">
+      <span class="tag-display">{{ placeholder }}</span>
+      <i class="ti ti-chevron-down ms-auto"></i>
+    </div>
+    <div class="dropdown-menu w-100 p-2" aria-labelledby="{{ selector_id }}">
+      {% for option in tag_options %}
+      <div class="form-check">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          name="{{ field_name }}"
+          value="{{ option.value }}"
+          id="{{ selector_id }}-{{ option.value }}"
+          {{ 'checked' if option.value in selected_values else '' }}
+        >
+        <label class="form-check-label" for="{{ selector_id }}-{{ option.value }}">
+          {{ option.label }}
+        </label>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% if help_text %}
+  <div class="form-text">{{ help_text }}</div>
+  {% endif %}
+</div>
+
+<script>
+// Initialize this specific tag selector
+initializeTagSelector('{{ selector_id }}', {
+    fieldName: '{{ field_name }}',
+    placeholder: '{{ placeholder }}'
+});
+</script>

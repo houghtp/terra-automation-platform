@@ -1,0 +1,107 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: fastapi_template_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-test.txt
+
+    - name: Wait for PostgreSQL
+      run: |
+        until pg_isready -h localhost -p 5432 -U test_user; do
+          echo "Waiting for PostgreSQL..."
+          sleep 2
+        done
+
+    - name: Run database migrations
+      run: |
+        alembic upgrade head
+      env:
+        DATABASE_URL: postgresql+asyncpg://test_user:test_password@localhost:5432/fastapi_template_test
+
+    - name: Run unit tests
+      run: |
+        pytest tests/ -v --tb=short -m "unit"
+      env:
+        TEST_DATABASE_URL: postgresql+asyncpg://test_user:test_password@localhost:5432/fastapi_template_test
+        ENVIRONMENT: test
+
+    - name: Run integration tests
+      run: |
+        pytest tests/ -v --tb=short -m "integration"
+      env:
+        TEST_DATABASE_URL: postgresql+asyncpg://test_user:test_password@localhost:5432/fastapi_template_test
+        ENVIRONMENT: test
+
+    - name: Run all other tests
+      run: |
+        pytest tests/ -v --tb=short -m "not unit and not integration"
+      env:
+        TEST_DATABASE_URL: postgresql+asyncpg://test_user:test_password@localhost:5432/fastapi_template_test
+        ENVIRONMENT: test
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ruff black isort
+
+    - name: Run linting
+      run: |
+        # Check code formatting
+        black --check .
+        # Check import sorting
+        isort --check-only .
+        # Run ruff linting
+        ruff check .

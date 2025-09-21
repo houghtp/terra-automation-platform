@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+{% block page_title %}User Management{% endblock %}
+{% block head %}
+<script src="/features/core/static/js/table-base.js"></script>
+{% endblock %}
+{% block content %}
+<div id="user-area">
+  {% include "administration/users/partials/list_content.html" %}
+</div>
+
+<!-- Tabler Modal -->
+<div class="modal modal-blur fade" id="modal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div id="modal-body">
+        <!-- Modal content will be loaded here via HTMX -->
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- User table configuration (Tabulator operations) -->
+<script src="/features/administration/users/static/js/user-table.js"></script>
+{% endblock %}

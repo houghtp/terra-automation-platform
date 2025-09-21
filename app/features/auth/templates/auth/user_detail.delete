@@ -1,0 +1,9 @@
+<!-- User detail view placeholder -->
+<!-- <div class="p-4">
+    <h2 class="text-xl font-semibold">{{ user.name }}</h2>
+    <p class="text-gray-600">Email: {{ user.email }}</p>
+    <p class="text-gray-600">Status: {{ user.status }}</p>
+    <p class="text-gray-600">Enabled: {{ user.enabled }}</p>
+    <p class="text-gray-600">Description: {{ user.description }}</p>
+    <div class="mt-4 text-xs text-gray-400">Created: {{ user.created_at.strftime('%d %b %Y') if user.created_at else '' }}</div>
+</div> -->

@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # Main application
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://dev_user:dev_password@postgres-dev:5432/terra_automation_platform_dev
+      - ENVIRONMENT=development
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+
+  # PostgreSQL for development
+  postgres-dev:
+    image: postgres:15
+    container_name: terra_automation_platform_dev_db
+    environment:
+      POSTGRES_DB: terra_automation_platform_dev
+      POSTGRES_USER: dev_user
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5434:5432"
+    volumes:
+      - dev_db_data:/var/lib/postgresql/data
+      - ./scripts/init-dev-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev_user -d terra_automation_platform_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL for testing (separate instance)
+  postgres-test:
+    image: postgres:15
+    container_name: terra_automation_platform_test_db
+    environment:
+      POSTGRES_DB: terra_automation_platform_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+    ports:
+      - "5433:5432"  # Different port
+    volumes:
+      - test_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d terra_automation_platform_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - testing  # Only start when explicitly requested
+
+  # Redis for Celery broker and result backend
+  redis-dev:
+    image: redis:7-alpine
+    container_name: terra_automation_platform_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    command: redis-server --appendonly yes
+
+volumes:
+  dev_db_data:
+  test_db_data:
+  redis_data:

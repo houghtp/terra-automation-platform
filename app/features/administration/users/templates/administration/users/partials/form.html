@@ -1,0 +1,180 @@
+<div class="modal-header">
+  <h5 class="modal-title">{{ 'Edit' if user else 'Create' }} User</h5>
+</div>
+
+<form
+  id="user-form"
+  {% if not user %}
+  hx-post="/features/administration/users/"
+  {% else %}
+  hx-put="/features/administration/users/{{ user.id }}/"
+  {% endif %}
+  hx-disabled-elt="this"
+  hx-indicator="#submit-spinner"
+  autocomplete="off"
+>
+  <div class="modal-body">
+    <div class="row g-3">
+      {# Name field with HTMX validation #}
+      <div class="col-md-6">
+        <label class="form-label">Name *</label>
+        <input
+          name="name"
+          value="{{ form_data.name if form_data else (user.name if user else '') }}"
+          required
+          class="form-control {{ 'is-invalid' if errors and 'name' in errors else '' }}"
+          placeholder="Enter full name"
+          hx-post="/features/administration/users/validate/name"
+          hx-trigger="blur changed delay:500ms"
+          hx-target="#name-validation"
+          hx-include="[name='name']"
+        />
+        <div id="name-validation">
+          {% if errors and 'name' in errors %}
+            <span class="invalid-feedback d-block">{{ errors.name[0] }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Email field with HTMX validation #}
+      <div class="col-md-6">
+        <label class="form-label">Email *</label>
+        <input
+          name="email"
+          type="text"
+          value="{{ form_data.email if form_data else (user.email if user else '') }}"
+          required
+          class="form-control {{ 'is-invalid' if errors and 'email' in errors else '' }}"
+          placeholder="Enter email address"
+          hx-post="/features/administration/users/validate/email"
+          hx-trigger="blur changed delay:500ms"
+          hx-target="#email-validation"
+          hx-include="[name='email']"
+        />
+        <div id="email-validation">
+          {% if errors and 'email' in errors %}
+            <span class="invalid-feedback d-block">{{ errors.email[0] }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Use new core select field for status #}
+      {% set field_config = {
+        'name': 'status',
+        'label': 'Status',
+        'options': [
+          {'value': 'active', 'label': 'Active'},
+          {'value': 'inactive', 'label': 'Inactive'},
+          {'value': 'pending', 'label': 'Pending'}
+        ],
+        'selected_value': user.status if user else 'active'
+      } %}
+      {% include 'components/forms/select_field.html' with context %}
+
+      {# Use new core select field for role #}
+      {% set field_config = {
+        'name': 'role',
+        'label': 'Role',
+        'options': [
+          {'value': 'user', 'label': 'User'},
+          {'value': 'admin', 'label': 'Admin'},
+          {'value': 'moderator', 'label': 'Moderator'}
+        ],
+        'selected_value': user.role if user else 'user'
+      } %}
+      {% include 'components/forms/select_field.html' with context %}
+
+      {# Modern toggle switch for enabled field #}
+      <div class="col-md-6">
+        <label class="form-label">Enabled</label>
+        {% set toggle_config = {
+          'name': 'enabled',
+          'id': 'enabled-toggle',
+          'checked': user.enabled if user else true,
+          'label': 'Enabled',
+          'size': 'normal'
+        } %}
+        {% include 'components/ui/toggle_switch.html' %}
+      </div>
+
+      {# Reusable tag selector component #}
+      {% set tag_options = [
+        {'value': 'admin', 'label': 'Admin'},
+        {'value': 'vip', 'label': 'VIP'},
+        {'value': 'beta-tester', 'label': 'Beta Tester'},
+        {'value': 'power-user', 'label': 'Power User'},
+        {'value': 'blocked', 'label': 'Blocked'},
+        {'value': 'verified', 'label': 'Verified'}
+      ] %}
+      {% set selected_values = user.tags if user and user.tags else [] %}
+      {% include 'components/ui/tag_selector.html' %}
+
+      <div class="col-12">
+        <label class="form-label">Description</label>
+        <textarea
+          name="description"
+          rows="3"
+          class="form-control"
+        >{{ user.description if user else '' }}</textarea>
+      </div>
+
+      {# Password fields with HTMX validation for new users #}
+      {% if not user %}
+        <div class="col-md-6">
+          <label class="form-label">Password *</label>
+          <input
+            name="password"
+            type="password"
+            required
+            class="form-control {{ 'is-invalid' if errors and 'password' in errors else '' }}"
+            placeholder="Enter password"
+            hx-post="/features/administration/users/validate/password"
+            hx-trigger="blur changed delay:500ms"
+            hx-target="#password-validation"
+            hx-include="[name='password']"
+          />
+          <div id="password-validation">
+            {% if errors and 'password' in errors %}
+              <span class="invalid-feedback d-block">{{ errors.password[0] }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Confirm Password *</label>
+          <input
+            name="confirm_password"
+            type="password"
+            required
+            class="form-control {{ 'is-invalid' if errors and 'confirm_password' in errors else '' }}"
+            placeholder="Confirm password"
+            hx-post="/features/administration/users/validate/confirm-password"
+            hx-trigger="blur changed delay:500ms"
+            hx-target="#confirm-password-validation"
+            hx-include="[name='password'], [name='confirm_password']"
+          />
+          <div id="confirm-password-validation">
+            {% if errors and 'confirm_password' in errors %}
+              <span class="invalid-feedback d-block">{{ errors.confirm_password[0] }}</span>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+      <i class="ti ti-x icon"></i>
+      Cancel
+    </button>
+    <button type="submit" class="btn btn-outline-primary">
+      <i class="ti ti-check icon"></i>
+      <span id="submit-spinner" class="htmx-indicator spinner-border spinner-border-sm me-2" role="status"></span>
+      {{ 'Update' if user else 'Create' }}
+    </button>
+  </div>
+</form>
+
+
+

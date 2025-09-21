@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block head %}
+<!-- Auth-specific styles -->
+<style>
+    .auth-container {
+        min-height: calc(100vh - 120px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .auth-card {
+        background: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        padding: 2rem;
+        max-width: 400px;
+        width: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="text-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">
+                Create your account
+            </h2>
+            <p class="text-sm text-gray-600">
+                Or
+                <a href="/auth/login" class="font-medium text-blue-600 hover:text-blue-500">
+                    sign in to existing account
+                </a>
+            </p>
+        </div>
+
+        <!-- Registration Form Container -->
+        <div id="register-form-container">
+            {% include "auth/partials/register_form.html" %}
+        </div>
+    </div>
+</div>
+
+<!-- Success redirect script -->
+{% if redirect %}
+<script>
+    // Redirect authenticated users
+    window.location.href = '/';
+</script>
+{% endif %}
+
+<!-- Auth utilities script -->
+<script>
+    // Store tokens in localStorage on successful registration
+    function storeTokens(accessToken, refreshToken) {
+        localStorage.setItem('access_token', accessToken);
+        localStorage.setItem('refresh_token', refreshToken);
+
+        // Redirect to dashboard or intended page
+        const redirectUrl = new URLSearchParams(window.location.search).get('redirect') || '/';
+        window.location.href = redirectUrl;
+    }
+
+    // Clear any existing tokens on page load
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+</script>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}SMTP Configuration{% endblock %}
+{% block page_title %}SMTP Configuration{% endblock %}
+{% block head %}
+<script src="/features/core/static/js/table-base.js"></script>
+{% endblock %}
+{% block content %}
+<div id="smtp-area">
+  {% include "administration/smtp/partials/list_content.html" %}
+</div>
+
+<!-- Tabler Modal -->
+<div class="modal modal-blur fade" id="modal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div id="modal-body">
+        <!-- Modal content will be loaded here via HTMX -->
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- SMTP table configuration (Tabulator operations) -->
+<script src="/features/administration/smtp/static/js/smtp-table.js"></script>
+{% endblock %}

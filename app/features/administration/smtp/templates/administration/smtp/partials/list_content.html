@@ -1,0 +1,14 @@
+<div class="card">
+  <div class="card-header">
+    {% set title = "SMTP Configuration" %}
+    {% set description = "Manage SMTP configurations for sending emails from your tenant." %}
+    {% set icon = "ti ti-mail" %}
+    {% set add_url = "/features/administration/smtp/partials/form" %}
+    {% set entity_name = "SMTP Configuration" %}
+    {% set table_id = "smtp-table" %}
+    {% include 'components/ui/table_actions.html' with context %}
+  </div>
+  <div class="card-body p-0">
+    <div id="smtp-table"></div>
+  </div>
+</div>

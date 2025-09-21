@@ -1,0 +1,109 @@
+<!--
+Table Actions Partial
+Parameters:
+- title: Table title text
+- description: Table description text
+- icon: Icon class for title
+- add_url: URL for add button
+- entity_name: Name for buttons (e.g. "Item", "User")
+-->
+<div class="table-actions-header">
+  <div class="table-header-content">
+    <div class="table-title-section">
+      <h3 class="table-title">
+        <i class="{{ icon | default('ti ti-database') }}"></i>
+        {{ title | default('Items') }}
+      </h3>
+      <p class="table-description">
+        {{ description | default('Manage your records, edit details, and experiment with functionality.') }}
+      </p>
+    </div>
+
+    <div class="table-actions-section">
+      <div class="table-actions-group">
+        <!-- Quick Search Bar -->
+        <div class="table-search-section">
+          <div class="input-icon">
+            <span class="input-icon-addon">
+              <i class="ti ti-search"></i>
+            </span>
+            <input type="text"
+                   id="table-quick-search"
+                   class="form-control"
+                   placeholder="Search across all columns..."
+                   autocomplete="off">
+          </div>
+          <button type="button"
+                  id="clear-search-btn"
+                  class="btn btn-outline-secondary ms-1"
+                  title="Clear search"
+                  style="display: none;">
+            <i class="ti ti-x"></i>
+          </button>
+        </div>
+
+        <!-- Refresh button -->
+        <button type="button"
+                id="refresh-table-btn"
+                class="table-action-btn table-action-refresh"
+                onclick="refreshTable('{{ table_id | default('demo-table') }}')"
+                title="Refresh table data">
+          <i class="ti ti-refresh"></i>
+          <span>Refresh</span>
+        </button>
+
+        <a class="table-action-btn table-action-add"
+          hx-get="{{ add_url | default('/partials/form') }}"
+          hx-target="#modal-body"
+          hx-swap="innerHTML">
+          <i class="ti ti-plus"></i>
+          <span>Add</span>
+        </a>
+        <a id="edit-selected-btn" class="table-action-btn table-action-edit">
+          <i class="ti ti-edit"></i>
+          <span>Edit</span>
+        </a>
+        <a id="delete-selected-btn" class="table-action-btn table-action-delete">
+          <i class="ti ti-trash"></i>
+          <span>Delete</span>
+        </a>
+
+        <!-- Group By dropdown -->
+        <div class="dropdown">
+          <a class="table-action-btn table-action-group dropdown-toggle"
+             href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="ti ti-layout-grid"></i>
+            <span>Group By</span>
+          </a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" onclick="setTableGrouping('none', '{{ table_id | default('demo-table') }}')">
+              <i class="ti ti-layout-list me-2"></i>No Grouping</a></li>
+            <li><a class="dropdown-item" href="#" onclick="setTableGrouping('status', '{{ table_id | default('demo-table') }}')">
+              <i class="ti ti-circle-dot me-2"></i>Group by Status</a></li>
+            <li><a class="dropdown-item" href="#" onclick="setTableGrouping('assignee', '{{ table_id | default('demo-table') }}')">
+              <i class="ti ti-user me-2"></i>Group by Assignee</a></li>
+            <li><a class="dropdown-item" href="#" onclick="setTableGrouping('enabled', '{{ table_id | default('demo-table') }}')">
+              <i class="ti ti-toggle-left me-2"></i>Group by Enabled</a></li>
+          </ul>
+        </div>
+
+        <!-- Export dropdown -->
+        <div class="dropdown">
+          <a class="table-action-btn table-action-export dropdown-toggle"
+             href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="ti ti-download"></i>
+            <span>Export</span>
+          </a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" onclick="exportTable('csv')">
+              <i class="ti ti-file-text me-2"></i>Export as CSV</a></li>
+            <li><a class="dropdown-item" href="#" onclick="exportTable('xlsx')">
+              <i class="ti ti-file-excel me-2"></i>Export as Excel</a></li>
+            <li><a class="dropdown-item" href="#" onclick="exportTable('json')">
+              <i class="ti ti-code me-2"></i>Export as JSON</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

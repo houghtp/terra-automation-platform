@@ -1,0 +1,15 @@
+<div style="padding: 20px; text-align: center; background-color: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px;">
+    <div style="color: #0369a1; margin-bottom: 16px;">
+        <svg style="width: 48px; height: 48px; margin: 0 auto 8px; display: block;" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+        </svg>
+    </div>
+    <h3 style="color: #0369a1; margin: 0 0 8px 0; font-size: 18px; font-weight: 600;">Login Successful!</h3>
+    <p style="color: #075985; margin: 0 0 16px 0; font-size: 14px;">Welcome back, {{ user.name or user.email }}!</p>
+    <p style="color: #0c4a6e; margin: 0; font-size: 12px;">Redirecting you to the dashboard...</p>
+
+    <script>
+        // Immediate redirect to set cookies and navigate
+        window.location.href = '/auth/redirect-to-dashboard?access_token={{ access_token }}&refresh_token={{ refresh_token }}';
+    </script>
+</div>

@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-5">
+  <div class="text-center">
+    <h1 class="display-4">422 Unprocessable Entity</h1>
+    <p class="lead">Validation error: {{ detail or 'Invalid input.' }}</p>
+    <a href="/" class="btn btn-primary">Go Home</a>
+  </div>
+</div>
+{% endblock %}
