@@ -8,29 +8,10 @@
 <!-- Stats Card Web Component -->
 <script src="/dashboard/static/js/stats-card.js"></script>
 <link rel="stylesheet" href="/static/css/tabulator-unified.css">
+<!-- Administration Dashboard Styles -->
+<link rel="stylesheet" href="/static/css/admin-dashboard.css">
 <!-- Table Base JavaScript -->
 <script src="/features/core/static/js/table-base.js"></script>
-<style>
-    .log-level-badge {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.375rem;
-        font-weight: 500;
-    }
-    .log-level-DEBUG { background-color: #e5e7eb; color: #374151; }
-    .log-level-INFO { background-color: #dbeafe; color: #1e40af; }
-    .log-level-WARNING { background-color: #fef3c7; color: #92400e; }
-    .log-level-ERROR { background-color: #fee2e2; color: #dc2626; }
-    .log-level-CRITICAL { background-color: #fce7f3; color: #be185d; }
-
-    .log-details {
-        max-width: 600px;
-        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-        font-size: 0.875rem;
-        white-space: pre-wrap;
-        word-break: break-word;
-    }
-</style>
 {% endblock %}
 
 {% block content %}
@@ -44,7 +25,7 @@
             description="Last 24 hours"
             icon="ti ti-file-text"
             color="blue"
-            data-url="/features/administration/logs/api/summary"
+            data-url="/features/administration/logs/api/stats"
             data-key="total_logs"
             auto-refresh="300000">
         </stats-card>
@@ -57,7 +38,7 @@
             description="Warnings & errors"
             icon="ti ti-alert-triangle"
             color="red"
-            data-url="/features/administration/logs/api/summary"
+            data-url="/features/administration/logs/api/stats"
             data-key="error_count"
             auto-refresh="300000">
         </stats-card>
@@ -70,7 +51,7 @@
             description="With log entries"
             icon="ti ti-users"
             color="green"
-            data-url="/features/administration/logs/api/summary"
+            data-url="/features/administration/logs/api/stats"
             data-key="tenant_count"
             auto-refresh="300000">
         </stats-card>
@@ -83,80 +64,16 @@
             description="Informational entries"
             icon="ti ti-info-circle"
             color="primary"
-            data-url="/features/administration/logs/api/summary"
+            data-url="/features/administration/logs/api/stats"
             data-key="info_count"
             auto-refresh="300000">
         </stats-card>
     </div>
 </div>
 
-<!-- Advanced Filters -->
-<div class="card mb-4">
-    <div class="card-body">
-        <h5 class="card-title mb-3">Advanced Filters</h5>
-        <form onsubmit="applyFilters(); return false;">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">Log Level</label>
-                    <select class="form-select" id="level-filter">
-                        <option value="">All Levels</option>
-                        <option value="DEBUG">Debug</option>
-                        <option value="INFO">Info</option>
-                        <option value="WARNING">Warning</option>
-                        <option value="ERROR">Error</option>
-                        <option value="CRITICAL">Critical</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Logger Name</label>
-                    <input type="text" class="form-control" id="logger-filter" placeholder="Filter by logger name...">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Date From</label>
-                    <input type="datetime-local" class="form-control" id="start-date">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Date To</label>
-                    <input type="datetime-local" class="form-control" id="end-date">
-                </div>
-            </div>
-            <div class="mt-3">
-                <button type="submit" class="btn btn-primary">
-                    <i class="ti ti-filter me-2"></i>Apply Filters
-                </button>
-                <button type="button" class="btn btn-outline-secondary ms-2" onclick="clearFilters()">
-                    <i class="ti ti-x me-2"></i>Clear Filters
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Logs Table -->
-<div class="card">
-    <div class="card-header">
-        <div class="table-actions-header">
-            <div class="table-header-content">
-                <div class="table-title-section">
-                    <h3 class="table-title">
-                        <i class="ti ti-file-text"></i>
-                        Application Logs
-                    </h3>
-                    <p class="table-description">
-                        Monitor application activity, errors, and system events for debugging and analysis.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="card-body p-0">
-        <div id="logs-table"></div>
-    </div>
-</div>
-
 <div id="logs-area">
   <div id="logs-table-container">
-    <!-- Table content will be loaded here via JavaScript -->
+    {% include "administration/logs/partials/list_content.html" %}
   </div>
 </div>
 
@@ -173,241 +90,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://unpkg.com/tabulator-tables@6.2.1/dist/js/tabulator.min.js"></script>
-<script>
-let logsTable;
-
-document.addEventListener('DOMContentLoaded', function() {
-    initializeLogsTable();
-});
-
-function initializeLogsTable() {
-    if (typeof Tabulator === 'undefined') {
-        console.error('Tabulator not loaded');
-        return;
-    }
-
-    logsTable = new Tabulator("#logs-table", {
-        ...advancedTableConfig,
-        // Logs-specific overrides
-        ajaxURL: "/features/administration/logs/api/list",
-        pagination: "remote",
-        paginationMode: "remote",
-        paginationSize: 25,
-        paginationSizeSelector: [10, 25, 50, 100],
-        responsiveLayout: "hide",
-        selectable: true,
-        selectableRangeMode: "click",
-        selectableRows: true,
-        rowHeader: false,
-        headerFilterPlaceholder: "Filter...",
-        columns: [
-            {
-                title: "<input type='checkbox' id='select-all-logs'>",
-                field: "select",
-                formatter: "rowSelection",
-                titleFormatter: "rowSelection",
-                width: 40,
-                headerSort: false,
-                cellClick: function (e, cell) {
-                    cell.getRow().toggleSelect();
-                }
-            },
-            {
-                title: "Timestamp",
-                field: "timestamp",
-                width: 180,
-                headerFilter: "input",
-                formatter: function(cell) {
-                    const date = new Date(cell.getValue());
-                    return date.toLocaleString();
-                }
-            },
-            {
-                title: "Level",
-                field: "level",
-                width: 100,
-                headerFilter: "select",
-                headerFilterParams: {
-                    values: ["", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-                },
-                formatter: function(cell) {
-                    const level = cell.getValue();
-                    return `<span class="log-level-badge log-level-${level}">${level}</span>`;
-                }
-            },
-            {
-                title: "Tenant",
-                field: "tenant_id",
-                width: 120,
-                headerFilter: "input"
-            },
-            {
-                title: "Logger",
-                field: "logger_name",
-                width: 200,
-                headerFilter: "input"
-            },
-            {
-                title: "Message",
-                field: "message",
-                minWidth: 300,
-                headerFilter: "input",
-                formatter: function(cell) {
-                    const message = cell.getValue();
-                    if (message.length > 100) {
-                        return message.substring(0, 100) + '...';
-                    }
-                    return message;
-                }
-            },
-            {
-                title: "Actions",
-                field: "id",
-                width: 100,
-                headerSort: false,
-                formatter: function(cell) {
-                    return `<i class="ti ti-eye row-action-icon" title="View Details" onclick="viewLogDetails(${cell.getValue()})"></i>`;
-                }
-            }
-        ],
-        ajaxResponse: function(url, params, response) {
-            return {
-                data: response.data || response.items || [],
-                last_page: Math.ceil((response.total || 0) / (params.size || 25))
-            };
-        },
-        rowClick: function(e, row) {
-            viewLogDetails(row.getData().id);
-        }
-    });
-}
-
-
-function applyFilters() {
-    const filters = {};
-
-    const level = document.getElementById('level-filter').value;
-    if (level) filters.level = level;
-
-    const logger = document.getElementById('logger-filter').value;
-    if (logger) filters.logger_name = logger;
-
-    const startDate = document.getElementById('start-date').value;
-    if (startDate) filters.start_date = new Date(startDate).toISOString();
-
-    const endDate = document.getElementById('end-date').value;
-    if (endDate) filters.end_date = new Date(endDate).toISOString();
-
-    logsTable.setData(logsTable.options.ajaxURL, filters);
-}
-
-function clearFilters() {
-    document.getElementById('level-filter').value = '';
-    document.getElementById('logger-filter').value = '';
-    document.getElementById('start-date').value = '';
-    document.getElementById('end-date').value = '';
-
-    logsTable.setData();
-}
-
-function refreshLogs() {
-    logsTable.setData();
-    // Refresh stats cards
-    document.querySelectorAll('stats-card').forEach(card => {
-        if (card.refresh) card.refresh();
-    });
-}
-
-async function viewLogDetails(logId) {
-    try {
-        const response = await fetch(`/features/administration/logs/api/${logId}`, {
-            credentials: 'same-origin'
-        });
-        const log = await response.json();
-
-        const content = document.getElementById('modal-body');
-        content.innerHTML = `
-            <div class="modal-header">
-                <h5 class="modal-title">Log Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <h6>Basic Information</h6>
-                    <table class="table table-sm">
-                        <tr><td><strong>ID:</strong></td><td>${log.id}</td></tr>
-                        <tr><td><strong>Timestamp:</strong></td><td>${new Date(log.timestamp).toLocaleString()}</td></tr>
-                        <tr><td><strong>Level:</strong></td><td><span class="log-level-badge log-level-${log.level}">${log.level}</span></td></tr>
-                        <tr><td><strong>Tenant:</strong></td><td>${log.tenant_id}</td></tr>
-                        <tr><td><strong>Logger:</strong></td><td>${log.logger_name}</td></tr>
-                        <tr><td><strong>Request ID:</strong></td><td>${log.request_id || 'N/A'}</td></tr>
-                    </table>
-                </div>
-                <div class="col-md-6">
-                    <h6>Context</h6>
-                    <table class="table table-sm">
-                        <tr><td><strong>User ID:</strong></td><td>${log.user_id || 'N/A'}</td></tr>
-                        <tr><td><strong>Endpoint:</strong></td><td>${log.endpoint || 'N/A'}</td></tr>
-                        <tr><td><strong>Method:</strong></td><td>${log.method || 'N/A'}</td></tr>
-                        <tr><td><strong>IP Address:</strong></td><td>${log.ip_address || 'N/A'}</td></tr>
-                    </table>
-                </div>
-            </div>
-            <div class="row mt-3">
-                <div class="col-12">
-                    <h6>Message</h6>
-                    <div class="log-details">${log.message}</div>
-                </div>
-            </div>
-            ${log.exception_type ? `
-            <div class="row mt-3">
-                <div class="col-12">
-                    <h6>Exception</h6>
-                    <div class="log-details">
-                        <strong>Type:</strong> ${log.exception_type}<br>
-                        <strong>Message:</strong> ${log.exception_message}<br>
-                        ${log.stack_trace ? `<strong>Stack Trace:</strong><br>${log.stack_trace}` : ''}
-                    </div>
-                </div>
-            </div>
-            ` : ''}
-            ${log.extra_data ? `
-            <div class="row mt-3">
-                <div class="col-12">
-                    <h6>Extra Data</h6>
-                    <div class="log-details">${JSON.stringify(log.extra_data, null, 2)}</div>
-                </div>
-            </div>
-            ` : ''}
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        `;
-
-        new bootstrap.Modal(document.getElementById('modal')).show();
-
-    } catch (error) {
-        console.error('Failed to load log details:', error);
-        showToast('Failed to load log details', 'error');
-    }
-}
-
-function exportLogs() {
-    // Get current filters
-    const params = new URLSearchParams();
-
-    const level = document.getElementById('level-filter').value;
-    if (level) params.append('level', level);
-
-    const logger = document.getElementById('logger-filter').value;
-    if (logger) params.append('logger_name', logger);
-
-    params.append('limit', '10000'); // Large export
-
-    window.open(`/features/administration/logs/api/list?${params.toString()}`);
-}
-</script>
+<!-- Logs table configuration (Tabulator operations) -->
+<script src="/features/administration/logs/static/js/logs-table.js"></script>
 {% endblock %}

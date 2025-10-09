@@ -3,9 +3,10 @@ from sqlalchemy import Column, Integer, String, DateTime, JSON, Text
 from sqlalchemy.sql import func
 
 from app.features.core.database import Base
+from app.features.core.audit_mixin import AuditMixin
 
 
-class Tenant(Base):
+class Tenant(Base, AuditMixin):
     __tablename__ = "tenants"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -28,11 +29,10 @@ class Tenant(Base):
     # `metadata` is a reserved attribute name on DeclarativeBase; use `meta` as the Python attribute
     meta = Column('metadata', JSON, nullable=True)
     
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    # Note: created_at and updated_at are now provided by AuditMixin
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        base_dict = {
             "id": self.id,
             "name": self.name,
             "description": self.description,
@@ -48,3 +48,6 @@ class Tenant(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+        # Add audit information
+        base_dict.update(self.get_audit_info())
+        return base_dict

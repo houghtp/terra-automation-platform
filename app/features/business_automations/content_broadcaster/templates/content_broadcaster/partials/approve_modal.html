@@ -1,0 +1,120 @@
+<!-- Approve Content Modal -->
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="ti ti-check"></i>
+        Approve Content
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<form hx-post="/content-broadcaster/approve/{{ content.id }}"
+      hx-target="#content-table"
+      hx-swap="outerHTML">
+    <div class="modal-body">
+        <!-- Content Preview -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card bg-light">
+                    <div class="card-header">
+                        <h6 class="mb-0">Content Preview</h6>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ content.title }}</h5>
+                        <div class="content-preview">
+                            {{ content.body[:300] }}
+                            {% if content.body|length > 300 %}
+                                <span class="text-muted">... (truncated)</span>
+                            {% endif %}
+                        </div>
+
+                        {% if content.tags %}
+                        <div class="mt-3">
+                            <small class="text-muted">Tags:</small>
+                            {% for tag in content.tags %}
+                                <span class="badge bg-secondary ms-1">{{ tag }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Details -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="mb-2">
+                    <strong>Created By:</strong> {{ content.created_by }}
+                </div>
+                <div class="mb-2">
+                    <strong>Created:</strong> {{ content.created_at.strftime('%Y-%m-%d %H:%M') if content.created_at else 'N/A' }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-2">
+                    <strong>Current State:</strong>
+                    <span class="badge bg-warning">{{ content.state.replace('_', ' ').title() }}</span>
+                </div>
+                <div class="mb-2">
+                    <strong>Approval Status:</strong>
+                    <span class="badge bg-warning">{{ content.approval_status.title() }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Approval Form -->
+        <div class="row">
+            <div class="col-12">
+                <div class="mb-3">
+                    <label for="comment" class="form-label">Approval Comment</label>
+                    <textarea class="form-control"
+                              id="comment"
+                              name="comment"
+                              rows="3"
+                              placeholder="Optional: Add a comment about this approval..."></textarea>
+                    <div class="form-text">This comment will be visible to the content creator</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="form-check">
+                    <input type="checkbox"
+                           class="form-check-input"
+                           id="auto_schedule"
+                           name="auto_schedule"
+                           value="true">
+                    <label class="form-check-label" for="auto_schedule">
+                        Auto-schedule if scheduled time is set
+                    </label>
+                    <div class="form-text">
+                        If enabled and content has a scheduled time, it will move to scheduled state immediately
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-success">
+                    <i class="ti ti-check-circle me-2"></i>
+                    <strong>Approving this content will:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Change approval status to "Approved"</li>
+                        <li>Allow content to be scheduled for publishing</li>
+                        <li>Enable publishing to connected channels</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-success">
+            <i class="ti ti-check me-1"></i>
+            Approve Content
+        </button>
+    </div>
+</form>

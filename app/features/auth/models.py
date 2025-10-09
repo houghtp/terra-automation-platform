@@ -2,13 +2,14 @@
 User model for authentication with tenant isolation and user management.
 """
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional
 from sqlalchemy import Column, String, Boolean, DateTime, Text, JSON, func, Index
 from app.features.core.database import Base
+from app.features.core.audit_mixin import AuditMixin
 
 
-class User(Base):
+class User(Base, AuditMixin):
     """User model with tenant isolation, role-based access, and management features."""
 
     __tablename__ = "users"
@@ -28,8 +29,7 @@ class User(Base):
 
     # Legacy field mapping
     is_active = Column(Boolean, nullable=False, default=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    # Note: created_at and updated_at are now provided by AuditMixin
 
     # Ensure email is unique per tenant
     __table_args__ = (
@@ -38,7 +38,7 @@ class User(Base):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON responses (excludes password)."""
-        return {
+        base_dict = {
             "id": self.id,
             "email": self.email,
             "name": self.name,
@@ -52,10 +52,22 @@ class User(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+        # Add audit information
+        base_dict.update(self.get_audit_info())
+        return base_dict
 
     def __repr__(self) -> str:
         """String representation of user."""
-        return f"<User(id={self.id}, name={self.name}, email={self.email}, tenant={self.tenant_id})>"
+        try:
+            # Safely access attributes without triggering lazy loading during error states
+            id_val = getattr(self, 'id', '<unknown>')
+            name_val = getattr(self, 'name', '<unknown>')
+            email_val = getattr(self, 'email', '<unknown>')
+            tenant_val = getattr(self, 'tenant_id', '<unknown>')
+            return f"<User(id={id_val}, name={name_val}, email={email_val}, tenant={tenant_val})>"
+        except Exception:
+            # Fallback for any error scenarios to prevent recursion
+            return f"<User(id={getattr(self, 'id', '<unknown>')})>"
 
 
 class PasswordResetToken(Base):
@@ -102,7 +114,7 @@ class PasswordResetToken(Base):
         token = secrets.token_urlsafe(32)
 
         # Set expiration
-        expires_at = datetime.utcnow() + timedelta(hours=expires_in_hours)
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=expires_in_hours)
 
         return cls(
             user_id=user_id,
@@ -116,13 +128,13 @@ class PasswordResetToken(Base):
 
     def is_valid(self) -> bool:
         """Check if token is valid (not used and not expired)."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         return not self.is_used and self.expires_at > now
 
     def mark_as_used(self) -> None:
         """Mark token as used."""
         self.is_used = True
-        self.used_at = datetime.utcnow()
+        self.used_at = datetime.now(timezone.utc)
 
     def __repr__(self) -> str:
         """String representation of password reset token."""

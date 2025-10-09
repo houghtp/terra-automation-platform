@@ -3,7 +3,7 @@ API Key utility for checking API key status
 """
 
 import os
-import logging
+import structlog
 from typing import Dict
 from fastapi import APIRouter, Request, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
@@ -18,7 +18,7 @@ except ImportError:
         pass
 
 # Set up logger
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Initialize router
 router = APIRouter(prefix="/api-keys", tags=["utils"])

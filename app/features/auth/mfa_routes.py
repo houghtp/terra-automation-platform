@@ -12,9 +12,9 @@ from app.features.core.database import get_db
 from app.features.core.mfa import MFAManager, MFAMethod, TOTPSetup
 from app.features.auth.dependencies import get_current_user
 from app.features.auth.models import User
-import logging
+import structlog
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/mfa", tags=["mfa"])
 

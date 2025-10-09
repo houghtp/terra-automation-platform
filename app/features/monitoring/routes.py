@@ -3,7 +3,7 @@ Monitoring endpoints for Prometheus metrics and enhanced health checks.
 Provides comprehensive application monitoring and observability.
 """
 import time
-import logging
+import structlog
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 
@@ -16,7 +16,7 @@ from app.features.core.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 router = APIRouter()
 

@@ -385,7 +385,7 @@ class TestUserModelIntegration:
         )
 
         # Set timestamps manually for testing
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         user.created_at = now
         user.updated_at = now
 

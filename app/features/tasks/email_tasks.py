@@ -1,7 +1,7 @@
 """
 Email-related background tasks.
 """
-import logging
+import structlog
 import asyncio
 from typing import Dict, List, Optional
 from celery import Task
@@ -13,7 +13,7 @@ from app.features.core.email_service import (
     send_admin_alert_service
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class CallbackTask(Task):

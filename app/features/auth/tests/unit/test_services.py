@@ -364,7 +364,7 @@ def test_verify_expired_token(jwt_utils: JWTUtils):
     # Create token with expired time
     with patch('app.features.auth.services.jwt_utils.datetime') as mock_datetime:
         # Mock datetime to create an already expired token
-        past_time = datetime.utcnow() - timedelta(hours=1)
+        past_time = datetime.now(timezone.utc) - timedelta(hours=1)
         mock_datetime.utcnow.return_value = past_time
 
         expired_token = jwt_utils.create_access_token(user_id)

@@ -1,13 +1,13 @@
 """
 Cleanup and maintenance background tasks.
 """
-import logging
+import structlog
 from datetime import datetime, timedelta
 from typing import Dict
 from celery import Task
 from app.features.core.celery_app import celery_app
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class CleanupTask(Task):
@@ -34,7 +34,7 @@ def cleanup_old_audit_logs(days_to_keep: int = 90) -> Dict:
     try:
         logger.info(f"Starting cleanup of audit logs older than {days_to_keep} days")
 
-        cutoff_date = datetime.utcnow() - timedelta(days=days_to_keep)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_to_keep)
 
         # Simulate cleanup operation
         import time
@@ -58,7 +58,7 @@ def cleanup_old_audit_logs(days_to_keep: int = 90) -> Dict:
             "deleted_count": deleted_count,
             "archived_count": archived_count,
             "message": f"Cleaned up {deleted_count} old audit log entries",
-            "next_run": (datetime.utcnow() + timedelta(days=1)).isoformat()
+            "next_run": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
         }
 
     except Exception as exc:
@@ -206,7 +206,7 @@ def health_check_task() -> Dict:
 
         return {
             "status": overall_status,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "checks": health_status,
             "message": f"System health check completed - status: {overall_status}"
         }
@@ -215,7 +215,7 @@ def health_check_task() -> Dict:
         logger.error(f"Health check task failed: {exc}")
         return {
             "status": "error",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "error": str(exc),
             "message": "Health check failed"
         }

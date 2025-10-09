@@ -3,6 +3,7 @@ Tenant management service for global administrators.
 Provides comprehensive tenant CRUD operations and user assignment.
 """
 
+import structlog
 import logging
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any, Tuple
@@ -17,30 +18,34 @@ from app.features.administration.tenants.models import (
     TenantDashboardStats, TenantSearchFilter, TenantUserResponse
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class TenantManagementService:
     """
     Comprehensive tenant management service for global administrators.
-    
+
     Provides:
     - Full tenant CRUD operations
     - User assignment and management
     - Statistics and reporting
     - Search and filtering
+
+    Note: This service doesn't inherit from BaseService since tenants
+    don't have tenant scoping (they ARE the tenants).
     """
 
     def __init__(self, db_session: AsyncSession):
         self.db = db_session
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     async def create_tenant(self, tenant_data: TenantCreate) -> TenantResponse:
         """
         Create a new tenant with full configuration.
-        
+
         Args:
             tenant_data: Tenant creation data
-            
+
         Returns:
             TenantResponse: Created tenant information
         """
@@ -67,17 +72,28 @@ class TenantManagementService:
             self.db.add(tenant)
             await self.db.flush()
             await self.db.refresh(tenant)
-            
+
             # Get user count (will be 0 for new tenant)
             user_count = await self._get_tenant_user_count(tenant.id)
-            
-            logger.info(f"Created tenant: {tenant.name} (ID: {tenant.id})")
-            
+
+            logger.info(
+                "Tenant created successfully",
+                tenant_id=tenant.id,
+                tenant_name=tenant.name,
+                user_count=user_count,
+                operation="create_tenant"
+            )
+
             return self._tenant_to_response(tenant, user_count)
-            
+
         except Exception as e:
             await self.db.rollback()
-            logger.error(f"Failed to create tenant: {e}")
+            logger.error(
+                "Failed to create tenant",
+                error=str(e),
+                tenant_name=tenant_data.name,
+                operation="create_tenant"
+            )
             raise
 
     async def get_tenant_by_id(self, tenant_id: int) -> Optional[TenantResponse]:
@@ -85,10 +101,10 @@ class TenantManagementService:
         stmt = select(Tenant).where(Tenant.id == tenant_id)
         result = await self.db.execute(stmt)
         tenant = result.scalar_one_or_none()
-        
+
         if not tenant:
             return None
-            
+
         user_count = await self._get_tenant_user_count(tenant_id)
         return self._tenant_to_response(tenant, user_count)
 
@@ -97,10 +113,10 @@ class TenantManagementService:
         stmt = select(Tenant).where(Tenant.name == name)
         result = await self.db.execute(stmt)
         tenant = result.scalar_one_or_none()
-        
+
         if not tenant:
             return None
-            
+
         user_count = await self._get_tenant_user_count(tenant.id)
         return self._tenant_to_response(tenant, user_count)
 
@@ -110,13 +126,13 @@ class TenantManagementService:
             stmt = select(Tenant).where(Tenant.id == tenant_id)
             result = await self.db.execute(stmt)
             tenant = result.scalar_one_or_none()
-            
+
             if not tenant:
                 return None
 
             # Update fields if provided
             update_fields = tenant_data.dict(exclude_unset=True)
-            
+
             for field, value in update_fields.items():
                 if hasattr(tenant, field):
                     if field in ['status', 'tier'] and hasattr(value, 'value'):
@@ -126,13 +142,13 @@ class TenantManagementService:
 
             await self.db.flush()
             await self.db.refresh(tenant)
-            
+
             user_count = await self._get_tenant_user_count(tenant_id)
-            
+
             logger.info(f"Updated tenant: {tenant.name} (ID: {tenant_id})")
-            
+
             return self._tenant_to_response(tenant, user_count)
-            
+
         except Exception as e:
             await self.db.rollback()
             logger.error(f"Failed to update tenant {tenant_id}: {e}")
@@ -141,10 +157,10 @@ class TenantManagementService:
     async def delete_tenant(self, tenant_id: int) -> bool:
         """
         Delete tenant and handle user reassignment/cleanup.
-        
+
         Args:
             tenant_id: Tenant ID to delete
-            
+
         Returns:
             bool: True if deleted successfully
         """
@@ -152,7 +168,7 @@ class TenantManagementService:
             stmt = select(Tenant).where(Tenant.id == tenant_id)
             result = await self.db.execute(stmt)
             tenant = result.scalar_one_or_none()
-            
+
             if not tenant:
                 return False
 
@@ -163,10 +179,10 @@ class TenantManagementService:
 
             await self.db.delete(tenant)
             await self.db.flush()
-            
+
             logger.info(f"Deleted tenant: {tenant.name} (ID: {tenant_id})")
             return True
-            
+
         except Exception as e:
             await self.db.rollback()
             logger.error(f"Failed to delete tenant {tenant_id}: {e}")
@@ -176,11 +192,11 @@ class TenantManagementService:
         """List tenants with optional filtering."""
         try:
             stmt = select(Tenant)
-            
+
             # Apply filters if provided
             if filters:
                 conditions = []
-                
+
                 if filters.search:
                     search_term = f"%{filters.search}%"
                     conditions.append(
@@ -191,47 +207,47 @@ class TenantManagementService:
                             Tenant.contact_name.ilike(search_term)
                         )
                     )
-                
+
                 if filters.status:
                     conditions.append(Tenant.status == filters.status.value)
-                    
+
                 if filters.tier:
                     conditions.append(Tenant.tier == filters.tier.value)
-                
+
                 if filters.created_after:
                     conditions.append(Tenant.created_at >= filters.created_after)
-                    
+
                 if filters.created_before:
                     conditions.append(Tenant.created_at <= filters.created_before)
-                
+
                 if conditions:
                     stmt = stmt.where(and_(*conditions))
-            
+
             # Apply ordering and pagination
             stmt = stmt.order_by(Tenant.created_at.desc())
-            
+
             if filters:
                 stmt = stmt.offset(filters.offset).limit(filters.limit)
-            
+
             result = await self.db.execute(stmt)
             tenants = result.scalars().all()
-            
+
             # Get user counts for all tenants
             tenant_responses = []
             for tenant in tenants:
                 user_count = await self._get_tenant_user_count(tenant.id)
-                
+
                 # Apply user count filter if specified
                 if filters and filters.has_users is not None:
                     if filters.has_users and user_count == 0:
                         continue
                     if not filters.has_users and user_count > 0:
                         continue
-                
+
                 tenant_responses.append(self._tenant_to_response(tenant, user_count))
-            
+
             return tenant_responses
-            
+
         except Exception as e:
             logger.error(f"Failed to list tenants: {e}")
             raise
@@ -250,10 +266,10 @@ class TenantManagementService:
                     User.role != "global_admin"  # Exclude global admins
                 )
             ).order_by(User.created_at.desc()).offset(offset).limit(limit)
-            
+
             result = await self.db.execute(stmt)
             users = result.scalars().all()
-            
+
             return [
                 TenantUserResponse(
                     id=user.id,
@@ -267,7 +283,7 @@ class TenantManagementService:
                 )
                 for user in users
             ]
-            
+
         except Exception as e:
             logger.error(f"Failed to get users for tenant {tenant_id}: {e}")
             raise
@@ -275,12 +291,12 @@ class TenantManagementService:
     async def assign_user_to_tenant(self, user_id: str, tenant_id: int, role: str = "user") -> bool:
         """
         Assign an existing user to a tenant.
-        
+
         Args:
             user_id: User ID to assign
             tenant_id: Target tenant ID
             role: Role in the tenant (user, admin)
-            
+
         Returns:
             bool: True if assignment successful
         """
@@ -289,7 +305,7 @@ class TenantManagementService:
             tenant = await self.get_tenant_by_id(tenant_id)
             if not tenant:
                 raise ValueError(f"Tenant {tenant_id} not found")
-            
+
             if tenant.user_count >= tenant.max_users:
                 raise ValueError(f"Tenant {tenant.name} has reached maximum user limit ({tenant.max_users})")
 
@@ -297,19 +313,27 @@ class TenantManagementService:
             stmt = select(User).where(User.id == user_id)
             result = await self.db.execute(stmt)
             user = result.scalar_one_or_none()
-            
+
             if not user:
                 raise ValueError(f"User {user_id} not found")
 
             # Update user's tenant assignment
             user.tenant_id = str(tenant_id)
             user.role = role
-            
+
             await self.db.flush()
-            
-            logger.info(f"Assigned user {user.email} to tenant {tenant.name} with role {role}")
+
+            logger.info(
+                "User assigned to tenant successfully",
+                user_id=user.id,
+                user_email=user.email,
+                tenant_id=tenant.id,
+                tenant_name=tenant.name,
+                role=role,
+                operation="assign_user_to_tenant"
+            )
             return True
-            
+
         except Exception as e:
             await self.db.rollback()
             logger.error(f"Failed to assign user {user_id} to tenant {tenant_id}: {e}")
@@ -326,17 +350,17 @@ class TenantManagementService:
             )
             result = await self.db.execute(stmt)
             user = result.scalar_one_or_none()
-            
+
             if not user:
                 return False
 
             # Deactivate user instead of deleting
             user.is_active = False
             await self.db.flush()
-            
+
             logger.info(f"Removed user {user.email} from tenant {tenant_id}")
             return True
-            
+
         except Exception as e:
             await self.db.rollback()
             logger.error(f"Failed to remove user {user_id} from tenant {tenant_id}: {e}")
@@ -353,7 +377,7 @@ class TenantManagementService:
                 ).group_by(Tenant.status)
             )
             status_map = dict(status_counts.fetchall())
-            
+
             # Tier distribution
             tier_counts = await self.db.execute(
                 select(
@@ -362,7 +386,7 @@ class TenantManagementService:
                 ).group_by(Tenant.tier)
             )
             tier_map = dict(tier_counts.fetchall())
-            
+
             # Total users across all tenants (excluding global admins)
             total_users_result = await self.db.execute(
                 select(func.count(User.id)).where(
@@ -373,19 +397,19 @@ class TenantManagementService:
                 )
             )
             total_users = total_users_result.scalar() or 0
-            
+
             # Recent tenants (last 5)
             recent_tenants_stmt = select(Tenant).order_by(
                 Tenant.created_at.desc()
             ).limit(5)
             recent_result = await self.db.execute(recent_tenants_stmt)
             recent_tenants = recent_result.scalars().all()
-            
+
             recent_tenant_responses = []
             for tenant in recent_tenants:
                 user_count = await self._get_tenant_user_count(tenant.id)
                 recent_tenant_responses.append(self._tenant_to_response(tenant, user_count))
-            
+
             return TenantDashboardStats(
                 total_tenants=sum(status_map.values()),
                 active_tenants=status_map.get("active", 0),
@@ -395,7 +419,7 @@ class TenantManagementService:
                 tenants_by_tier=tier_map,
                 recent_tenants=recent_tenant_responses
             )
-            
+
         except Exception as e:
             logger.error(f"Failed to get dashboard stats: {e}")
             raise
@@ -403,14 +427,11 @@ class TenantManagementService:
     async def _get_tenant_user_count(self, tenant_id: int) -> int:
         """Get count of active users for a tenant."""
         try:
-            # Handle both string and integer tenant IDs for compatibility
+            # Convert tenant_id to string since User.tenant_id is a String column
             result = await self.db.execute(
                 select(func.count(User.id)).where(
                     and_(
-                        or_(
-                            User.tenant_id == str(tenant_id),
-                            User.tenant_id == tenant_id
-                        ),
+                        User.tenant_id == str(tenant_id),
                         User.is_active == True,
                         User.role != "global_admin"
                     )

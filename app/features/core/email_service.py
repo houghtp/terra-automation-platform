@@ -3,10 +3,10 @@ Email service for sending emails using configured SMTP settings.
 Provides a unified interface for sending emails with template support.
 """
 
-import logging
+import structlog
 import smtplib
 import ssl
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any, Union
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -22,7 +22,7 @@ from sqlalchemy import select, and_
 from app.features.administration.smtp.models import SMTPConfiguration, SMTPStatus
 from app.features.core.security import security_manager
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class EmailTemplate:
@@ -60,7 +60,7 @@ class EmailResult:
         self.message = message
         self.message_id = message_id
         self.error = error
-        self.sent_at = datetime.utcnow()
+        self.sent_at = datetime.now(timezone.utc)
 
 
 class EmailService:
@@ -323,7 +323,7 @@ class EmailService:
                 "message": message,
                 "severity": severity,
                 "tenant_id": self.tenant_id,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             },
             priority="high" if severity in ["error", "critical"] else "normal",
             **kwargs
@@ -383,7 +383,7 @@ class EmailService:
                     {self._dict_to_html(data)}
                 </div>
                 <hr>
-                <p><small>Generated at {datetime.utcnow().isoformat()}</small></p>
+                <p><small>Generated at {datetime.now(timezone.utc).isoformat()}</small></p>
             </body>
         </html>
         """

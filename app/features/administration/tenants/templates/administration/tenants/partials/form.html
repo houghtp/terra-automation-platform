@@ -26,8 +26,11 @@
           hx-post="/features/administration/tenants/validate/name"
           hx-trigger="blur changed delay:500ms"
           hx-target="#name-validation"
-          hx-include="[name='name']"
+          hx-include="[name='name'], [name='tenant_id']"
         />
+        {% if tenant %}
+        <input type="hidden" name="tenant_id" value="{{ tenant.id }}" />
+        {% endif %}
         <div id="name-validation">
           {% if errors and 'name' in errors %}
             <span class="invalid-feedback d-block">{{ errors.name[0] }}</span>

@@ -3,6 +3,10 @@
 {% block page_title %}SMTP Configuration{% endblock %}
 {% block head %}
 <script src="/features/core/static/js/table-base.js"></script>
+<script>
+  // Set global admin flag for JavaScript
+  window.isGlobalAdmin = {{ 'true' if is_global_admin else 'false' }};
+</script>
 {% endblock %}
 {% block content %}
 <div id="smtp-area">

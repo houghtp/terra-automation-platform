@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, EmailStr, validator
 from enum import Enum
 from sqlalchemy import Column, String, Boolean, DateTime, Text, JSON, func, Index, Integer
 from app.features.core.database import Base
+from app.features.core.audit_mixin import AuditMixin
 
 
 class SMTPStatus(str, Enum):
@@ -19,7 +20,7 @@ class SMTPStatus(str, Enum):
     FAILED = "failed"
 
 
-class SMTPConfiguration(Base):
+class SMTPConfiguration(Base, AuditMixin):
     """SMTP configuration model with tenant isolation and encryption."""
 
     __tablename__ = "smtp_configurations"
@@ -60,10 +61,6 @@ class SMTPConfiguration(Base):
     # Management fields matching user pattern
     tags = Column(JSON, default=list)
 
-    # Audit fields
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
     # Ensure only one active config per tenant and unique names per tenant
     __table_args__ = (
         Index('idx_smtp_name_tenant', 'name', 'tenant_id', unique=True),
@@ -72,7 +69,7 @@ class SMTPConfiguration(Base):
 
     def to_dict(self) -> Dict[str, any]:
         """Convert to dictionary for JSON responses (excludes password)."""
-        return {
+        base_dict = {
             "id": self.id,
             "name": self.name,
             "description": self.description,
@@ -93,9 +90,10 @@ class SMTPConfiguration(Base):
             "last_tested_at": self.last_tested_at.isoformat() if self.last_tested_at else None,
             "test_status": self.test_status,
             "error_message": self.error_message,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+        # Add audit information with human-readable data
+        base_dict.update(self.get_audit_info())
+        return base_dict
 
     def __repr__(self) -> str:
         """String representation of SMTP configuration."""

@@ -36,6 +36,31 @@
         </div>
       </div>
 
+      {# Tenant selection for global admins #}
+      {% if is_global_admin %}
+      <div class="col-md-6">
+        <label class="form-label">{{ 'Current Tenant' if user else 'Target Tenant' }} *</label>
+        <select
+          name="target_tenant_id"
+          required
+          class="form-select {{ 'is-invalid' if errors and 'target_tenant_id' in errors else '' }}"
+        >
+          <option value="">Select a tenant...</option>
+          {% for tenant in available_tenants %}
+          <option value="{{ tenant.id }}" {{ 'selected' if (form_data and form_data.target_tenant_id == tenant.id) or (user and user.tenant_id == tenant.id|string) else '' }}>
+            {{ tenant.name }}
+          </option>
+          {% endfor %}
+        </select>
+        {% if errors and 'target_tenant_id' in errors %}
+          <div class="invalid-feedback">{{ errors.target_tenant_id[0] }}</div>
+        {% endif %}
+        <div class="form-text">
+          {{ 'Change which tenant this user belongs to.' if user else 'Select which tenant this user will belong to.' }}
+        </div>
+      </div>
+      {% endif %}
+
       {# Email field with HTMX validation #}
       <div class="col-md-6">
         <label class="form-label">Email *</label>

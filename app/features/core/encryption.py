@@ -5,13 +5,13 @@ Implements AES-256-GCM with proper key derivation, rotation, and integrity verif
 import os
 import base64
 import secrets
-import logging
+import structlog
 from typing import Tuple, Optional
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class EncryptionKeyError(Exception):

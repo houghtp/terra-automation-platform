@@ -1,12 +1,12 @@
 """
 Task manager utilities for background task execution.
 """
-import logging
+import structlog
 from typing import Dict, Any, Optional
 from celery.result import AsyncResult
 from app.features.core.celery_app import celery_app
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class TaskManager:

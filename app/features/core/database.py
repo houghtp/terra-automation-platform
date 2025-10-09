@@ -1,10 +1,15 @@
 """
 Database configuration and session management.
 """
+import os
+import importlib
+import structlog
+from pathlib import Path
 from typing import AsyncGenerator, Any
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 
+logger = structlog.get_logger(__name__)
 
 # --- Base class for all models ---
 class Base(DeclarativeBase):
@@ -22,17 +27,67 @@ if DATABASE_URL.startswith('postgresql://'):
     DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+asyncpg://', 1)
 
 
-# Import all models for relationship resolution
-import app.features.administration.tenants.db_models
-import app.features.administration.users.models
-import app.features.administration.tenants.models
-import app.features.administration.secrets.models
-import app.features.administration.audit.models
+def _discover_and_import_models():
+    """
+    Dynamically discover and import all model files for relationship resolution.
+    This replaces hard-coded imports and makes the system more maintainable.
+    """
+    # Get the app directory path
+    app_dir = Path(__file__).parent.parent.parent  # Go up from core -> features -> app
+    features_dir = app_dir / "features"
+
+    models_imported = []
+
+    if not features_dir.exists():
+        logger.warning(f"Features directory not found at {features_dir}")
+        return models_imported
+
+    # Walk through all feature directories looking for models.py files
+    for feature_path in features_dir.rglob("*/"):
+        if feature_path.is_dir():
+            models_file = feature_path / "models.py"
+            db_models_file = feature_path / "db_models.py"
+
+            # Try to import models.py
+            if models_file.exists():
+                try:
+                    # Convert file path to module path
+                    relative_path = models_file.relative_to(app_dir)
+                    module_path = str(relative_path.with_suffix("")).replace(os.sep, ".")
+                    module_name = f"app.{module_path}"
+
+                    importlib.import_module(module_name)
+                    models_imported.append(module_name)
+                except ImportError as e:
+                    logger.warning(f"Failed to import {module_name}: {e}")
+                except Exception as e:
+                    logger.error(f"Error importing {module_name}: {e}")
+
+            # Try to import db_models.py (some features use this naming)
+            if db_models_file.exists():
+                try:
+                    relative_path = db_models_file.relative_to(app_dir)
+                    module_path = str(relative_path.with_suffix("")).replace(os.sep, ".")
+                    module_name = f"app.{module_path}"
+
+                    importlib.import_module(module_name)
+                    models_imported.append(module_name)
+                except ImportError as e:
+                    logger.warning(f"Failed to import {module_name}: {e}")
+                except Exception as e:
+                    logger.error(f"Error importing {module_name}: {e}")
+
+    logger.info(f"Dynamically imported {len(models_imported)} model modules: {models_imported}")
+    return models_imported
+
+
+# Discover and import all models for relationship resolution
+_discover_and_import_models()
 
 # Create async engine with PostgreSQL-specific configuration
 engine = create_async_engine(
     DATABASE_URL,
-    echo=True,
+    echo=False,  # Disable SQL logging for cleaner output
     future=True,
     pool_size=5,
     max_overflow=10,
@@ -59,16 +114,29 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with async_session() as session:
         try:
             yield session
-        finally:
-            await session.close()
+        except Exception:
+            await session.rollback()
+            raise
+
+
+# Function to get async session for direct use (not as dependency)
+def get_async_session():
+    """
+    Get an async session for direct use in background tasks.
+
+    Returns:
+        async_sessionmaker: Session maker for creating sessions
+    """
+    return async_session
 
 
 async def create_tables() -> None:
-    """Create all tables."""
-    # Import all models to ensure they're registered with the metadata
-    from app.features.administration.secrets.models import TenantSecret
-    from app.features.administration.audit.models import AuditLog
-
-    # Create tables
+    """
+    Create all tables.
+    Models are now automatically discovered and imported by _discover_and_import_models().
+    """
+    # Create tables - all models should already be registered with metadata
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    logger.info("Database tables created successfully")

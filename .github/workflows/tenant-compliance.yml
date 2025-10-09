@@ -1,0 +1,63 @@
+name: Tenant CRUD Compliance Check
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'app/features/**/routes.py'
+      - 'app/features/**/services.py'
+
+jobs:
+  compliance-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest
+        pip install -r requirements.txt
+
+    - name: Run Tenant CRUD Compliance Check
+      run: |
+        python tests/compliance/test_tenant_crud_compliance.py
+        pytest tests/compliance/test_tenant_crud_compliance.py -v
+
+    - name: Generate Compliance Report
+      if: always()
+      run: |
+        pytest tests/compliance/test_tenant_crud_compliance.py::TestTenantCRUDCompliance::test_generate_compliance_report -v
+
+    - name: Upload Compliance Report
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: compliance-report
+        path: docs/compliance-report.md
+
+    - name: Comment PR with Compliance Results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          try {
+            const report = fs.readFileSync('docs/compliance-report.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Tenant CRUD Compliance Check Results\n\n${report}`
+            });
+          } catch (error) {
+            console.log('No compliance report found');
+          }

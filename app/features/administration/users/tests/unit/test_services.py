@@ -86,8 +86,8 @@ class TestUserCreation:
             tags=valid_user_create.tags,
             tenant_id="test-tenant-123"
         )
-        created_user.created_at = datetime.utcnow()
-        created_user.updated_at = datetime.utcnow()
+        created_user.created_at = datetime.now(timezone.utc)
+        created_user.updated_at = datetime.now(timezone.utc)
         created_user.is_active = True
 
         mock_session.refresh.return_value = None
@@ -195,8 +195,8 @@ class TestUserRetrieval:
             email="test@example.com",
             tenant_id="test-tenant-123"
         )
-        mock_user.created_at = datetime.utcnow()
-        mock_user.updated_at = datetime.utcnow()
+        mock_user.created_at = datetime.now(timezone.utc)
+        mock_user.updated_at = datetime.now(timezone.utc)
         mock_user.is_active = True
         mock_user.status = "active"
         mock_user.role = "user"
@@ -229,7 +229,7 @@ class TestUserRetrieval:
             email="test@example.com",
             tenant_id="test-tenant-123"
         )
-        mock_user.created_at = datetime.utcnow()
+        mock_user.created_at = datetime.now(timezone.utc)
         mock_user.is_active = True
         mock_user.status = "active"
         mock_user.role = "user"
@@ -272,8 +272,8 @@ class TestUserUpdate:
             enabled=True,
             tenant_id="test-tenant-123"
         )
-        existing_user.created_at = datetime.utcnow()
-        existing_user.updated_at = datetime.utcnow()
+        existing_user.created_at = datetime.now(timezone.utc)
+        existing_user.updated_at = datetime.now(timezone.utc)
 
         service.db.execute.return_value.scalar_one_or_none.return_value = existing_user
 
@@ -306,7 +306,7 @@ class TestUserUpdate:
             email="test@example.com",
             tenant_id="test-tenant-123"
         )
-        existing_user.created_at = datetime.utcnow()
+        existing_user.created_at = datetime.now(timezone.utc)
         existing_user.status = "active"
         existing_user.role = "user"
         existing_user.enabled = True
@@ -408,7 +408,7 @@ class TestUserListing:
         ]
 
         for user in mock_users:
-            user.created_at = datetime.utcnow()
+            user.created_at = datetime.now(timezone.utc)
             user.is_active = True
 
         service.db.execute.return_value.scalars.return_value.all.return_value = mock_users
@@ -433,7 +433,7 @@ class TestUserListing:
             User(id="user-1", name="John Doe", email="john@example.com",
                  tenant_id="test-tenant-123", status="active", role="user", enabled=True)
         ]
-        mock_users[0].created_at = datetime.utcnow()
+        mock_users[0].created_at = datetime.now(timezone.utc)
         mock_users[0].is_active = True
 
         service.db.execute.return_value.scalars.return_value.all.return_value = mock_users
@@ -491,7 +491,7 @@ class TestDashboardStats:
             User(id="user-1", name="Recent User 1", email="recent1@example.com",
                  tenant_id="test-tenant-123", status="active", role="user", enabled=True)
         ]
-        recent_users[0].created_at = datetime.utcnow()
+        recent_users[0].created_at = datetime.now(timezone.utc)
         recent_users[0].is_active = True
 
         # Setup mock returns

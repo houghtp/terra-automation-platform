@@ -1,8 +1,8 @@
 """
 Password reset service for secure password reset functionality.
 """
-import logging
-from datetime import datetime, timedelta
+import structlog
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, delete
@@ -11,7 +11,7 @@ from app.features.auth.models import PasswordResetToken
 from app.features.core.security import security_manager
 
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class PasswordResetService:
@@ -222,7 +222,7 @@ class PasswordResetService:
             int: Number of tokens cleaned up
         """
         try:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
 
             # Delete expired tokens
             result = await self.session.execute(

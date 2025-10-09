@@ -12,6 +12,7 @@ from app.features.core.database import get_db
 from app.features.core.webhooks import WebhookManager, WebhookEndpoint, WebhookDelivery, EventType
 from app.features.auth.dependencies import get_current_user
 from app.features.auth.models import User
+from app.deps.tenant import tenant_dependency
 import logging
 
 logger = logging.getLogger(__name__)
@@ -103,7 +104,10 @@ class AvailableEventsResponse(BaseModel):
 
 # Webhook Endpoint Management
 @router.get("/events", response_model=AvailableEventsResponse)
-async def get_available_events(current_user: User = Depends(get_current_user)):
+async def get_available_events(
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user)
+):
     """Get list of available webhook event types."""
     events = {event.value: event.name for event in EventType}
     return AvailableEventsResponse(events=events)
@@ -112,6 +116,7 @@ async def get_available_events(current_user: User = Depends(get_current_user)):
 @router.post("/endpoints", response_model=WebhookEndpointResponse)
 async def create_webhook_endpoint(
     request: WebhookEndpointRequest,
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db)
 ):
@@ -128,7 +133,7 @@ async def create_webhook_endpoint(
 
         endpoint = await webhook_manager.create_webhook_endpoint(
             session=session,
-            tenant_id=current_user.tenant_id,
+            tenant_id=tenant_id,
             url=str(request.url),
             name=request.name,
             events=request.events,
@@ -178,6 +183,7 @@ async def create_webhook_endpoint(
 @router.get("/endpoints", response_model=List[WebhookEndpointListResponse])
 async def list_webhook_endpoints(
     include_inactive: bool = Query(False, description="Include inactive endpoints"),
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db)
 ):
@@ -185,7 +191,7 @@ async def list_webhook_endpoints(
     try:
         endpoints = await webhook_manager.get_webhook_endpoints(
             session=session,
-            tenant_id=current_user.tenant_id,
+            tenant_id=tenant_id,
             include_inactive=include_inactive
         )
 
@@ -220,6 +226,7 @@ async def list_webhook_endpoints(
 @router.get("/endpoints/{endpoint_id}", response_model=WebhookEndpointResponse)
 async def get_webhook_endpoint(
     endpoint_id: int,
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db)
 ):
@@ -228,7 +235,7 @@ async def get_webhook_endpoint(
         from sqlalchemy import select
         stmt = select(WebhookEndpoint).where(
             WebhookEndpoint.id == endpoint_id,
-            WebhookEndpoint.tenant_id == current_user.tenant_id
+            WebhookEndpoint.tenant_id == tenant_id
         )
         result = await session.execute(stmt)
         endpoint = result.scalar_one_or_none()
@@ -273,6 +280,7 @@ async def get_webhook_endpoint(
 @router.delete("/endpoints/{endpoint_id}")
 async def delete_webhook_endpoint(
     endpoint_id: int,
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db)
 ):
@@ -281,7 +289,7 @@ async def delete_webhook_endpoint(
         success = await webhook_manager.delete_webhook_endpoint(
             session=session,
             endpoint_id=endpoint_id,
-            tenant_id=current_user.tenant_id
+            tenant_id=tenant_id
         )
 
         if not success:
@@ -307,6 +315,7 @@ async def test_webhook_endpoint(
     endpoint_id: int,
     request: TestWebhookRequest,
     background_tasks: BackgroundTasks,
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db)
 ):
@@ -325,7 +334,7 @@ async def test_webhook_endpoint(
         from sqlalchemy import select
         stmt = select(WebhookEndpoint).where(
             WebhookEndpoint.id == endpoint_id,
-            WebhookEndpoint.tenant_id == current_user.tenant_id
+            WebhookEndpoint.tenant_id == tenant_id
         )
         result = await session.execute(stmt)
         endpoint = result.scalar_one_or_none()
@@ -349,7 +358,7 @@ async def test_webhook_endpoint(
             session=session,
             background_tasks=background_tasks,
             event_type=event_type,
-            tenant_id=current_user.tenant_id,
+            tenant_id=tenant_id,
             data=test_data
         )
 
@@ -380,6 +389,7 @@ async def get_webhook_deliveries(
     endpoint_id: int,
     limit: int = Query(50, ge=1, le=100, description="Number of deliveries to return"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db)
 ):
@@ -389,7 +399,7 @@ async def get_webhook_deliveries(
         from sqlalchemy import select
         endpoint_stmt = select(WebhookEndpoint).where(
             WebhookEndpoint.id == endpoint_id,
-            WebhookEndpoint.tenant_id == current_user.tenant_id
+            WebhookEndpoint.tenant_id == tenant_id
         )
         endpoint_result = await session.execute(endpoint_stmt)
         endpoint = endpoint_result.scalar_one_or_none()
@@ -440,6 +450,7 @@ async def get_webhook_deliveries(
 @router.post("/deliveries/{delivery_id}/retry")
 async def retry_webhook_delivery(
     delivery_id: int,
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db)
 ):
@@ -449,7 +460,7 @@ async def retry_webhook_delivery(
         from sqlalchemy import select
         stmt = select(WebhookDelivery).where(
             WebhookDelivery.id == delivery_id,
-            WebhookDelivery.tenant_id == current_user.tenant_id
+            WebhookDelivery.tenant_id == tenant_id
         )
         result = await session.execute(stmt)
         delivery = result.scalar_one_or_none()

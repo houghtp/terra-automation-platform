@@ -1,0 +1,222 @@
+<!-- Application Log Details Modal -->
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="ti ti-file-text me-2"></i>
+        Application Log Details
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<div class="modal-body">
+    <!-- Overview Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="ti ti-info-circle me-2"></i>
+                Overview
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Log Level</label>
+                        <div>
+                            <span class="log-level-badge log-level-{{ log.level }}">{{ log.level }}</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Logger Name</label>
+                        <div>
+                            <code class="text-primary">{{ log.logger_name }}</code>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Tenant</label>
+                        <div>
+                            <code class="text-muted">{{ log.tenant_id }}</code>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Timestamp</label>
+                        <div class="d-flex align-items-center">
+                            <i class="ti ti-clock me-2 text-muted"></i>
+                            <span>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp else 'N/A' }}</span>
+                        </div>
+                        <small class="text-muted">{{ log.timestamp.strftime('%Z') if log.timestamp and log.timestamp.tzinfo else 'UTC' }}</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Log ID</label>
+                        <div>
+                            <code class="text-primary">#{{ log.id }}</code>
+                        </div>
+                    </div>
+                    {% if log.request_id %}
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Request ID</label>
+                        <div>
+                            <code class="text-muted">{{ log.request_id[:16] }}...</code>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Request Context Card -->
+    {% if log.user_id or log.endpoint or log.method or log.ip_address %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="ti ti-world-www me-2"></i>
+                Request Context
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    {% if log.user_id %}
+                    <div class="mb-3">
+                        <label class="form-label text-muted">User ID</label>
+                        <div>
+                            <code class="text-info">{{ log.user_id }}</code>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if log.method %}
+                    <div class="mb-3">
+                        <label class="form-label text-muted">HTTP Method</label>
+                        <div>
+                            <span class="badge bg-{{ 'success' if log.method == 'GET' else 'primary' if log.method == 'POST' else 'warning' if log.method in ['PUT', 'PATCH'] else 'danger' if log.method == 'DELETE' else 'secondary' }}">
+                                {{ log.method }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    {% if log.ip_address %}
+                    <div class="mb-3">
+                        <label class="form-label text-muted">IP Address</label>
+                        <div class="d-flex align-items-center">
+                            <i class="ti ti-world me-2 text-muted"></i>
+                            <code class="text-info">{{ log.ip_address }}</code>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if log.endpoint %}
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Endpoint</label>
+                        <div>
+                            <code class="text-primary">{{ log.endpoint }}</code>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Message Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="ti ti-message me-2"></i>
+                Log Message
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="log-message">
+                {{ log.message }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Exception Information Card -->
+    {% if log.exception_type or log.exception_message or log.stack_trace %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title text-danger">
+                <i class="ti ti-alert-triangle me-2"></i>
+                Exception Details
+            </h3>
+        </div>
+        <div class="card-body">
+            {% if log.exception_type %}
+            <div class="mb-3">
+                <label class="form-label text-muted">Exception Type</label>
+                <div>
+                    <span class="badge bg-danger">{{ log.exception_type }}</span>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if log.exception_message %}
+            <div class="mb-3">
+                <label class="form-label text-muted">Exception Message</label>
+                <div class="bg-light rounded p-3">
+                    <code class="text-danger">{{ log.exception_message }}</code>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if log.stack_trace %}
+            <div class="mb-3">
+                <label class="form-label text-muted">Stack Trace</label>
+                <div class="bg-light rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                    <pre class="mb-0"><code>{{ log.stack_trace }}</code></pre>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Extra Data Card -->
+    {% if log.extra_data %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="ti ti-code me-2"></i>
+                Additional Data
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="bg-light rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                <pre class="mb-0"><code class="language-json">{{ log.extra_data | tojson(indent=2) }}</code></pre>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Developer Notice -->
+    <div class="alert alert-info">
+        <div class="d-flex">
+            <div>
+                <i class="ti ti-code alert-icon"></i>
+            </div>
+            <div>
+                <h4 class="alert-title">Development & Debugging Notice</h4>
+                <div class="text-muted">
+                    Application logs provide detailed runtime information for debugging and monitoring.
+                    All timestamps are recorded in UTC. These logs help track application behavior, errors, and performance metrics.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <i class="ti ti-x me-2"></i>
+        Close
+    </button>
+    <button type="button" class="btn btn-primary" onclick="window.print()">
+        <i class="ti ti-printer me-2"></i>
+        Print
+    </button>
+</div>

@@ -5,7 +5,7 @@ import os
 import time
 import uuid
 from typing import Dict, Any, Optional, Set
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -368,7 +368,7 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
         # Create audit log entry
         audit_log = AuditLog(
             tenant_id=context["tenant_id"],
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             action=action,
             category=category,
             severity=severity,

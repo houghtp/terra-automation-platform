@@ -1,0 +1,223 @@
+"""Log service for read-only application log operations."""
+
+from typing import List, Dict, Any, Optional, Tuple
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func, and_, or_, desc, asc
+from sqlalchemy.sql import text
+from datetime import datetime, timedelta
+import structlog
+from app.features.core.enhanced_base_service import BaseService
+from .models import ApplicationLog
+
+logger = structlog.get_logger()
+
+
+class LogService(BaseService):
+    """
+    Read-only service for application log operations.
+
+    This service provides methods to query and analyze application logs
+    without any modification capabilities to maintain log integrity.
+    """
+
+    def __init__(self, db: AsyncSession, tenant_id: str = None):
+        """Initialize log service with database session."""
+        super().__init__(db, tenant_id)
+
+    async def get_application_logs(
+        self,
+        limit: int = 100,
+        offset: int = 0,
+        level_filter: Optional[str] = None,
+        logger_filter: Optional[str] = None,
+        user_filter: Optional[str] = None,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
+        sort_by: str = "timestamp",
+        sort_order: str = "desc"
+    ) -> List[ApplicationLog]:
+        """
+        Get paginated application logs with optional filtering.
+
+        Args:
+            tenant_id: Tenant identifier for isolation
+            limit: Maximum number of records to return
+            offset: Number of records to skip
+            level_filter: Filter by level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+            logger_filter: Filter by logger name
+            user_filter: Filter by user ID
+            date_from: Filter logs from this date
+            date_to: Filter logs to this date
+            sort_by: Column to sort by
+            sort_order: Sort order (asc or desc)
+
+        Returns:
+            List of ApplicationLog instances
+        """
+        try:
+            # Use BaseService query builder for automatic tenant filtering
+            query = self.create_base_query(ApplicationLog)
+
+            # Apply filters
+            if level_filter:
+                query = query.where(ApplicationLog.level == level_filter.upper())
+
+            if logger_filter:
+                query = query.where(ApplicationLog.logger_name.ilike(f"%{logger_filter}%"))
+
+            if user_filter:
+                query = query.where(ApplicationLog.user_id.ilike(f"%{user_filter}%"))
+
+            if date_from:
+                query = query.where(ApplicationLog.timestamp >= date_from)
+
+            if date_to:
+                query = query.where(ApplicationLog.timestamp <= date_to)
+
+            # Apply sorting
+            sort_column = getattr(ApplicationLog, sort_by, ApplicationLog.timestamp)
+            if sort_order.lower() == "asc":
+                query = query.order_by(asc(sort_column))
+            else:
+                query = query.order_by(desc(sort_column))
+
+            # Apply pagination
+            query = query.limit(limit).offset(offset)
+
+            result = await self.db.execute(query)
+            return result.scalars().all()
+
+        except Exception as e:
+            logger.exception(f"Failed to get application logs for tenant {self.tenant_id}")
+            raise
+
+    async def get_logs_stats(self) -> Dict[str, Any]:
+        """
+        Get comprehensive log statistics.
+
+        Returns:
+            Dictionary containing various log statistics
+        """
+        try:
+            # Base query with tenant filtering
+            base_query = self.create_base_query()
+
+            # Total logs
+            total_logs = await self.session.scalar(select(func.count()).select_from(
+                base_query.subquery()
+            ))
+
+            # Log level distribution
+            level_stats = await self.session.execute(
+                base_query
+                .with_only_columns(
+                    ApplicationLog.level,
+                    func.count(ApplicationLog.id).label('count')
+                )
+                .group_by(ApplicationLog.level)
+            )
+
+            # Recent activity (last 24 hours)
+            twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+            recent_logs = await self.session.scalar(
+                base_query
+                .with_only_columns(func.count(ApplicationLog.id))
+                .where(ApplicationLog.timestamp >= twenty_four_hours_ago)
+            )
+
+            # Top modules/components
+            top_modules = await self.session.execute(
+                base_query
+                .with_only_columns(
+                    ApplicationLog.module,
+                    func.count(ApplicationLog.id).label('count')
+                )
+                .group_by(ApplicationLog.module)
+                .order_by(func.count(ApplicationLog.id).desc())
+                .limit(10)
+            )
+
+            # Error rate (last 24 hours)
+            error_logs = await self.session.scalar(
+                base_query
+                .with_only_columns(func.count(ApplicationLog.id))
+                .where(
+                    and_(
+                        ApplicationLog.level.in_(['ERROR', 'CRITICAL']),
+                        ApplicationLog.timestamp >= twenty_four_hours_ago
+                    )
+                )
+            )
+
+            error_rate = (error_logs / recent_logs * 100) if recent_logs > 0 else 0
+
+            stats = {
+                'total_logs': total_logs or 0,
+                'recent_logs_24h': recent_logs or 0,
+                'error_rate_24h': round(error_rate, 2),
+                'level_distribution': {
+                    row.level: row.count for row in level_stats.all()
+                },
+                'top_modules': [
+                    {'module': row.module, 'count': row.count}
+                    for row in top_modules.all()
+                ]
+            }
+
+            logger.info(f"Generated log statistics for tenant {self.tenant_id}")
+            return stats
+
+        except Exception as e:
+            logger.exception(f"Failed to get log stats for tenant {self.tenant_id}")
+            raise
+
+    async def count_logs(self, search_query: Optional[str] = None, level_filter: Optional[str] = None) -> int:
+        """
+        Count logs with optional filtering.
+
+        Args:
+            search_query: Optional text search query
+            level_filter: Optional log level filter
+
+        Returns:
+            Count of logs matching the criteria
+        """
+        try:
+            query = self.create_base_query().with_only_columns(func.count(ApplicationLog.id))
+
+            if search_query:
+                search_filter = or_(
+                    ApplicationLog.message.ilike(f"%{search_query}%"),
+                    ApplicationLog.module.ilike(f"%{search_query}%"),
+                    ApplicationLog.function_name.ilike(f"%{search_query}%")
+                )
+                query = query.where(search_filter)
+
+            if level_filter:
+                query = query.where(ApplicationLog.level == level_filter)
+
+            result = await self.session.scalar(query)
+            logger.debug(f"Counted {result} logs for tenant {self.tenant_id}")
+            return result or 0
+
+        except Exception as e:
+            logger.exception(f"Failed to count logs for tenant {self.tenant_id}")
+            raise
+
+    async def get_log_by_id(self, log_id: int) -> Optional[ApplicationLog]:
+        """
+        Get a single log by ID with tenant validation.
+
+        Args:
+            log_id: Log entry ID
+
+        Returns:
+            ApplicationLog instance or None if not found
+        """
+        try:
+            # Use BaseService get_by_id method for automatic tenant filtering
+            return await self.get_by_id(ApplicationLog, log_id)
+
+        except Exception as e:
+            logger.exception(f"Failed to get log {log_id} for tenant {self.tenant_id}")
+            raise

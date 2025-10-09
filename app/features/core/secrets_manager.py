@@ -2,7 +2,7 @@
 Secrets Manager - High-level interface for managing application secrets.
 """
 import os
-import logging
+import structlog
 from typing import Dict, Any, Optional, Type
 from app.features.core.secrets import (
     SecretsProvider,
@@ -14,7 +14,7 @@ from app.features.core.secrets import (
     SecretMetadata
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class SecretsManager:

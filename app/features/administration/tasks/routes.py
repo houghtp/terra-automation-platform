@@ -1,7 +1,7 @@
 """
 Task management API routes.
 """
-import logging
+import structlog
 from typing import Dict, Any
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.responses import JSONResponse
@@ -9,9 +9,10 @@ from pydantic import BaseModel
 from app.features.core.task_manager import TaskManager, task_manager
 from app.features.auth.dependencies import get_current_user
 from app.features.auth.models import User
+from app.deps.tenant import tenant_dependency
 
-logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/administration/tasks")
+logger = structlog.get_logger(__name__)
+router = APIRouter()
 
 
 # Request models
@@ -40,6 +41,7 @@ class AuditReportRequest(BaseModel):
 @router.post("/email/welcome", response_model=Dict[str, str])
 async def send_welcome_email(
     request: EmailTaskRequest,
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user)
 ):
     """Send welcome email in background."""
@@ -63,6 +65,7 @@ async def send_welcome_email(
 @router.post("/email/bulk", response_model=Dict[str, str])
 async def send_bulk_email(
     request: BulkEmailRequest,
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user)
 ):
     """Send bulk email in background."""
@@ -87,6 +90,7 @@ async def send_bulk_email(
 @router.post("/data/export", response_model=Dict[str, str])
 async def export_user_data(
     request: DataExportRequest,
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user)
 ):
     """Start user data export in background."""
@@ -110,10 +114,15 @@ async def export_user_data(
 @router.post("/reports/audit", response_model=Dict[str, str])
 async def generate_audit_report(
     request: AuditReportRequest,
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user)
 ):
     """Generate audit report in background."""
     try:
+        # SECURITY: Validate that user can only request audit for their own tenant
+        if request.tenant_id != tenant_id:
+            raise HTTPException(status_code=403, detail="Cannot generate audit report for different tenant")
+
         task_id = TaskManager.start_task(
             "app.features.tasks.data_processing_tasks.generate_audit_report",
             request.tenant_id,
@@ -134,6 +143,7 @@ async def generate_audit_report(
 @router.post("/cleanup/audit-logs", response_model=Dict[str, str])
 async def cleanup_audit_logs(
     days_to_keep: int = 90,
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user)
 ):
     """Start audit log cleanup in background."""
@@ -156,6 +166,7 @@ async def cleanup_audit_logs(
 @router.get("/status/{task_id}", response_model=Dict[str, Any])
 async def get_task_status(
     task_id: str,
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user)
 ):
     """Get status of a background task."""
@@ -170,6 +181,7 @@ async def get_task_status(
 @router.delete("/cancel/{task_id}", response_model=Dict[str, str])
 async def cancel_task(
     task_id: str,
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user)
 ):
     """Cancel a background task."""
@@ -189,7 +201,10 @@ async def cancel_task(
 
 
 @router.get("/active", response_model=Dict[str, Any])
-async def get_active_tasks(current_user: User = Depends(get_current_user)):
+async def get_active_tasks(
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user)
+):
     """Get information about active tasks."""
     try:
         active_tasks = TaskManager.get_active_tasks()
@@ -200,7 +215,10 @@ async def get_active_tasks(current_user: User = Depends(get_current_user)):
 
 
 @router.get("/workers", response_model=Dict[str, Any])
-async def get_worker_stats(current_user: User = Depends(get_current_user)):
+async def get_worker_stats(
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user)
+):
     """Get worker statistics."""
     try:
         worker_stats = TaskManager.get_worker_stats()

@@ -197,7 +197,7 @@ class TestTenantSecretModel:
 
     async def test_tenant_secret_expiration_handling(self, test_db_session: AsyncSession):
         """Test secret expiration fields."""
-        future_date = datetime.utcnow() + timedelta(days=30)
+        future_date = datetime.now(timezone.utc) + timedelta(days=30)
 
         secret = TenantSecret(
             tenant_id="expiration-test",
@@ -230,7 +230,7 @@ class TestTenantSecretModel:
         assert secret.last_accessed is None
 
         # Simulate access
-        access_time = datetime.utcnow()
+        access_time = datetime.now(timezone.utc)
         secret.last_accessed = access_time
         secret.access_count += 1
 
@@ -264,8 +264,8 @@ class TestTenantSecretModel:
 
     async def test_tenant_secret_to_dict_method(self, test_db_session: AsyncSession):
         """Test the to_dict method for JSON serialization."""
-        expires_at = datetime.utcnow() + timedelta(days=30)
-        last_accessed = datetime.utcnow() - timedelta(hours=1)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=30)
+        last_accessed = datetime.now(timezone.utc) - timedelta(hours=1)
 
         secret = TenantSecret(
             tenant_id="dict-test",
@@ -442,7 +442,7 @@ class TestTenantSecretQueries:
         tenant_id = "expiring-query-test"
 
         # Create secrets with various expiration dates
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         secrets_data = [
             ("Expired Secret", now - timedelta(days=1)),  # Already expired
             ("Expiring Soon", now + timedelta(days=5)),    # Expires in 5 days

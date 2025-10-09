@@ -9,6 +9,7 @@ from sqlalchemy.orm import relationship
 from pydantic import BaseModel, Field
 
 from app.features.core.database import Base
+from app.features.core.audit_mixin import AuditMixin
 
 
 class SecretType(str, Enum):
@@ -22,7 +23,7 @@ class SecretType(str, Enum):
     OTHER = "other"
 
 
-class TenantSecret(Base):
+class TenantSecret(Base, AuditMixin):
     """
     Tenant-aware secrets storage with encryption.
     Integrates with existing bcrypt infrastructure for secure storage.
@@ -42,9 +43,7 @@ class TenantSecret(Base):
 
     # Metadata
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    created_by = Column(String(255), nullable=True)  # User who created the secret
+    # Note: created_at, updated_at, and created_by are now provided by AuditMixin
     last_accessed = Column(DateTime, nullable=True)
     access_count = Column(Integer, default=0, nullable=False)
 
@@ -68,7 +67,7 @@ class TenantSecret(Base):
 
     def to_dict(self) -> dict:
         """Convert to dictionary, excluding sensitive data."""
-        return {
+        base_dict = {
             "id": self.id,
             "tenant_id": self.tenant_id,
             "name": self.name,
@@ -77,13 +76,15 @@ class TenantSecret(Base):
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "created_by": self.created_by,
             "last_accessed": self.last_accessed.isoformat() if self.last_accessed else None,
             "access_count": self.access_count,
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,
             "rotation_interval_days": self.rotation_interval_days,
             "has_value": bool(self.encrypted_value),  # Indicate if secret exists without exposing it
         }
+        # Add audit information with human-readable data
+        base_dict.update(self.get_audit_info())
+        return base_dict
 
 
 # Pydantic models for API
@@ -118,7 +119,10 @@ class SecretResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
-    created_by: Optional[str]
+    created_by_email: Optional[str]
+    created_by_name: Optional[str]
+    updated_by_email: Optional[str]
+    updated_by_name: Optional[str]
     last_accessed: Optional[datetime]
     access_count: int
     expires_at: Optional[datetime]

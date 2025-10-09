@@ -1,12 +1,12 @@
 """
 Data processing background tasks.
 """
-import logging
+import structlog
 from typing import Dict, List, Any
 from celery import Task
 from app.features.core.celery_app import celery_app
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class DataProcessingTask(Task):

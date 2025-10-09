@@ -4,13 +4,13 @@ Supports multiple backends: .env files (dev), AWS Secrets Manager, Azure Key Vau
 """
 import os
 import json
-import logging
+import structlog
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, Union
 from dataclasses import dataclass
 from enum import Enum
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class SecretsBackend(Enum):

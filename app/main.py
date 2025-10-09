@@ -109,14 +109,14 @@ app.add_middleware(VersioningMiddleware, version_manager=api_version_manager)
 from .features.core.api_security import APISecurityMiddleware
 app.add_middleware(APISecurityMiddleware)
 
-# Add audit logging middleware (early in the stack to capture all requests)
-# PERFORMANCE FIXED - now runs in background tasks
-from .features.administration.audit.middleware import AuditLoggingMiddleware
-app.add_middleware(AuditLoggingMiddleware)
-
 # Add authentication context middleware (must run before audit middleware)
 from .middleware.auth_context import AuthContextMiddleware
 app.add_middleware(AuthContextMiddleware)
+
+# Add audit logging middleware (after auth context to capture user info)
+# PERFORMANCE FIXED - now runs in background tasks
+from .features.administration.audit.middleware import AuditLoggingMiddleware
+app.add_middleware(AuditLoggingMiddleware)
 
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(TenantMiddleware)
@@ -181,11 +181,18 @@ app.mount("/features/administration/tenants/static", StaticFiles(directory="app/
 # Mount audit static files
 app.mount("/features/administration/audit/static", StaticFiles(directory="app/features/administration/audit/static"), name="audit_static")
 
+# Mount logs static files
+app.mount("/features/administration/logs/static", StaticFiles(directory="app/features/administration/logs/static"), name="logs_static")
+
 # Mount secrets static files
 app.mount("/features/administration/secrets/static", StaticFiles(directory="app/features/administration/secrets/static"), name="secrets_static")
 
 # Mount SMTP static files
 app.mount("/features/administration/smtp/static", StaticFiles(directory="app/features/administration/smtp/static"), name="smtp_static")
+
+# Mount content broadcaster static files
+app.mount("/features/content-broadcaster/static", StaticFiles(directory="app/features/business_automations/content_broadcaster/static"), name="content_broadcaster_static")
+app.mount("/features/connectors/static", StaticFiles(directory="app/features/connectors/connectors/static"), name="connectors_static")
 
 
 # Setup versioned API documentation
@@ -211,21 +218,34 @@ from .features.monitoring.routes import router as monitoring_router
 app.include_router(monitoring_router, tags=["monitoring"])
 
 # Include administration routes
-from .features.administration.secrets.routes import router as administration_secrets_router
+from .features.administration.secrets.routes.crud_routes import router as administration_secrets_crud_router
+from .features.administration.secrets.routes.form_routes import router as administration_secrets_form_router
 from .features.administration.audit.routes import router as administration_audit_router
 from .features.administration.tenants.routes import router as administration_tenants_router
 from .features.administration.users.routes import router as administration_users_router
 from .features.administration.tasks.routes import router as administration_tasks_router
 from .features.administration.api_keys.routes import router as administration_api_keys_router
 from .features.administration.smtp.routes import router as administration_smtp_router
-app.include_router(administration_secrets_router, prefix="/features", tags=["administration"])
-app.include_router(administration_audit_router, prefix="/features", tags=["administration"])
-app.include_router(administration_tenants_router, prefix="/features", tags=["administration"])
-app.include_router(administration_users_router, prefix="/features", tags=["administration"])
-app.include_router(administration_tasks_router, prefix="/features", tags=["tasks"])
-app.include_router(administration_api_keys_router, prefix="/features", tags=["administration"])
-app.include_router(administration_smtp_router, prefix="/features", tags=["administration"])
-app.include_router(admin_logs_router, prefix="/features/administration", tags=["administration"])
+
+# Include business automation routes
+from .features.business_automations.content_broadcaster.routes import router as content_broadcaster_router
+from .features.connectors.connectors.routes import router as connectors_router
+
+app.include_router(administration_secrets_crud_router, prefix="/features/administration/secrets", tags=["administration"])
+app.include_router(administration_secrets_form_router, prefix="/features/administration/secrets", tags=["administration"])
+app.include_router(administration_audit_router, prefix="/features/administration/audit", tags=["administration"])
+app.include_router(administration_tenants_router, prefix="/features/administration/tenants", tags=["administration"])
+app.include_router(administration_users_router, prefix="/features/administration/users", tags=["administration"])
+app.include_router(administration_tasks_router, prefix="/features/administration/tasks", tags=["tasks"])
+app.include_router(administration_api_keys_router, prefix="/features/administration/api-keys", tags=["administration"])
+app.include_router(administration_smtp_router, prefix="/features/administration/smtp", tags=["administration"])
+app.include_router(admin_logs_router, prefix="/features/administration/logs", tags=["administration"])
+
+# Business automation routes
+app.include_router(content_broadcaster_router, prefix="/features/content-broadcaster", tags=["business-automations"])
+
+# Connectors routes
+app.include_router(connectors_router, prefix="/features/connectors", tags=["connectors"])
 
 # Old users routes moved to administration
 
@@ -263,8 +283,8 @@ async def root(request: Request):
 @app.get("/health", tags=["infra"])
 async def health():
     """Basic health check for load balancers."""
-    from datetime import datetime
-    return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}
+    from datetime import datetime, timezone
+    return {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
 
 @app.get("/health/db", tags=["infra"])
 async def db_health():
@@ -281,11 +301,11 @@ async def db_health():
 @app.get("/health/detailed", tags=["infra"])
 async def detailed_health():
     """Comprehensive health check for monitoring systems."""
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     health_data = {
         "status": "ok",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "version": "1.0.0",  # TODO: Get from package.json or version file
         "environment": os.getenv("ENVIRONMENT", "development"),
     }

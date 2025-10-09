@@ -1,0 +1,135 @@
+<!-- Reject Content Modal -->
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="ti ti-x"></i>
+        Reject Content
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<form hx-post="/content-broadcaster/reject/{{ content.id }}"
+      hx-target="#content-table"
+      hx-swap="outerHTML">
+    <div class="modal-body">
+        <!-- Content Preview -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card bg-light">
+                    <div class="card-header">
+                        <h6 class="mb-0">Content to Reject</h6>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ content.title }}</h5>
+                        <div class="content-preview">
+                            {{ content.body[:300] }}
+                            {% if content.body|length > 300 %}
+                                <span class="text-muted">... (truncated)</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rejection Form -->
+        <div class="row">
+            <div class="col-12">
+                <div class="mb-3">
+                    <label for="comment" class="form-label">
+                        Rejection Reason <span class="text-danger">*</span>
+                    </label>
+                    <textarea class="form-control"
+                              id="comment"
+                              name="comment"
+                              rows="4"
+                              required
+                              placeholder="Please provide a clear reason for rejecting this content..."></textarea>
+                    <div class="form-text">This comment will help the content creator understand what needs to be improved</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-warning">
+                    <i class="ti ti-alert-triangle me-2"></i>
+                    <strong>Rejecting this content will:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Change state back to "Rejected"</li>
+                        <li>Set approval status to "Rejected"</li>
+                        <li>Allow the creator to edit and resubmit</li>
+                        <li>Send the rejection comment to the creator</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Common Rejection Reasons (Quick Select) -->
+        <div class="row">
+            <div class="col-12">
+                <div class="mb-3">
+                    <label class="form-label">Quick Reasons (Click to add)</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-sm quick-reason-btn"
+                                data-reason="Content needs more detail and explanation">
+                            Needs More Detail
+                        </button>
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-sm quick-reason-btn"
+                                data-reason="Content does not align with brand guidelines">
+                            Brand Guidelines
+                        </button>
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-sm quick-reason-btn"
+                                data-reason="Content contains factual errors that need correction">
+                            Factual Errors
+                        </button>
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-sm quick-reason-btn"
+                                data-reason="Content requires legal review before publishing">
+                            Legal Review Required
+                        </button>
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-sm quick-reason-btn"
+                                data-reason="Content is not appropriate for target audience">
+                            Audience Mismatch
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-danger">
+            <i class="ti ti-x me-1"></i>
+            Reject Content
+        </button>
+    </div>
+</form>
+
+<script>
+// Quick reason buttons functionality
+document.querySelectorAll('.quick-reason-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const reason = this.getAttribute('data-reason');
+        const commentTextarea = document.getElementById('comment');
+
+        // Add reason to existing comment or replace if empty
+        if (commentTextarea.value.trim()) {
+            commentTextarea.value += '\n\n' + reason;
+        } else {
+            commentTextarea.value = reason;
+        }
+
+        // Visual feedback
+        this.classList.add('btn-secondary');
+        this.classList.remove('btn-outline-secondary');
+
+        // Focus on textarea for additional editing
+        commentTextarea.focus();
+    });
+});
+</script>

@@ -1,0 +1,14 @@
+<div class="card">
+  <div class="card-header">
+    {% set title = "Connectors" %}
+    {% set description = "Manage your connected services and integrations. Add and configure connectors to automate workflows across different platforms." %}
+    {% set icon = "ti ti-plug" %}
+    {% set add_url = "/features/connectors/partials/form" %}
+    {% set entity_name = "Connector" %}
+    {% set table_id = "connectors-table" %}
+    {% include 'components/ui/table_actions.html' with context %}
+  </div>
+  <div class="card-body p-0">
+    <div id="connectors-table"></div>
+  </div>
+</div>

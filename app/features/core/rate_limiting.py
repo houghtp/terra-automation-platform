@@ -4,7 +4,7 @@ Supports multiple algorithms, storage backends, and tenant isolation.
 """
 import time
 import json
-import logging
+import structlog
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, Tuple, List
 from dataclasses import dataclass, asdict
@@ -12,7 +12,7 @@ from enum import Enum
 import asyncio
 from datetime import datetime, timedelta
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class RateLimitAlgorithm(Enum):

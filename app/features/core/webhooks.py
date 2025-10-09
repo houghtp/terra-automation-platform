@@ -10,7 +10,7 @@ import hashlib
 import secrets
 import asyncio
 from typing import Dict, List, Optional, Any, Union
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from dataclasses import dataclass, asdict
 from urllib.parse import urlparse
@@ -20,11 +20,11 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, JSON, F
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from fastapi import BackgroundTasks
-import logging
+import structlog
 
 from app.features.core.database import Base
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class WebhookStatus(Enum):
@@ -123,8 +123,8 @@ class WebhookEndpoint(Base):
     successful_deliveries = Column(Integer, default=0, nullable=False)
 
     # Metadata
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
     created_by = Column(String(255), nullable=True)
 
     @property
@@ -180,7 +180,7 @@ class WebhookDelivery(Base):
     error_message = Column(Text, nullable=True)
 
     # Timing
-    scheduled_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    scheduled_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     attempted_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     delivery_time_ms = Column(Float, nullable=True)
@@ -189,7 +189,7 @@ class WebhookDelivery(Base):
     next_retry_at = Column(DateTime, nullable=True)
 
     # Metadata
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     def is_pending(self) -> bool:
         """Check if delivery is pending."""
@@ -201,7 +201,7 @@ class WebhookDelivery(Base):
             self.status in [DeliveryStatus.FAILED.value, DeliveryStatus.RETRYING.value] and
             self.attempt_number < self.max_attempts and
             self.next_retry_at and
-            datetime.utcnow() >= self.next_retry_at
+            datetime.now(timezone.utc) >= self.next_retry_at
         )
 
     def is_final(self) -> bool:
@@ -323,7 +323,7 @@ class WebhookManager:
                 event_type=event_type.value,
                 tenant_id=tenant_id,
                 data=data,
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=datetime.now(timezone.utc).isoformat(),
                 event_id=event_id
             )
 
@@ -438,7 +438,7 @@ class WebhookManager:
                 )
 
             # Mark as attempting
-            delivery.attempted_at = datetime.utcnow()
+            delivery.attempted_at = datetime.now(timezone.utc)
             delivery.status = DeliveryStatus.RETRYING.value if delivery.attempt_number > 1 else DeliveryStatus.PENDING.value
 
             # Prepare headers
@@ -451,7 +451,7 @@ class WebhookManager:
             }
 
             # Make HTTP request
-            start_time = datetime.utcnow()
+            start_time = datetime.now(timezone.utc)
             try:
                 response = await self.http_client.post(
                     delivery.delivery_url,
@@ -460,7 +460,7 @@ class WebhookManager:
                     timeout=30.0
                 )
 
-                end_time = datetime.utcnow()
+                end_time = datetime.now(timezone.utc)
                 delivery_time_ms = (end_time - start_time).total_seconds() * 1000
 
                 # Update delivery record
@@ -527,12 +527,12 @@ class WebhookManager:
         if delivery.attempt_number >= delivery.max_attempts:
             # No more retries
             delivery.status = DeliveryStatus.EXHAUSTED.value
-            delivery.completed_at = datetime.utcnow()
+            delivery.completed_at = datetime.now(timezone.utc)
             await self._update_endpoint_failure(session, delivery.webhook_endpoint_id)
         else:
             # Schedule retry with exponential backoff
             delay_minutes = 2 ** (delivery.attempt_number - 1)  # 1, 2, 4, 8...
-            delivery.next_retry_at = datetime.utcnow() + timedelta(minutes=delay_minutes)
+            delivery.next_retry_at = datetime.now(timezone.utc) + timedelta(minutes=delay_minutes)
             delivery.status = DeliveryStatus.FAILED.value
 
         await session.commit()
@@ -542,8 +542,8 @@ class WebhookManager:
         stmt = update(WebhookEndpoint).where(
             WebhookEndpoint.id == endpoint_id
         ).values(
-            last_delivery_at=datetime.utcnow(),
-            last_success_at=datetime.utcnow(),
+            last_delivery_at=datetime.now(timezone.utc),
+            last_success_at=datetime.now(timezone.utc),
             consecutive_failures=0,
             total_deliveries=WebhookEndpoint.total_deliveries + 1,
             successful_deliveries=WebhookEndpoint.successful_deliveries + 1
@@ -555,7 +555,7 @@ class WebhookManager:
         stmt = update(WebhookEndpoint).where(
             WebhookEndpoint.id == endpoint_id
         ).values(
-            last_delivery_at=datetime.utcnow(),
+            last_delivery_at=datetime.now(timezone.utc),
             consecutive_failures=WebhookEndpoint.consecutive_failures + 1,
             total_deliveries=WebhookEndpoint.total_deliveries + 1
         )

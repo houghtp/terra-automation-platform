@@ -9,9 +9,9 @@ import hashlib
 import secrets
 import base64
 import json
-import logging
+import structlog
 from typing import Dict, List, Optional, Any, Set
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass
 from enum import Enum
 
@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.database import Base, get_db
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class APIKeyStatus(Enum):
@@ -81,7 +81,7 @@ class APIKey(Base):
     rate_limit_per_day = Column(Integer, default=10000, nullable=False)
 
     # Lifecycle management
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     expires_at = Column(DateTime, nullable=True)
     last_used_at = Column(DateTime, nullable=True)
     last_used_ip = Column(String(45), nullable=True)
@@ -106,7 +106,7 @@ class APIKey(Base):
         if self.status != APIKeyStatus.ACTIVE.value or not self.is_active:
             return False
 
-        if self.expires_at and self.expires_at < datetime.utcnow():
+        if self.expires_at and self.expires_at < datetime.now(timezone.utc):
             return False
 
         return True
@@ -188,7 +188,7 @@ class APIKeyManager:
 
             expires_at = None
             if expires_in_days:
-                expires_at = datetime.utcnow() + timedelta(days=expires_in_days)
+                expires_at = datetime.now(timezone.utc) + timedelta(days=expires_in_days)
 
             api_key = APIKey(
                 key_id=key_id,
@@ -249,7 +249,7 @@ class APIKeyManager:
                 return None
 
             # Update usage tracking
-            api_key.last_used_at = datetime.utcnow()
+            api_key.last_used_at = datetime.now(timezone.utc)
             api_key.usage_count += 1
             await session.commit()
 
@@ -339,7 +339,7 @@ class RequestSignatureValidator:
             # Check timestamp (prevent replay attacks)
             try:
                 request_time = datetime.fromisoformat(timestamp)
-                if (datetime.utcnow() - request_time).total_seconds() > max_age_seconds:
+                if (datetime.now(timezone.utc) - request_time).total_seconds() > max_age_seconds:
                     logger.warning("Request signature expired")
                     return False
             except ValueError:

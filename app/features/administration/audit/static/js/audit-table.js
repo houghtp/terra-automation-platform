@@ -1,29 +1,137 @@
-let auditStats = {};
-
-document.body.addEventListener("htmx:afterSwap", (e) => {
-  if (e.target.id === "audit-area") {
-    setTimeout(() => {
-      window.initializeAuditLogsTable?.();
-    }, 0);
+window.initializeAuditLogsTable = function () {
+  // Make sure appTables exists
+  if (!window.appTables) {
+    window.appTables = {};
   }
-});
 
-// Handle modal close and table refresh
-document.body.addEventListener("htmx:afterRequest", (e) => {
-  if (e.target.closest('.modal')) {
-    // Close the modal with proper focus restoration
-    if (window.closeModal) {
-      window.closeModal();
-    }
-
-    // Refresh the table after a short delay
-    setTimeout(() => {
-      if (window.refreshTable) {
-        window.refreshTable('audit-table');
+  const table = new Tabulator("#audit-table", {
+    ...advancedTableConfig,
+    ajaxURL: "/features/administration/audit/api/list",
+    columns: [
+      {
+        title: "Timestamp",
+        field: "timestamp",
+        width: 180,
+        formatter: formatTimestamp,
+        headerFilter: "input"
+      },
+      {
+        title: "Action",
+        field: "action",
+        width: 150,
+        headerFilter: "input",
+        formatter: formatActionBadge
+      },
+      {
+        title: "Category",
+        field: "category",
+        width: 120,
+        headerFilter: "input",
+        formatter: formatCategoryBadge
+      },
+      {
+        title: "Severity",
+        field: "severity",
+        width: 100,
+        headerFilter: "input",
+        formatter: formatSeverityBadge
+      },
+      {
+        title: "User",
+        field: "user_email",
+        width: 180,
+        headerFilter: "input",
+        formatter: formatUserEmail
+      },
+      {
+        title: "User Role",
+        field: "user_role",
+        width: 100,
+        headerFilter: "input",
+      },
+      {
+        title: "Resource Type",
+        field: "resource_type",
+        width: 120,
+        headerFilter: "input"
+      },
+      {
+        title: "Resource ID",
+        field: "resource_id",
+        width: 120,
+        headerFilter: "input"
+      },
+      {
+        title: "Request ID",
+        field: "request_id",
+        width: 140,
+        headerFilter: "input"
+      },
+      {
+        title: "Endpoint",
+        field: "endpoint",
+        width: 180,
+        headerFilter: "input",
+        formatter: function (cell) {
+          const endpoint = cell.getValue() || '';
+          if (endpoint.length > 25) {
+            return endpoint.substring(0, 25) + '...';
+          }
+          return endpoint;
+        }
+      },
+      {
+        title: "Method",
+        field: "method",
+        width: 80,
+        headerFilter: "input",
+      },
+      {
+        title: "Description",
+        field: "description",
+        minWidth: 150,
+        headerFilter: "input",
+        formatter: formatDescription
+      },
+      {
+        title: "IP Address",
+        field: "ip_address",
+        width: 130,
+        headerFilter: "input"
+      },
+      {
+        title: "Actions",
+        field: "actions",
+        width: 100,
+        headerSort: false,
+        formatter: (cell) => formatViewAction(cell, 'viewAuditLog')
       }
-    }, 100);
-  }
-});
+    ]
+  });
+
+  // Store table reference globally
+  window.auditTable = table;
+  window.appTables["audit-table"] = table;
+
+  return table;
+};
+
+// Export table function
+window.exportTable = function (format) {
+  return exportTabulatorTable('audit-table', format, 'audit_logs');
+};
+
+window.viewAuditLog = function (logId) {
+  // Use HTMX to load audit log details
+  htmx.ajax('GET', `/features/administration/audit/partials/log_details?log_id=${logId}`, {
+    target: '#modal-body',
+    swap: 'innerHTML'
+  }).then(() => {
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('modal'));
+    modal.show();
+  });
+};
 
 // Handle security alerts and populate filters (stats-card web components handle the rest)
 async function loadSecurityAlertAndFilters() {
@@ -46,166 +154,10 @@ async function loadSecurityAlertAndFilters() {
       alert.classList.add('d-none');
     }
 
-    // Note: Category filter is now static in the template - no dynamic population needed
-
   } catch (error) {
     console.error('Failed to load security alert and filters:', error);
   }
 }
-
-// Initialize Audit Logs table
-function initializeAuditLogsTable() {
-  if (typeof Tabulator === 'undefined') {
-    console.error('Tabulator not loaded');
-    return;
-  }
-
-  const table = new Tabulator("#audit-table", {
-    ...advancedTableConfig,
-    // Audit-specific overrides
-    ajaxURL: "/features/administration/audit/api/list",
-    pagination: "remote",
-    paginationMode: "remote",
-    paginationSize: 25,
-    paginationSizeSelector: [10, 25, 50, 100],
-    responsiveLayout: "hide",
-    selectable: true,
-    selectableRangeMode: "click",
-    selectableRows: true,  // Enable row selection
-    rowHeader: false,  // Disable the base config row header to avoid conflicts
-    headerFilterPlaceholder: "Filter...",
-    columns: [
-      {
-        title: "<input type='checkbox' id='select-all'>",
-        field: "select",
-        formatter: "rowSelection",
-        titleFormatter: "rowSelection",
-        width: 40,
-        headerSort: false,
-        cellClick: function (e, cell) {
-          cell.getRow().toggleSelect();
-        }
-      },
-      {
-        title: "Timestamp",
-        field: "timestamp",
-        width: 180,
-        formatter: formatTimestamp,
-        headerFilter: "input"
-      },
-      {
-        title: "Action",
-        field: "action",
-        width: 150,
-        headerFilter: "input",
-        formatter: formatActionBadge
-      },
-      {
-        title: "Category",
-        field: "category",
-        width: 120,
-        headerFilter: "select",
-        headerFilterParams: {
-          values: ["", "AUTH", "DATA", "ADMIN", "API", "SYSTEM"]
-        },
-        formatter: formatCategoryBadge
-      },
-      {
-        title: "Severity",
-        field: "severity",
-        width: 100,
-        headerFilter: "select",
-        headerFilterParams: {
-          values: ["", "INFO", "WARNING", "ERROR", "CRITICAL"]
-        },
-        formatter: formatSeverityBadge
-      },
-      {
-        title: "User",
-        field: "user_email",
-        width: 200,
-        headerFilter: "input",
-        formatter: formatUserEmail
-      },
-      {
-        title: "Description",
-        field: "description",
-        minWidth: 200,
-        headerFilter: "input",
-        formatter: formatDescription
-      },
-      {
-        title: "IP Address",
-        field: "ip_address",
-        width: 130,
-        headerFilter: "input"
-      },
-      {
-        title: "Actions",
-        field: "actions",
-        width: 100,
-        headerSort: false,
-        formatter: (cell) => formatViewAction(cell, 'viewAuditLog')
-      }
-    ],
-    ajaxResponse: function (url, params, response) {
-      return {
-        data: response.items || [],
-        last_page: Math.ceil((response.total || 0) / (params.size || 25))
-      };
-    }
-  });
-
-  // Store table reference globally
-  window.auditTable = table;
-
-  // Handle select all checkbox
-  const selectAllCheckbox = document.getElementById('select-all');
-  if (selectAllCheckbox) {
-    selectAllCheckbox.addEventListener('change', function (e) {
-      if (e.target.checked) {
-        table.selectRow("all");
-      } else {
-        table.deselectRow("all");
-      }
-    });
-  }
-
-  return table;
-}
-
-// Note: Advanced filtering now handled by HTMX form submission
-
-// View audit log details
-function viewAuditLog(logId) {
-  // Use HTMX to load audit log details
-  htmx.ajax('GET', `/features/administration/audit/partials/log_details?log_id=${logId}`, {
-    target: '#modal-body',
-    swap: 'innerHTML'
-  }).then(() => {
-    // Show the modal
-    const modal = new bootstrap.Modal(document.getElementById('modal'));
-    modal.show();
-  });
-}
-
-// Refresh table function using centralized utility
-window.refreshTable = function (tableId) {
-  refreshTable(tableId);
-};
-
-// Refresh audit table function
-window.refreshAuditTable = function () {
-  refreshTable('audit-table');
-  showToast('Audit logs refreshed', 'success');
-  // Refresh security alert and filters (web components handle their own refresh)
-  loadSecurityAlertAndFilters();
-};
-
-// Export table function using centralized utility
-window.exportTable = function (format) {
-  return exportTabulatorTable('audit-table', format, 'audit_logs');
-};
 
 // Apply table filters
 function applyTableFilters() {
@@ -293,19 +245,20 @@ function filterBySeverity(severityList) {
   }
 }
 
-// Toast notification function
-function showToast(message, type = 'info') {
-  // Simple console log for now - can be enhanced with actual toast library
-  console.log(`${type.toUpperCase()}: ${message}`);
-};
+document.addEventListener("DOMContentLoaded", () => {
+  const tableElement = document.getElementById("audit-table");
 
-// Initialize everything on page load
-document.addEventListener('DOMContentLoaded', function () {
-  // Load dashboard data (stats cards will load automatically via data-url)
-  loadSecurityAlertAndFilters();
+  if (tableElement && !window.auditTableInitialized) {
+    window.auditTableInitialized = true;
 
-  // Initialize table
-  setTimeout(() => {
-    window.initializeAuditLogsTable();
-  }, 100);
+    // Load dashboard data (stats cards will load automatically via data-url)
+    loadSecurityAlertAndFilters();
+
+    initializeAuditLogsTable();
+
+    // Initialize quick search after table is ready
+    setTimeout(() => {
+      initializeQuickSearch('table-quick-search', 'clear-search-btn', 'audit-table');
+    }, 100);
+  }
 });

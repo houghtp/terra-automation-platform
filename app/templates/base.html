@@ -83,17 +83,26 @@
 
                         <!-- Connectors collapsible section -->
                         <li class="nav-item">
-                            <a class="nav-link {% if request.path.startswith('/connectors') %}{% else %}collapsed{% endif %}"
+                            <a class="nav-link {% if request.path.startswith('/features/connectors') %}{% else %}collapsed{% endif %}"
                                 href="#connectors-menu"
                                 data-bs-toggle="collapse"
                                 role="button"
-                                aria-expanded="{% if request.path.startswith('/connectors') %}true{% else %}false{% endif %}"
+                                aria-expanded="{% if request.path.startswith('/features/connectors') %}true{% else %}false{% endif %}"
                                 aria-controls="connectors-menu">
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
                                 <i class="ti ti-plug icon"></i>
                                 </span>
                                 <span class="nav-link-title">Connectors</span>
                             </a>
+                            <div class="collapse {% if request.path.startswith('/features/connectors') %}show{% endif %}" id="connectors-menu">
+                                <ul class="nav nav-sm flex-column ms-3">
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/features/connectors' %} active{% endif %}" href="/features/connectors">
+                                        <i class="ti ti-settings icon me-2"></i> Manage Connectors
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
                         </li>
 
                         <!-- Automations collapsible section -->
@@ -117,7 +126,7 @@
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link{% if request.path == '/automations/content-broadcaster' %} active{% endif %}" href="/automations/content-broadcaster">
+                                        <a class="nav-link{% if request.path == '/features/content-broadcaster' %} active{% endif %}" href="/features/content-broadcaster">
                                         <i class="ti ti-broadcast icon me-2"></i> Content Broadcaster
                                         </a>
                                     </li>

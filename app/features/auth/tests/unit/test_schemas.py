@@ -345,7 +345,7 @@ class TestUserResponseSchema:
     def test_valid_user_response_complete(self):
         """Test valid user response with all fields."""
         user_id = str(uuid4())
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
 
         data = {
             "id": user_id,
@@ -572,8 +572,8 @@ class TestSchemaIntegration:
             "tenant_id": "tenant-123",
             "role": register_request.role,
             "is_active": True,
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
         }
 
         user_response = UserResponse(**user_response_data)
@@ -610,8 +610,8 @@ class TestSchemaIntegration:
             "tenant_id": "tenant-123",
             "role": "user",
             "is_active": True,
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
         }
 
         user_response = UserResponse(**user_data)

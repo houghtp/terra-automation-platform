@@ -1,0 +1,158 @@
+"""Application logs routes for administration interface."""
+
+from fastapi import APIRouter, Depends, Request, HTTPException, Query
+from fastapi.responses import HTMLResponse, JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List, Optional
+from datetime import datetime, timedelta
+import structlog
+from app.features.core.database import get_db
+from app.features.core.templates import templates
+from app.features.core.rate_limiter import rate_limit_api
+from app.deps.tenant import tenant_dependency
+from app.features.auth.dependencies import get_current_user
+from app.features.auth.models import User
+from .services import LogService
+from .models import ApplicationLog
+
+router = APIRouter(tags=["logs"])
+logger = structlog.get_logger()
+
+
+async def get_log_service(db: AsyncSession = Depends(get_db)) -> LogService:
+    """Dependency to get log service."""
+    return LogService(db)
+
+
+@router.get("/", response_class=HTMLResponse, name="logs_dashboard")
+async def logs_dashboard(
+    request: Request,
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    log_service: LogService = Depends(get_log_service)
+):
+    """Render the application logs dashboard."""
+    try:
+        # Get log statistics
+        stats = await log_service.get_logs_stats(tenant_id)
+
+        # Get recent logs for display
+        recent_logs = await log_service.get_application_logs(
+            tenant_id=tenant_id,
+            limit=20,
+            sort_by="timestamp",
+            sort_order="desc"
+        )
+
+        context = {
+            "request": request,
+            "user": current_user,
+            "page_title": "Application Logs",
+            "page_description": "View and filter application logs by tenant",
+            "stats": stats,
+            "recent_logs": recent_logs,
+        }
+
+        return templates.TemplateResponse(
+            "administration/logs/logs_dashboard.html",
+            context
+        )
+
+    except Exception as e:
+        logger.exception("Failed to render logs dashboard")
+        raise HTTPException(status_code=500, detail="Failed to load logs dashboard")
+
+
+@router.get("/api/stats", response_class=JSONResponse, name="logs_stats_api")
+async def get_logs_stats(
+    request: Request,
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    log_service: LogService = Depends(get_log_service),
+    _rate_limit: dict = Depends(rate_limit_api)
+):
+    """Get log statistics for dashboard."""
+    try:
+        return await log_service.get_logs_stats(tenant_id)
+    except Exception as e:
+        logger.exception("Failed to get logs stats")
+        raise HTTPException(status_code=500, detail="Failed to retrieve log statistics")
+
+
+@router.get("/api/list", response_class=JSONResponse, name="logs_list_api")
+async def get_logs_list(
+    request: Request,
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    page: int = Query(1, ge=1),
+    size: int = Query(25, ge=1, le=200),
+    level: Optional[str] = Query(None, description="Filter by log level"),
+    logger_name: Optional[str] = Query(None, description="Filter by logger name"),
+    user_id: Optional[str] = Query(None, description="Filter by user ID"),
+    sort: Optional[str] = Query("timestamp"),
+    order: Optional[str] = Query("desc"),
+    log_service: LogService = Depends(get_log_service),
+    _rate_limit: dict = Depends(rate_limit_api)
+):
+    """API endpoint for Tabulator table data."""
+    try:
+        offset = (page - 1) * size
+
+        # Get logs
+        logs = await log_service.get_application_logs(
+            tenant_id=tenant_id,
+            limit=size,
+            offset=offset,
+            level_filter=level,
+            logger_filter=logger_name,
+            user_filter=user_id,
+            sort_by=sort or "timestamp",
+            sort_order=order or "desc"
+        )
+
+        # Get total count
+        total = await log_service.get_logs_count(
+            tenant_id=tenant_id,
+            level_filter=level,
+            logger_filter=logger_name,
+            user_filter=user_id
+        )
+
+        # Convert to dict format
+        logs_data = [log.to_dict() for log in logs]
+
+        return JSONResponse(content={
+            "data": logs_data,
+            "total": total,
+            "page": page,
+            "size": size,
+            "last_page": (total + size - 1) // size if total > 0 else 1
+        })
+
+    except Exception as e:
+        logger.exception("Failed to get logs list")
+        raise HTTPException(status_code=500, detail="Failed to retrieve logs")
+
+
+@router.get("/api/{log_id}", response_class=JSONResponse, name="logs_detail_api")
+async def get_log_details(
+    log_id: int,
+    request: Request,
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    log_service: LogService = Depends(get_log_service)
+):
+    """Get detailed information for a specific log entry."""
+    try:
+        log_entry = await log_service.get_log_by_id(log_id, tenant_id)
+
+        if not log_entry:
+            raise HTTPException(status_code=404, detail="Log entry not found")
+
+        return log_entry.to_dict()
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to get log details for {log_id}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve log details")

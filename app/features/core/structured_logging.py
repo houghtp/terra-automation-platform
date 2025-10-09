@@ -8,7 +8,7 @@ import sys
 import os
 import traceback
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 from contextlib import contextmanager
 
@@ -129,7 +129,7 @@ def configure_logging(
     level: str = "INFO",
     format_type: str = "console",  # "console" or "json"
     enable_json: bool = False,
-    enable_request_id: bool = True,
+    enable_request_id: bool = False,  # Cleaner logs by default
     enable_database_logging: bool = True
 ):
     """
@@ -153,6 +153,10 @@ def configure_logging(
         # Auto-detect: use JSON in production, console in development
         environment = os.getenv("ENVIRONMENT", "development").lower()
         enable_json = environment == "production"
+
+    if enable_request_id is None:
+        # Disable request IDs in development for cleaner logs
+        enable_request_id = os.getenv("ENABLE_REQUEST_ID", "false").lower() == "true"
 
     # Override format_type based on enable_json if format is auto
     if format_type == "auto":
@@ -262,9 +266,14 @@ def _configure_application_loggers(level: str):
     # Third-party loggers (usually more verbose)
     third_party_loggers = {
         "uvicorn": "INFO",
-        "uvicorn.access": "INFO",
-        "sqlalchemy.engine": "WARNING",
-        "sqlalchemy.pool": "WARNING",
+        "uvicorn.access": "WARNING",  # Quieter access logs
+        "sqlalchemy": "ERROR",       # Only show SQL errors
+        "sqlalchemy.engine": "ERROR",
+        "sqlalchemy.engine.Engine": "ERROR",
+        "sqlalchemy.pool": "ERROR",
+        "sqlalchemy.orm": "ERROR",
+        "sqlalchemy.dialects": "ERROR",
+        "alembic": "WARNING",        # Migration info still useful
         "httpx": "WARNING",
         "azure": "WARNING",
         "boto3": "WARNING",
@@ -410,7 +419,7 @@ class AuditLogger:
             "event_type": "user_action",
             "action": action,
             "user_id": user_id,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             **kwargs
         }
 
@@ -430,7 +439,7 @@ class AuditLogger:
             "event_type": "system_change",
             "change_type": change_type,
             "component": component,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             **kwargs
         }
 
@@ -450,7 +459,7 @@ class AuditLogger:
             "event_type": "admin_action",
             "action": action,
             "admin_user_id": admin_user_id,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             **kwargs
         }
 
@@ -482,7 +491,7 @@ def log_performance(operation_name: str, logger: Optional[structlog.BoundLogger]
     if logger is None:
         logger = structlog.get_logger("performance")
 
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
 
     try:
         yield
@@ -498,7 +507,7 @@ def log_performance(operation_name: str, logger: Optional[structlog.BoundLogger]
         )
         raise
     finally:
-        end_time = datetime.utcnow()
+        end_time = datetime.now(timezone.utc)
         duration = (end_time - start_time).total_seconds()
 
         logger.info(

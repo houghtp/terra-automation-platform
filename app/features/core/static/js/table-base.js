@@ -367,7 +367,7 @@ const tableConfig = {
     tooltips: true,
     ajaxConfig: "GET",
     ajaxContentType: "json",
-    selectable: 1,
+    selectable: true,
 
     // Simple CSS-based loader
     dataLoader: true,
@@ -376,7 +376,7 @@ const tableConfig = {
     dataLoaderErrorTimeout: 3000,
 
     // No data placeholder
-    placeholder: function(el) {
+    placeholder: function (el) {
         return `
             <div class="no-data-placeholder" style="padding: 40px; text-align: center; color: #6c757d;">
                 <i class="ti ti-database-off" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
@@ -387,7 +387,7 @@ const tableConfig = {
     },
 
     // Row selection features
-    selectableRows: false,
+    selectableRows: true,
     rowHeader: {
         formatter: "rowSelection",
         titleFormatter: "rowSelection",

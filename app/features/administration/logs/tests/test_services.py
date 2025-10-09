@@ -158,8 +158,8 @@ async def test_cleanup_old_logs(test_db_session: AsyncSession):
     service = LogService(test_db_session)
 
     # Create logs with different timestamps
-    old_time = datetime.utcnow() - timedelta(days=40)
-    recent_time = datetime.utcnow() - timedelta(days=10)
+    old_time = datetime.now(timezone.utc) - timedelta(days=40)
+    recent_time = datetime.now(timezone.utc) - timedelta(days=10)
 
     logs = [
         ApplicationLog(tenant_id="test", level="INFO", logger_name="test", message="Old log", timestamp=old_time),

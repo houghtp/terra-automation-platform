@@ -2,7 +2,7 @@
 Authentication routes providing JWT-based authentication endpoints.
 """
 import os
-import logging
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +12,7 @@ from app.features.core.rate_limiter import rate_limit_login, rate_limit_register
 from app.features.core.security import validate_password_complexity
 from app.deps.tenant import tenant_dependency
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Simple tenant resolution for login (avoids circular dependency)
 async def simple_tenant_dependency(request: Request) -> str:
@@ -217,6 +217,49 @@ async def logout(
 
 # HTML/HTMX Endpoints (Web Interface)
 
+@router.get("/", response_class=HTMLResponse)
+async def user_management_page(
+    request: Request,
+    current_user: User = Depends(get_current_active_user)
+):
+    """Main user management page."""
+    return templates.TemplateResponse(
+        "auth/user_management.html",
+        {
+            "request": request,
+            "user": current_user,
+            "title": "User Management",
+            "description": "Manage user accounts and permissions"
+        }
+    )
+
+
+@router.get("/api/list")
+async def list_users_api(
+    request: Request,
+    tenant_id: str = Depends(tenant_dependency),
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """API endpoint to list users for table."""
+    try:
+        users = await auth_service.list_users(session, tenant_id)
+
+        # Convert to table format
+        user_data = []
+        for user in users:
+            user_dict = user.to_dict()
+            user_dict['created_at_formatted'] = user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else ''
+            user_dict['last_login_formatted'] = user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else 'Never'
+            user_data.append(user_dict)
+
+        return JSONResponse(content=user_data)
+
+    except Exception as e:
+        logger.exception("Failed to list users")
+        raise HTTPException(status_code=500, detail="Failed to load users")
+
+
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(
     request: Request,
@@ -305,7 +348,7 @@ async def login_form_submit(
             }
         )
     except Exception as e:
-        print(f"🔍 LOGIN ERROR: {str(e)}")
+        print(f"LOGIN ERROR: {str(e)}")
         return templates.TemplateResponse(
             "auth/partials/login_form.html",
             {

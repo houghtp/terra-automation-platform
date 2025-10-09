@@ -1,0 +1,392 @@
+<div class="modal-header">
+  <h5 class="modal-title">{{ 'Edit' if connector else 'Add' }} Connector</h5>
+</div>
+
+<form
+  id="connector-form"
+  {% if not connector %}
+  hx-post="/features/connectors/api"
+  {% else %}
+  hx-put="/features/connectors/api/{{ connector.id }}"
+  {% endif %}
+  hx-disabled-elt="this"
+  hx-indicator="#submit-spinner"
+  autocomplete="off"
+>
+  <div class="modal-body">
+    <div class="row g-3">
+
+      {% if not connector %}
+      <!-- Available Connector Picker (only for new connectors) -->
+      <div class="col-12">
+        <label class="form-label">Select Connector Type *</label>
+        <div id="connector-picker" class="border rounded" style="max-height: 300px; overflow-y: auto; padding: 1rem; background-color: #f8fafc;">
+          <!-- Available connectors will be loaded here -->
+          {% for available in available_connectors %}
+          <div class="connector-option mb-2"
+               data-connector-id="{{ available.id }}"
+               data-connector-name="{{ available.display_name }}"
+               data-connector-schema='{{ available.schema_definition | tojson | e }}'
+               style="cursor: pointer; transition: all 0.2s; border: 2px solid transparent; border-radius: 0.5rem; padding: 0.75rem; background-color: white;">
+            <div class="d-flex align-items-center">
+              <!-- Checkbox -->
+              <input type="checkbox" class="form-check-input me-3" style="transform: scale(1.2);" readonly>
+
+              <!-- Icon -->
+              <div class="me-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                {% if available.icon_url %}
+                  <img src="{{ available.icon_url }}" alt="{{ available.display_name }}" style="width: 40px; height: 40px; object-fit: contain;">
+                {% elif available.icon_class %}
+                  <i class="{{ available.icon_class }}" style="font-size: 32px; {% if available.brand_color %}color: {{ available.brand_color }};{% endif %}"></i>
+                {% else %}
+                  <i class="ti ti-plug" style="font-size: 32px; color: #6c757d;"></i>
+                {% endif %}
+              </div>
+
+              <!-- Content -->
+              <div class="flex-grow-1">
+                <h6 class="mb-1 fw-semibold">{{ available.display_name }}</h6>
+                <p class="mb-0 text-muted small">{{ available.description or 'Connect to ' + available.display_name }}</p>
+                <span class="badge bg-light text-dark mt-1">{{ available.category.replace('_', ' ').title() }}</span>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="available_connector_id" id="selected-connector-id" required>
+        <div class="invalid-feedback" id="connector-picker-error" style="display: none;">
+          Please select a connector type.
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Instance Name -->
+      <div class="col-md-6">
+        <label class="form-label">Instance Name *</label>
+        <input
+          name="instance_name"
+          value="{{ connector.instance_name if connector else '' }}"
+          required
+          class="form-control {{ 'is-invalid' if errors and 'instance_name' in errors else '' }}"
+          placeholder="My WordPress Site"
+          hx-post="/features/connectors/validate/name"
+          hx-trigger="blur changed delay:500ms"
+          hx-target="#instance-name-validation"
+          hx-include="[name='instance_name'], [name='connector_id']"
+        />
+        {% if connector %}
+        <input type="hidden" name="connector_id" value="{{ connector.id }}" />
+        {% endif %}
+        <div id="instance-name-validation">
+          {% if errors and 'instance_name' in errors %}
+            <span class="invalid-feedback d-block">{{ errors.instance_name[0] }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="col-md-6">
+        <label class="form-label">Description</label>
+        <input
+          name="description"
+          value="{{ connector.description if connector else '' }}"
+          class="form-control"
+          placeholder="Brief description (optional)"
+        />
+      </div>
+
+      <!-- Dynamic Configuration Fields -->
+      <div class="col-12" id="dynamic-config">
+        {% if connector %}
+        <!-- Edit mode: show current configuration -->
+        <div class="row g-3">
+          {% if connector.configuration %}
+            {% for key, value in connector.configuration.items() %}
+            <div class="col-md-6">
+              <label class="form-label">{{ key | title }}</label>
+              <input
+                name="config_{{ key }}"
+                value="{{ value }}"
+                class="form-control"
+                placeholder="Enter {{ key }}"
+              />
+            </div>
+            {% endfor %}
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Tags -->
+      <div class="col-12">
+        <label class="form-label">Tags</label>
+        <input
+          name="tags"
+          value="{{ connector.tags | join(', ') if connector and connector.tags else '' }}"
+          class="form-control"
+          placeholder="Enter tags separated by commas"
+        />
+      </div>
+
+      <!-- Enable toggle -->
+      <div class="col-md-6">
+        <label class="form-check form-switch">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            name="is_enabled"
+            value="true"
+            {{ 'checked' if (connector.is_enabled if connector else True) }}
+          />
+          <span class="form-check-label">Connector Enabled</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <div class="w-100">
+      <!-- Test Connection Results Area -->
+      <div id="test-connection-results" class="mb-3" style="display: none;">
+        <div class="alert" id="test-result-alert"></div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <button type="button" class="btn w-100" data-bs-dismiss="modal">
+            Cancel
+          </button>
+        </div>
+        {% if connector %}
+        <div class="col">
+          <button type="button" class="btn btn-outline-primary w-100" onclick="testConnection({{ connector.id }})">
+            <span id="test-spinner" class="spinner-border spinner-border-sm me-2" style="display: none;"></span>
+            Test Connection
+          </button>
+        </div>
+        {% endif %}
+        <div class="col">
+          <button type="submit" class="btn btn-primary w-100">
+            <span id="submit-spinner" class="spinner-border spinner-border-sm me-2" style="display: none;"></span>
+            {{ 'Update' if connector else 'Add' }} Connector
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Connector picker functionality
+  const connectorOptions = document.querySelectorAll('.connector-option');
+  const selectedConnectorInput = document.getElementById('selected-connector-id');
+  const dynamicConfig = document.getElementById('dynamic-config');
+
+  connectorOptions.forEach(option => {
+    option.addEventListener('click', function() {
+      // Remove selection from other options
+      connectorOptions.forEach(opt => {
+        opt.style.border = '2px solid transparent';
+        opt.style.backgroundColor = 'white';
+        const checkbox = opt.querySelector('input[type="checkbox"]');
+        if (checkbox) checkbox.checked = false;
+      });
+
+      // Select this option
+      this.style.border = '2px solid #206bc4';
+      this.style.backgroundColor = '#e3f2fd';
+      const checkbox = this.querySelector('input[type="checkbox"]');
+      if (checkbox) checkbox.checked = true;
+
+      // Set the selected connector ID
+      const connectorId = this.dataset.connectorId;
+      selectedConnectorInput.value = connectorId;
+
+      // Generate dynamic configuration fields
+      try {
+        const schema = JSON.parse(this.dataset.connectorSchema);
+        generateConfigFields(schema);
+      } catch (e) {
+        console.error('Failed to parse connector schema:', e);
+      }
+
+      // Hide error message
+      document.getElementById('connector-picker-error').style.display = 'none';
+    });
+  });
+
+  function generateConfigFields(schema) {
+    if (!schema || !schema.properties) {
+      dynamicConfig.innerHTML = '';
+      return;
+    }
+
+    let html = '<div class="row g-3">';
+
+    Object.entries(schema.properties).forEach(([key, fieldSchema]) => {
+      const isRequired = schema.required && schema.required.includes(key);
+      const fieldType = fieldSchema.type || 'string';
+      const isSecret = fieldSchema.secret || false;
+
+      html += `
+        <div class="col-md-6">
+          <label class="form-label">
+            ${fieldSchema.title || key.charAt(0).toUpperCase() + key.slice(1)}
+            ${isRequired ? '*' : ''}
+          </label>
+      `;
+
+      if (fieldType === 'boolean') {
+        html += `
+          <label class="form-check form-switch">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              name="config_${key}"
+              value="true"
+              ${fieldSchema.default ? 'checked' : ''}
+            />
+            <span class="form-check-label">${fieldSchema.description || ''}</span>
+          </label>
+        `;
+      } else if (fieldSchema.enum) {
+        html += `
+          <select name="config_${key}" class="form-select" ${isRequired ? 'required' : ''}>
+            <option value="">Select ${fieldSchema.title || key}</option>
+        `;
+        fieldSchema.enum.forEach(option => {
+          html += `<option value="${option}" ${fieldSchema.default === option ? 'selected' : ''}>${option}</option>`;
+        });
+        html += '</select>';
+      } else {
+        const inputType = isSecret ? 'password' : (fieldType === 'integer' || fieldType === 'number' ? 'number' : 'text');
+        html += `
+          <input
+            name="config_${key}"
+            type="${inputType}"
+            class="form-control"
+            placeholder="${fieldSchema.description || 'Enter ' + key}"
+            ${isRequired ? 'required' : ''}
+            ${fieldSchema.default ? 'value="' + fieldSchema.default + '"' : ''}
+          />
+        `;
+      }
+
+      if (fieldSchema.description && fieldType !== 'boolean') {
+        html += `<small class="form-hint">${fieldSchema.description}</small>`;
+      }
+
+      html += '</div>';
+    });
+
+    html += '</div>';
+    dynamicConfig.innerHTML = html;
+  }
+
+  // Form submission handling
+  document.getElementById('connector-form').addEventListener('submit', function(e) {
+    // Validate connector selection for new connectors
+    if (!document.getElementById('selected-connector-id').value &&
+        document.getElementById('selected-connector-id').hasAttribute('required')) {
+      e.preventDefault();
+      document.getElementById('connector-picker-error').style.display = 'block';
+      return false;
+    }
+
+    // Collect configuration data
+    const formData = new FormData(this);
+    const configData = {};
+
+    // Extract configuration fields
+    for (let [key, value] of formData.entries()) {
+      if (key.startsWith('config_')) {
+        const configKey = key.replace('config_', '');
+        configData[configKey] = value;
+      }
+    }
+
+    // Add configuration as JSON field
+    if (Object.keys(configData).length > 0) {
+      formData.set('configuration', JSON.stringify(configData));
+    }
+
+    // Convert tags to array
+    const tagsValue = formData.get('tags');
+    if (tagsValue) {
+      const tagsArray = tagsValue.split(',').map(tag => tag.trim()).filter(tag => tag);
+      formData.set('tags', JSON.stringify(tagsArray));
+    }
+  });
+});
+
+// Test connection function
+async function testConnection(connectorId) {
+  const testButton = document.querySelector('button[onclick*="testConnection"]');
+  const testSpinner = document.getElementById('test-spinner');
+  const resultsArea = document.getElementById('test-connection-results');
+  const resultAlert = document.getElementById('test-result-alert');
+
+  // Show spinner and disable button
+  testSpinner.style.display = 'inline-block';
+  testButton.disabled = true;
+
+  try {
+    const response = await fetch(`/features/connectors/${connectorId}/test-connection`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    const result = await response.json();
+
+    // Show results
+    resultsArea.style.display = 'block';
+
+    if (result.success) {
+      resultAlert.className = 'alert alert-success';
+      resultAlert.innerHTML = `
+        <i class="ti ti-check-circle me-2"></i>
+        <strong>Connection successful!</strong>
+        ${result.metadata ? `<br><small class="text-muted">Response time: ${result.metadata.response_time || 'N/A'}</small>` : ''}
+      `;
+
+      // Show success toast
+      if (typeof showToast === 'function') {
+        showToast('Connection test successful', 'success');
+      }
+    } else {
+      resultAlert.className = 'alert alert-danger';
+      resultAlert.innerHTML = `
+        <i class="ti ti-x-circle me-2"></i>
+        <strong>Connection failed:</strong> ${result.error || 'Unknown error'}
+        ${result.error_code ? `<br><small class="text-muted">Error code: ${result.error_code}</small>` : ''}
+      `;
+
+      // Show error toast
+      if (typeof showToast === 'function') {
+        showToast('Connection test failed', 'danger');
+      }
+    }
+
+  } catch (error) {
+    console.error('Test connection error:', error);
+
+    resultsArea.style.display = 'block';
+    resultAlert.className = 'alert alert-danger';
+    resultAlert.innerHTML = `
+      <i class="ti ti-x-circle me-2"></i>
+      <strong>Test failed:</strong> ${error.message || 'Network error'}
+    `;
+
+    if (typeof showToast === 'function') {
+      showToast('Connection test error', 'danger');
+    }
+  } finally {
+    // Hide spinner and enable button
+    testSpinner.style.display = 'none';
+    testButton.disabled = false;
+  }
+}
+</script>

@@ -23,6 +23,10 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Pass global admin flag to JavaScript -->
+<script>
+  window.isGlobalAdmin = {{ 'true' if is_global_admin else 'false' }};
+</script>
 <!-- User table configuration (Tabulator operations) -->
 <script src="/features/administration/users/static/js/user-table.js"></script>
 {% endblock %}

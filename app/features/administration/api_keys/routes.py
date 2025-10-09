@@ -12,11 +12,12 @@ from app.features.core.database import get_db
 from app.features.core.api_security import APIKeyManager, APIKeyScope, APIKey
 from app.features.auth.dependencies import get_current_user
 from app.features.auth.models import User
-import logging
+from app.deps.tenant import tenant_dependency
+import structlog
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
-router = APIRouter(prefix="/administration/api-keys", tags=["admin-api-keys"])
+router = APIRouter(tags=["admin-api-keys"])
 
 
 # Request/Response Models
@@ -82,11 +83,13 @@ class APIKeyStatsResponse(BaseModel):
 @router.get("/stats", response_model=APIKeyStatsResponse)
 async def get_api_key_stats(
     current_user: User = Depends(get_current_user),
+    tenant: str = Depends(tenant_dependency),
     session: AsyncSession = Depends(get_db)
 ):
     """Get API key usage statistics (admin only)."""
-    # Check admin permissions
-    if current_user.role != "admin":
+    # Check admin permissions and tenant isolation
+    is_global_admin = current_user.role == "global_admin" and current_user.tenant_id == "global"
+    if not is_global_admin and current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
@@ -119,7 +122,7 @@ async def get_api_key_stats(
         # Get expired keys
         from datetime import datetime
         expired_stmt = select(func.count(APIKey.id)).where(
-            APIKey.expires_at < datetime.utcnow()
+            APIKey.expires_at < datetime.now(timezone.utc)
         )
         expired_result = await session.execute(expired_stmt)
         expired_keys = expired_result.scalar() or 0

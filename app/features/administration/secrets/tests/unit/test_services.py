@@ -70,7 +70,7 @@ class TestSecretsService:
         """Test creating secret with expiration settings."""
         service = SecretsService(test_db_session)
         tenant_id = "test-tenant"
-        expires_at = datetime.utcnow() + timedelta(days=30)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=30)
 
         secret_data = SecretCreate(
             name="Expiring Secret",
@@ -419,7 +419,7 @@ class TestSecretsService:
         service = SecretsService(test_db_session)
         tenant_id = "test-tenant"
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         # Create secrets with various expiration dates
         secrets_data = [
@@ -477,7 +477,7 @@ class TestSecretsService:
         expiring_data = SecretCreate(
             name="Expiring Secret",
             value="expiring_value",
-            expires_at=datetime.utcnow() + timedelta(days=15)
+            expires_at=datetime.now(timezone.utc) + timedelta(days=15)
         )
         await service.create_secret(tenant_id, expiring_data)
 

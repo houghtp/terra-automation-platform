@@ -7,7 +7,7 @@
   {% if not config %}
   hx-post="/features/administration/smtp/"
   {% else %}
-  hx-post="/features/administration/smtp/{{ config.id }}"
+  hx-put="/features/administration/smtp/{{ config.id }}"
   {% endif %}
   hx-disabled-elt="this"
   hx-indicator="#submit-spinner"
@@ -27,14 +27,42 @@
           hx-post="/features/administration/smtp/validate/name"
           hx-trigger="blur changed delay:500ms"
           hx-target="#name-validation"
-          hx-include="[name='name']"
+          hx-include="[name='name'], [name='config_id']"
         />
+        {% if config %}
+        <input type="hidden" name="config_id" value="{{ config.id }}" />
+        {% endif %}
         <div id="name-validation">
           {% if errors and 'name' in errors %}
             <span class="invalid-feedback d-block">{{ errors.name[0] }}</span>
           {% endif %}
         </div>
       </div>
+
+      {# Tenant selection for global admins #}
+      {% if is_global_admin %}
+      <div class="col-md-6">
+        <label class="form-label">{{ 'Current Tenant' if config else 'Target Tenant' }} *</label>
+        <select
+          name="target_tenant_id"
+          required
+          class="form-select {{ 'is-invalid' if errors and 'target_tenant_id' in errors else '' }}"
+        >
+          <option value="">Select a tenant...</option>
+          {% for tenant in available_tenants %}
+          <option value="{{ tenant.id }}" {{ 'selected' if (form_data and form_data.target_tenant_id == tenant.id) or (config and config.tenant_id == tenant.id|string) else '' }}>
+            {{ tenant.name }}
+          </option>
+          {% endfor %}
+        </select>
+        {% if errors and 'target_tenant_id' in errors %}
+          <div class="invalid-feedback">{{ errors.target_tenant_id[0] }}</div>
+        {% endif %}
+        <div class="form-text">
+          {{ 'Change which tenant this SMTP configuration belongs to.' if config else 'Select which tenant this SMTP configuration will belong to.' }}
+        </div>
+      </div>
+      {% endif %}
 
       {# Description field #}
       <div class="col-md-6">
@@ -329,7 +357,7 @@
         </div>
         <div class="col">
           <button type="submit" class="btn btn-primary w-100">
-            <span id="submit-spinner" class="spinner-border spinner-border-sm me-2" style="display: none;"></span>
+            <span id="submit-spinner" class="htmx-indicator spinner-border spinner-border-sm me-2" role="status"></span>
             {{ 'Update' if config else 'Create' }} Configuration
           </button>
         </div>

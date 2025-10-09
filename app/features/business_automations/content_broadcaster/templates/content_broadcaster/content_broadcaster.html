@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+
+{% block title %}Content Broadcaster{% endblock %}
+
+{% block head %}
+<!-- Chart Widget Web Component -->
+<script src="/dashboard/static/js/chart-widget.js"></script>
+<!-- Stats Card Web Component -->
+<script src="/dashboard/static/js/stats-card.js"></script>
+<link rel="stylesheet" href="/static/css/tabulator-unified.css">
+<!-- Table Base JavaScript -->
+<script src="/features/core/static/js/table-base.js"></script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-sm-6 col-lg-3">
+        <stats-card
+            id="total-content-card"
+            title="Total Content"
+            description="All content items"
+            icon="ti ti-file-text"
+            color="blue"
+            data-url="/features/content-broadcaster/api/summary"
+            data-key="total_content"
+            auto-refresh="300000">
+        </stats-card>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <stats-card
+            id="pending-approvals-card"
+            title="Pending Approvals"
+            description="Awaiting review"
+            icon="ti ti-clock"
+            color="yellow"
+            data-url="/features/content-broadcaster/api/summary"
+            data-key="pending_approvals"
+            auto-refresh="300000">
+        </stats-card>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <stats-card
+            id="scheduled-content-card"
+            title="Scheduled"
+            description="Ready to publish"
+            icon="ti ti-calendar"
+            color="primary"
+            data-url="/features/content-broadcaster/api/summary"
+            data-key="scheduled_count"
+            auto-refresh="300000">
+        </stats-card>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <stats-card
+            id="published-content-card"
+            title="Published"
+            description="Live content"
+            icon="ti ti-check"
+            color="green"
+            data-url="/features/content-broadcaster/api/summary"
+            data-key="published_count"
+            auto-refresh="300000">
+        </stats-card>
+    </div>
+</div>
+
+<!-- Main Content Table -->
+<div class="card">
+    <div class="card-header">
+        {% set title = "Content Items" %}
+        {% set description = "Create, approve, and schedule content for multi-channel publishing." %}
+        {% set icon = "ti ti-broadcast" %}
+        {% set add_url = "/features/content-broadcaster/partials/form" %}
+        {% set entity_name = "Content" %}
+        {% set table_id = "content-broadcaster-table" %}
+        {% include 'components/ui/table_actions.html' with context %}
+    </div>
+    <div class="card-body p-0">
+        <div id="content-broadcaster-table"></div>
+    </div>
+</div>
+
+<!-- HTMX Modal Container -->
+<div class="modal modal-blur fade" id="modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div id="modal-body">
+                <!-- HTMX content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/tabulator-tables@6.2.1/dist/js/tabulator.min.js"></script>
+<script>
+let contentTable;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeContentTable();
+});
+
+function initializeContentTable() {
+    if (typeof Tabulator === 'undefined') {
+        console.error('Tabulator not loaded');
+        return;
+    }
+
+    contentTable = new Tabulator("#content-broadcaster-table", {
+        ...advancedTableConfig,
+        // Content broadcaster-specific overrides
+        ajaxURL: "/features/content-broadcaster/api/list",
+        pagination: "remote",
+        paginationMode: "remote",
+        paginationSize: 25,
+        paginationSizeSelector: [10, 25, 50, 100],
+        responsiveLayout: "hide",
+        selectable: true,
+        selectableRangeMode: "click",
+        selectableRows: true,
+        rowHeader: false,
+        headerFilterPlaceholder: "Filter...",
+        columns: [
+            {
+                title: "<input type='checkbox' id='select-all-content'>",
+                field: "select",
+                formatter: "rowSelection",
+                titleFormatter: "rowSelection",
+                width: 40,
+                headerSort: false,
+                cellClick: function (e, cell) {
+                    cell.getRow().toggleSelect();
+                }
+            },
+            {
+                title: "Title",
+                field: "title",
+                width: 200,
+                headerFilter: "input",
+                formatter: function(cell) {
+                    const data = cell.getRow().getData();
+                    return `<strong>${data.title}</strong>`;
+                }
+            },
+            {
+                title: "State",
+                field: "state",
+                width: 120,
+                headerFilter: "select",
+                headerFilterParams: {
+                    values: ["", "draft", "in_review", "rejected", "scheduled", "published"]
+                },
+                formatter: function(cell) {
+                    const state = cell.getValue();
+                    const stateClasses = {
+                        'draft': 'bg-secondary',
+                        'in_review': 'bg-warning',
+                        'rejected': 'bg-danger',
+                        'scheduled': 'bg-info',
+                        'published': 'bg-success'
+                    };
+                    const className = stateClasses[state] || 'bg-secondary';
+                    return `<span class="badge ${className}">${state.replace('_', ' ')}</span>`;
+                }
+            },
+            {
+                title: "Approval",
+                field: "approval_status",
+                width: 120,
+                headerFilter: "select",
+                headerFilterParams: {
+                    values: ["", "pending", "approved", "rejected"]
+                },
+                formatter: function(cell) {
+                    const status = cell.getValue();
+                    const statusClasses = {
+                        'pending': 'bg-warning',
+                        'approved': 'bg-success',
+                        'rejected': 'bg-danger'
+                    };
+                    const className = statusClasses[status] || 'bg-secondary';
+                    return `<span class="badge ${className}">${status}</span>`;
+                }
+            },
+            {
+                title: "Created By",
+                field: "created_by",
+                width: 120,
+                headerFilter: "input"
+            },
+            {
+                title: "Created",
+                field: "created_at",
+                width: 130,
+                formatter: function(cell) {
+                    return new Date(cell.getValue()).toLocaleDateString();
+                }
+            },
+            {
+                title: "Tags",
+                field: "tags",
+                width: 150,
+                headerFilter: "input",
+                formatter: function(cell) {
+                    const tags = cell.getValue() || [];
+                    if (tags.length === 0) return '<span class="text-muted">None</span>';
+                    return tags.map(tag => `<span class="badge bg-light text-dark me-1">${tag}</span>`).join('');
+                }
+            },
+            {
+                title: "Actions",
+                field: "id",
+                width: 120,
+                headerSort: false,
+                formatter: function(cell) {
+                    const data = cell.getRow().getData();
+                    return `<i class="ti ti-eye row-action-icon" title="View Details" onclick="viewContentDetails(${cell.getValue()})"></i>`;
+                }
+            }
+        ],
+        ajaxResponse: function(url, params, response) {
+            return {
+                data: response.data || response.items || [],
+                last_page: Math.ceil((response.total || 0) / (params.size || 25))
+            };
+        },
+        rowClick: function(e, row) {
+            viewContentDetails(row.getData().id);
+        }
+    });
+}
+
+// HTMX event handlers for modal management
+document.addEventListener('htmx:afterSwap', function(event) {
+    if (event.detail.target.id === 'modal-body') {
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal'));
+        if (!modal._isShown) {
+            modal.show();
+        }
+    }
+});
+
+// Close modal on successful form submission and refresh table
+document.addEventListener('htmx:afterRequest', function(event) {
+    if (event.detail.successful && event.detail.xhr.status === 204) {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modal'));
+        if (modal) {
+            modal.hide();
+        }
+        if (contentTable) {
+            contentTable.setData();
+        }
+        showToast('Operation completed successfully', 'success');
+    }
+});
+
+async function viewContentDetails(contentId) {
+    try {
+        const response = await fetch(`/features/content-broadcaster/api/${contentId}`, {
+            credentials: 'same-origin'
+        });
+        const content = await response.json();
+
+        const modalBody = document.getElementById('modal-body');
+        modalBody.innerHTML = `
+            <div class="modal-header">
+                <h5 class="modal-title">Content Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Basic Information</h6>
+                        <table class="table table-sm">
+                            <tr><td><strong>ID:</strong></td><td>${content.id}</td></tr>
+                            <tr><td><strong>Title:</strong></td><td>${content.title}</td></tr>
+                            <tr><td><strong>State:</strong></td><td><span class="badge bg-info">${content.state}</span></td></tr>
+                            <tr><td><strong>Approval:</strong></td><td><span class="badge bg-warning">${content.approval_status}</span></td></tr>
+                            <tr><td><strong>Created:</strong></td><td>${new Date(content.created_at).toLocaleString()}</td></tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Tags</h6>
+                        <div class="mb-3">
+                            ${content.tags && content.tags.length > 0 ?
+                                content.tags.map(tag => `<span class="badge bg-light text-dark me-1">${tag}</span>`).join('') :
+                                '<span class="text-muted">No tags</span>'
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6>Content</h6>
+                        <div class="border p-3" style="max-height: 300px; overflow-y: auto;">
+                            ${content.body || '<span class="text-muted">No content</span>'}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        `;
+
+        new bootstrap.Modal(document.getElementById('modal')).show();
+
+    } catch (error) {
+        console.error('Failed to load content details:', error);
+        showToast('Failed to load content details', 'error');
+    }
+}
+
+function refreshContent() {
+    if (contentTable) {
+        contentTable.setData();
+    }
+    // Refresh stats cards
+    document.querySelectorAll('stats-card').forEach(card => {
+        if (card.refresh) card.refresh();
+    });
+}
+
+// Export table function for table_actions component
+window.exportTable = function(format) {
+    if (contentTable) {
+        if (format === 'csv') {
+            contentTable.download("csv", "content_broadcaster_data.csv");
+        } else if (format === 'xlsx') {
+            contentTable.download("xlsx", "content_broadcaster_data.xlsx");
+        } else if (format === 'json') {
+            contentTable.download("json", "content_broadcaster_data.json");
+        }
+    }
+};
+
+// Table refresh function for table_actions component
+window.refreshTable = function(tableId) {
+    if (tableId === 'content-broadcaster-table' && contentTable) {
+        contentTable.setData();
+    }
+};
+
+// Group by function for table_actions component
+window.setTableGrouping = function(field, tableId) {
+    if (tableId === 'content-broadcaster-table' && contentTable) {
+        if (field && field !== 'none') {
+            contentTable.setGroupBy(field);
+        } else {
+            contentTable.setGroupBy(false);
+        }
+    }
+};
+
+// Utility functions
+window.showToast = function(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed top-0 end-0 m-3`;
+    toast.style.zIndex = '9999';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        if (document.body.contains(toast)) {
+            document.body.removeChild(toast);
+        }
+    }, 3000);
+};
+</script>
+{% endblock %}

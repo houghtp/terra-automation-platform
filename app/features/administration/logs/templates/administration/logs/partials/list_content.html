@@ -1,0 +1,68 @@
+<div class="card">
+  <div class="card-header">
+    <div class="table-actions-header">
+      <div class="table-header-content">
+        <div class="table-title-section">
+          <h3 class="table-title">
+            <i class="ti ti-file-text"></i>
+            Application Logs
+          </h3>
+          <p class="table-description">
+            Monitor application activity, errors, and system events for debugging and analysis.
+          </p>
+        </div>
+
+        <div class="table-actions-section">
+          <div class="table-actions-group">
+            <!-- Quick Search Bar -->
+            <div class="table-search-section">
+              <div class="input-icon">
+                <span class="input-icon-addon">
+                  <i class="ti ti-search"></i>
+                </span>
+                <input type="text"
+                       id="table-quick-search"
+                       class="form-control"
+                       placeholder="Search application logs..."
+                       autocomplete="off">
+              </div>
+              <button type="button"
+                      id="clear-search-btn"
+                      class="btn btn-outline-secondary ms-1"
+                      title="Clear search"
+                      style="display: none;">
+                <i class="ti ti-x"></i>
+              </button>
+            </div>
+
+            <!-- Export dropdown -->
+            <div class="dropdown">
+              <a class="table-action-btn table-action-export dropdown-toggle"
+                 href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="ti ti-download"></i>
+                <span>Export</span>
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#" onclick="exportLogs('csv')">
+                  <i class="ti ti-file-text me-2"></i>Export as CSV</a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportLogs('xlsx')">
+                  <i class="ti ti-file-excel me-2"></i>Export as Excel</a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportLogs('json')">
+                  <i class="ti ti-code me-2"></i>Export as JSON</a></li>
+              </ul>
+            </div>
+
+            <!-- Refresh button -->
+            <a class="table-action-btn table-action-add" onclick="refreshLogs()">
+              <i class="ti ti-refresh"></i>
+              <span>Refresh</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div id="logs-table"></div>
+  </div>
+</div>

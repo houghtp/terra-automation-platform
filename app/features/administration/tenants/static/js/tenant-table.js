@@ -5,7 +5,7 @@ window.initializeTenantManagementTable = function () {
 
   const table = new Tabulator("#tenant-table", {
     ...advancedTableConfig,
-    ajaxURL: "/features/administration/tenants/api",
+    ajaxURL: "/features/administration/tenants/api/list",
     columns: [
       {
         title: "Name",

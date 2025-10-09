@@ -9,9 +9,9 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 from fastapi import HTTPException, Request, status
 from functools import wraps
-import logging
+import structlog
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class InMemoryRateLimiter:

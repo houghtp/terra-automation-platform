@@ -82,8 +82,8 @@ class TestTenantCreation:
             features=valid_tenant_create.features,
             settings=valid_tenant_create.settings
         )
-        created_tenant.created_at = datetime.utcnow()
-        created_tenant.updated_at = datetime.utcnow()
+        created_tenant.created_at = datetime.now(timezone.utc)
+        created_tenant.updated_at = datetime.now(timezone.utc)
 
         mock_session.refresh.return_value = None
 
@@ -144,8 +144,8 @@ class TestTenantRetrieval:
             status="active",
             tier="professional"
         )
-        mock_tenant.created_at = datetime.utcnow()
-        mock_tenant.updated_at = datetime.utcnow()
+        mock_tenant.created_at = datetime.now(timezone.utc)
+        mock_tenant.updated_at = datetime.now(timezone.utc)
 
         service.db.execute.return_value.scalar_one_or_none.return_value = mock_tenant
         service._get_tenant_user_count = AsyncMock(return_value=25)
@@ -172,7 +172,7 @@ class TestTenantRetrieval:
             name="Search Corp",
             status="active"
         )
-        mock_tenant.created_at = datetime.utcnow()
+        mock_tenant.created_at = datetime.now(timezone.utc)
 
         service.db.execute.return_value.scalar_one_or_none.return_value = mock_tenant
         service._get_tenant_user_count = AsyncMock(return_value=10)
@@ -211,8 +211,8 @@ class TestTenantUpdate:
             tier="basic",
             max_users=50
         )
-        existing_tenant.created_at = datetime.utcnow()
-        existing_tenant.updated_at = datetime.utcnow()
+        existing_tenant.created_at = datetime.now(timezone.utc)
+        existing_tenant.updated_at = datetime.now(timezone.utc)
 
         service.db.execute.return_value.scalar_one_or_none.return_value = existing_tenant
         service._get_tenant_user_count = AsyncMock(return_value=15)
@@ -242,7 +242,7 @@ class TestTenantUpdate:
     async def test_update_tenant_enum_values(self, service):
         """Test update with enum values."""
         existing_tenant = Tenant(id=1, name="Enum Corp")
-        existing_tenant.created_at = datetime.utcnow()
+        existing_tenant.created_at = datetime.now(timezone.utc)
 
         service.db.execute.return_value.scalar_one_or_none.return_value = existing_tenant
         service._get_tenant_user_count = AsyncMock(return_value=5)
@@ -346,7 +346,7 @@ class TestTenantListing:
         ]
 
         for tenant in mock_tenants:
-            tenant.created_at = datetime.utcnow()
+            tenant.created_at = datetime.now(timezone.utc)
 
         service.db.execute.return_value.scalars.return_value.all.return_value = mock_tenants
         service._get_tenant_user_count = AsyncMock(side_effect=[10, 5])
@@ -369,7 +369,7 @@ class TestTenantListing:
         mock_tenants = [
             Tenant(id=1, name="Tech Corp", status="active", tier="professional")
         ]
-        mock_tenants[0].created_at = datetime.utcnow()
+        mock_tenants[0].created_at = datetime.now(timezone.utc)
 
         service.db.execute.return_value.scalars.return_value.all.return_value = mock_tenants
         service._get_tenant_user_count = AsyncMock(return_value=20)
@@ -390,7 +390,7 @@ class TestTenantListing:
         ]
 
         for tenant in mock_tenants:
-            tenant.created_at = datetime.utcnow()
+            tenant.created_at = datetime.now(timezone.utc)
 
         service.db.execute.return_value.scalars.return_value.all.return_value = mock_tenants
         service._get_tenant_user_count = AsyncMock(side_effect=[10, 0])
@@ -464,7 +464,7 @@ class TestTenantUserManagement:
         ]
 
         for user in mock_users:
-            user.created_at = datetime.utcnow()
+            user.created_at = datetime.now(timezone.utc)
 
         service.db.execute.return_value.scalars.return_value.all.return_value = mock_users
 
@@ -617,7 +617,7 @@ class TestDashboardStats:
             Tenant(id=2, name="Recent Corp 2", status="active")
         ]
         for tenant in recent_tenants:
-            tenant.created_at = datetime.utcnow()
+            tenant.created_at = datetime.now(timezone.utc)
 
         # Setup mock returns
         service.db.execute.side_effect = [

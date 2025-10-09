@@ -38,7 +38,7 @@ class TestAuditLogModel:
 
     def test_audit_log_creation_complete(self):
         """Test audit log creation with all fields populated."""
-        timestamp = datetime.utcnow()
+        timestamp = datetime.now(timezone.utc)
         old_values = {"name": "Old Name", "status": "inactive"}
         new_values = {"name": "New Name", "status": "active"}
         extra_data = {"source": "admin_panel", "session_id": "sess_123"}
@@ -151,7 +151,7 @@ class TestAuditLogModel:
 
     def test_audit_log_to_dict(self):
         """Test audit log dictionary conversion."""
-        timestamp = datetime.utcnow()
+        timestamp = datetime.now(timezone.utc)
         log = AuditLog(
             id=1,
             tenant_id="test_tenant",
@@ -495,8 +495,8 @@ class TestAuditService:
         """Test audit timeline retrieval."""
         mock_result = MagicMock()
         mock_timeline_data = [
-            MagicMock(day=datetime.utcnow().date(), category="AUTH", count=10),
-            MagicMock(day=datetime.utcnow().date(), category="DATA", count=5)
+            MagicMock(day=datetime.now(timezone.utc).date(), category="AUTH", count=10),
+            MagicMock(day=datetime.now(timezone.utc).date(), category="DATA", count=5)
         ]
         mock_result.scalars.return_value = mock_timeline_data
         mock_db_session.execute.return_value = mock_result

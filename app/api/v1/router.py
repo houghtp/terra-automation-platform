@@ -10,7 +10,8 @@ from typing import Dict, Any
 from app.features.auth.routes import router as auth_router
 from app.features.administration.users.routes import router as users_router
 from app.features.administration.tenants.routes import router as tenants_router
-from app.features.administration.secrets.routes import router as secrets_router
+from app.features.administration.secrets.routes.crud_routes import router as secrets_crud_router
+from app.features.administration.secrets.routes.form_routes import router as secrets_form_router
 from app.features.administration.audit.routes import router as audit_router
 from app.features.administration.tasks.routes import router as tasks_router
 from app.features.administration.api_keys.routes import router as api_keys_router
@@ -69,7 +70,8 @@ v1_router.include_router(auth_router, prefix="/auth", tags=["auth-v1"])
 # Administration routers already have /administration/[slice] prefix, so we include them directly
 v1_router.include_router(users_router, prefix="", tags=["users-v1"])
 v1_router.include_router(tenants_router, prefix="", tags=["tenants-v1"])
-v1_router.include_router(secrets_router, prefix="", tags=["secrets-v1"])
+v1_router.include_router(secrets_crud_router, prefix="", tags=["secrets-v1"])
+v1_router.include_router(secrets_form_router, prefix="", tags=["secrets-v1"])
 v1_router.include_router(audit_router, prefix="", tags=["audit-v1"])
 v1_router.include_router(tasks_router, prefix="", tags=["tasks-v1"])
 v1_router.include_router(api_keys_router, prefix="", tags=["api-keys-v1"])

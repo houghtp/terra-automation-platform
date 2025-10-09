@@ -1,0 +1,259 @@
+<!-- Schedule Content Modal -->
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="ti ti-calendar"></i>
+        Schedule Content Publishing
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<form hx-post="/content-broadcaster/schedule/{{ content.id }}"
+      hx-target="#content-table"
+      hx-swap="outerHTML">
+    <div class="modal-body">
+        <!-- Content Preview -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card bg-light">
+                    <div class="card-header">
+                        <h6 class="mb-0">Content to Schedule</h6>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ content.title }}</h5>
+                        <div class="content-preview">
+                            {{ content.body[:200] }}
+                            {% if content.body|length > 200 %}
+                                <span class="text-muted">... (truncated)</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="mt-2">
+                            <span class="badge bg-success">{{ content.approval_status.title() }}</span>
+                            <small class="text-muted ms-2">Ready for scheduling</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scheduling Form -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="scheduled_date" class="form-label">
+                        Publish Date <span class="text-danger">*</span>
+                    </label>
+                    <input type="date"
+                           class="form-control"
+                           id="scheduled_date"
+                           name="scheduled_date"
+                           required
+                           min="{{ (now().date() + timedelta(days=0)).isoformat() if now else '' }}">
+                    <div class="form-text">Select the date for publishing</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="scheduled_time" class="form-label">
+                        Publish Time <span class="text-danger">*</span>
+                    </label>
+                    <input type="time"
+                           class="form-control"
+                           id="scheduled_time"
+                           name="scheduled_time"
+                           required>
+                    <div class="form-text">Select the time for publishing</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Time Presets -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <label class="form-label">Quick Time Presets</label>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm time-preset-btn" data-time="09:00">9:00 AM</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm time-preset-btn" data-time="12:00">12:00 PM</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm time-preset-btn" data-time="15:00">3:00 PM</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm time-preset-btn" data-time="18:00">6:00 PM</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm time-preset-btn" data-time="20:00">8:00 PM</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Channel/Connector Selection -->
+        <div class="row">
+            <div class="col-12">
+                <div class="mb-3">
+                    <label class="form-label">
+                        Publishing Channels <span class="text-danger">*</span>
+                    </label>
+                    <div class="connector-selection">
+                        <!-- These would be dynamically loaded from available connectors -->
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   value="twitter"
+                                   id="connector_twitter"
+                                   name="connector_ids">
+                            <label class="form-check-label" for="connector_twitter">
+                                <i class="ti ti-brand-twitter me-2 text-info"></i>
+                                Twitter
+                                <small class="text-muted d-block">Post to Twitter account</small>
+                            </label>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   value="linkedin"
+                                   id="connector_linkedin"
+                                   name="connector_ids">
+                            <label class="form-check-label" for="connector_linkedin">
+                                <i class="ti ti-brand-linkedin me-2 text-primary"></i>
+                                LinkedIn
+                                <small class="text-muted d-block">Post to LinkedIn company page</small>
+                            </label>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   value="facebook"
+                                   id="connector_facebook"
+                                   name="connector_ids">
+                            <label class="form-check-label" for="connector_facebook">
+                                <i class="ti ti-brand-facebook me-2 text-primary"></i>
+                                Facebook
+                                <small class="text-muted d-block">Post to Facebook page</small>
+                            </label>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   value="instagram"
+                                   id="connector_instagram"
+                                   name="connector_ids">
+                            <label class="form-check-label" for="connector_instagram">
+                                <i class="ti ti-brand-instagram me-2 text-danger"></i>
+                                Instagram
+                                <small class="text-muted d-block">Post to Instagram business account</small>
+                            </label>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   value="email"
+                                   id="connector_email"
+                                   name="connector_ids">
+                            <label class="form-check-label" for="connector_email">
+                                <i class="ti ti-mail me-2 text-success"></i>
+                                Email Newsletter
+                                <small class="text-muted d-block">Send as email newsletter</small>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-text">Select at least one channel for publishing</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedule Preview -->
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="ti ti-clock me-2"></i>
+                    <strong>Schedule Summary:</strong>
+                    <div id="schedule-preview" class="mt-2">
+                        <em>Select date, time, and channels to see publishing schedule</em>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="schedule-btn" disabled>
+            <i class="ti ti-calendar-plus me-1"></i>
+            Schedule Publishing
+        </button>
+    </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set minimum date to today
+    const dateInput = document.getElementById('scheduled_date');
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.min = today;
+
+    // Time preset buttons
+    document.querySelectorAll('.time-preset-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const time = this.getAttribute('data-time');
+            document.getElementById('scheduled_time').value = time;
+            updateSchedulePreview();
+
+            // Visual feedback
+            document.querySelectorAll('.time-preset-btn').forEach(btn => {
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-outline-secondary');
+            });
+            this.classList.add('btn-secondary');
+            this.classList.remove('btn-outline-secondary');
+        });
+    });
+
+    // Update schedule preview when inputs change
+    function updateSchedulePreview() {
+        const date = document.getElementById('scheduled_date').value;
+        const time = document.getElementById('scheduled_time').value;
+        const checkedChannels = document.querySelectorAll('input[name="connector_ids"]:checked');
+
+        const preview = document.getElementById('schedule-preview');
+        const scheduleBtn = document.getElementById('schedule-btn');
+
+        if (date && time && checkedChannels.length > 0) {
+            const datetime = new Date(`${date}T${time}`);
+            const formattedDate = datetime.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            const formattedTime = datetime.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            const channelNames = Array.from(checkedChannels).map(cb => {
+                const label = document.querySelector(`label[for="${cb.id}"]`);
+                return label.textContent.trim().split('\n')[0];
+            });
+
+            preview.innerHTML = `
+                <strong>Publishing on:</strong> ${formattedDate} at ${formattedTime}<br>
+                <strong>Channels:</strong> ${channelNames.join(', ')}
+            `;
+
+            scheduleBtn.disabled = false;
+        } else {
+            preview.innerHTML = '<em>Select date, time, and channels to see publishing schedule</em>';
+            scheduleBtn.disabled = true;
+        }
+    }
+
+    // Attach event listeners
+    document.getElementById('scheduled_date').addEventListener('change', updateSchedulePreview);
+    document.getElementById('scheduled_time').addEventListener('change', updateSchedulePreview);
+    document.querySelectorAll('input[name="connector_ids"]').forEach(cb => {
+        cb.addEventListener('change', updateSchedulePreview);
+    });
+
+    // Initial update
+    updateSchedulePreview();
+});
+</script>

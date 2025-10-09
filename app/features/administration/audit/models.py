@@ -1,8 +1,8 @@
 """Audit Log model for tracking system activities."""
 
-from sqlalchemy import Column, Integer, String, DateTime, Text, Index, JSON
-from sqlalchemy.dialects.postgresql import JSONB
-from datetime import datetime
+from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, Index, JSON
+from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
 from app.features.core.database import Base
@@ -24,7 +24,7 @@ class AuditLog(Base):
     tenant_id = Column(String(255), nullable=False, index=True)
 
     # Audit metadata
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    timestamp = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
     action = Column(String(100), nullable=False, index=True)  # e.g., "USER_LOGIN", "DATA_CREATED"
     category = Column(String(50), nullable=False, index=True)  # e.g., "AUTH", "DATA", "ADMIN"
     severity = Column(String(20), nullable=False, default="INFO")  # INFO, WARNING, ERROR, CRITICAL
@@ -48,7 +48,7 @@ class AuditLog(Base):
 
     # Additional context
     description = Column(Text, nullable=True)
-    extra_data = Column(JSON, nullable=True)  # Flexible additional data (renamed from metadata)
+    extra_data = Column(JSON, nullable=True)  # Flexible additional data
 
     # System context
     source_module = Column(String(100), nullable=True)  # Which module generated the log

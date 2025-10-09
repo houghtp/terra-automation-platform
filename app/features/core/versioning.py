@@ -3,7 +3,7 @@ API versioning system for enterprise SaaS platform.
 
 Provides robust API versioning with deprecation, compatibility, and migration support.
 """
-import logging
+import structlog
 from typing import Dict, List, Optional, Callable, Any
 from datetime import datetime, timedelta
 from dataclasses import dataclass
@@ -13,7 +13,7 @@ from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class VersionStatus(Enum):
@@ -137,7 +137,7 @@ class APIVersionManager:
 
         # Check if approaching deprecation
         if version_info.deprecation_date:
-            days_until_deprecation = (version_info.deprecation_date - datetime.utcnow()).days
+            days_until_deprecation = (version_info.deprecation_date - datetime.now(timezone.utc)).days
             if 0 < days_until_deprecation <= 90:  # 90 days warning
                 return {
                     "warning": "approaching_deprecation",

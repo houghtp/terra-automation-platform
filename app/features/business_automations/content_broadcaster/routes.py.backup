@@ -1,0 +1,955 @@
+"""
+Content Broadcaster API endpoints for multi-channel content publishing.
+
+Provides content management, approval workflows, scheduling, and analytics.
+"""
+from typing import List, Dict, Any, Optional
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query, Request, Form
+from fastapi.responses import HTMLResponse, JSONResponse
+from pydantic import BaseModel, Field
+from datetime import datetime, timezone
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, desc, func, and_, case, text
+from sqlalchemy.orm import selectinload
+from app.features.core.database import get_db, get_async_session
+from app.deps.tenant import tenant_dependency
+from app.features.auth.dependencies import get_current_user
+from app.features.auth.models import User
+from app.features.business_automations.content_broadcaster.services import ContentBroadcasterService
+from .models import ContentState, ApprovalStatus, JobStatus
+from .services import ContentBroadcasterService
+from app.features.core.templates import templates  # Use global templates
+
+import structlog
+
+logger = structlog.get_logger(__name__)
+
+# Router setup
+router = APIRouter(tags=["Content Broadcaster"])
+
+
+# ==================== PYDANTIC MODELS ====================
+
+class ContentCreateRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=500)
+    body: str = Field(..., min_length=1)
+    metadata: Optional[dict] = Field(default_factory=dict)
+    tags: Optional[List[str]] = Field(default_factory=list)
+
+
+class ContentUpdateRequest(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=500)
+    body: Optional[str] = Field(None, min_length=1)
+    metadata: Optional[dict] = None
+    tags: Optional[List[str]] = None
+
+
+class ContentScheduleRequest(BaseModel):
+    scheduled_at: datetime
+    connector_ids: List[str] = Field(..., min_items=1)
+
+
+class ApprovalRequest(BaseModel):
+    comment: Optional[str] = None
+    auto_schedule: bool = False
+
+
+class RejectRequest(BaseModel):
+    comment: str = Field(..., min_length=1)
+
+
+class SEOContentGenerationRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=500)
+    ai_provider: str = Field(default="openai")
+    fallback_ai: Optional[str] = Field(default="anthropic")
+    search_provider: str = Field(default="serpapi")
+    scraping_provider: str = Field(default="firecrawl")
+    min_seo_score: int = Field(default=95, ge=80, le=100)
+    max_iterations: int = Field(default=3, ge=1, le=5)
+    auto_approve: bool = Field(default=False)
+
+
+# ==================== DEPENDENCY INJECTION ====================
+
+async def get_content_service(
+    session: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency)
+) -> ContentBroadcasterService:
+    """Get Content Broadcaster service with tenant context."""
+    return ContentBroadcasterService(session, tenant_id)
+
+
+# ==================== MAIN PAGE ROUTE ====================
+
+@router.get("/", response_class=HTMLResponse)
+async def content_broadcaster_page(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """Main content broadcaster page."""
+    try:
+        # Get dashboard stats for the page
+        stats = await service.get_dashboard_stats()
+
+        return templates.TemplateResponse(
+            "content_broadcaster/content_broadcaster.html",
+            {
+                "request": request,
+                "title": "Content Broadcaster",
+                "stats": stats,
+                "user": current_user
+            }
+        )
+    except Exception as e:
+        logger.exception("Failed to load content broadcaster page")
+        raise HTTPException(status_code=500, detail="Failed to load page")
+
+
+# ==================== API ENDPOINTS ====================
+
+@router.get("/api/summary", response_class=JSONResponse)
+async def get_summary_stats(
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """Get summary statistics for stats cards."""
+    try:
+        stats = await service.get_dashboard_stats()
+
+        # Format for stats cards
+        return {
+            "total_content": stats.get("total_content", 0),
+            "pending_approvals": stats.get("pending_approvals", 0),
+            "scheduled_count": stats.get("content_by_state", {}).get("scheduled", 0),
+            "published_count": stats.get("content_by_state", {}).get("published", 0)
+        }
+    except Exception as e:
+        logger.exception("Failed to get summary stats")
+        raise HTTPException(status_code=500, detail="Failed to get stats")
+
+@router.get("/api/list")
+async def get_content_list(
+    limit: int = Query(default=100, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
+    search: Optional[str] = Query(default=None),
+    state: Optional[str] = Query(default=None),
+    created_by: Optional[str] = Query(default=None),
+    approval_status: Optional[str] = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """API endpoint to get paginated content list with filtering."""
+    try:
+        # Parse enum values
+        state_enum = None
+        if state:
+            try:
+                state_enum = ContentState(state)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid state: {state}")
+
+        approval_enum = None
+        if approval_status:
+            try:
+                approval_enum = ApprovalStatus(approval_status)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid approval status: {approval_status}")
+
+        result = await service.get_content_list(
+            limit=limit,
+            offset=offset,
+            search=search,
+            state=state_enum,
+            created_by=created_by,
+            approval_status=approval_enum
+        )
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to get content list")
+        raise HTTPException(status_code=500, detail="Failed to retrieve content")
+
+
+@router.post("/api/create")
+async def create_content(
+    request: ContentCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """API endpoint to create new content."""
+    try:
+        content = await service.create_content(
+            title=request.title,
+            body=request.body,
+            created_by_user=current_user,
+            metadata=request.metadata,
+            tags=request.tags
+        )
+        return content.to_dict()
+
+    except Exception as e:
+        logger.exception("Failed to create content")
+        raise HTTPException(status_code=500, detail="Failed to create content")
+
+
+@router.get("/api/{content_id}")
+async def get_content(
+    content_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """API endpoint to get content by ID."""
+    try:
+        content = await service.get_content_by_id(content_id)
+        if not content:
+            raise HTTPException(status_code=404, detail="Content not found")
+
+        return content.to_dict()
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to get content {content_id}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve content")
+
+
+@router.put("/api/{content_id}")
+async def update_content(
+    content_id: str,
+    request: ContentUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """API endpoint to update content."""
+    try:
+        content = await service.update_content(
+            content_id=content_id,
+            title=request.title,
+            body=request.body,
+            updated_by=current_user.id,
+            metadata=request.metadata,
+            tags=request.tags
+        )
+
+        if not content:
+            raise HTTPException(status_code=404, detail="Content not found")
+
+        return content.to_dict()
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to update content {content_id}")
+        raise HTTPException(status_code=500, detail="Failed to update content")
+
+
+@router.post("/api/{content_id}/submit")
+async def submit_for_review(
+    content_id: str,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """API endpoint to submit content for review."""
+    try:
+        content = await service.submit_for_review(content_id, current_user.id)
+        if not content:
+            raise HTTPException(status_code=404, detail="Content not found")
+
+        return content.to_dict()
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception(f"Failed to submit content {content_id} for review")
+        raise HTTPException(status_code=500, detail="Failed to submit content")
+
+
+@router.post("/api/{content_id}/approve")
+async def approve_content(
+    content_id: str,
+    request: ApprovalRequest,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """API endpoint to approve content."""
+    try:
+        content = await service.approve_content(
+            content_id=content_id,
+            approved_by=current_user,
+            comment=request.comment,
+            auto_schedule=request.auto_schedule
+        )
+
+        if not content:
+            raise HTTPException(status_code=404, detail="Content not found")
+
+        return content.to_dict()
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception(f"Failed to approve content {content_id}")
+        raise HTTPException(status_code=500, detail="Failed to approve content")
+
+
+@router.post("/api/{content_id}/reject")
+async def reject_content(
+    content_id: str,
+    request: RejectRequest,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """API endpoint to reject content."""
+    try:
+        content = await service.reject_content(
+            content_id=content_id,
+            rejected_by=current_user,
+            comment=request.comment
+        )
+
+        if not content:
+            raise HTTPException(status_code=404, detail="Content not found")
+
+        return content.to_dict()
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception(f"Failed to reject content {content_id}")
+        raise HTTPException(status_code=500, detail="Failed to reject content")
+
+
+@router.post("/api/{content_id}/schedule")
+async def schedule_content(
+    content_id: str,
+    request: ContentScheduleRequest,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """API endpoint to schedule content for publishing."""
+    try:
+        content = await service.schedule_content(
+            content_id=content_id,
+            scheduled_at=request.scheduled_at,
+            connector_ids=request.connector_ids,
+            updated_by=current_user.id
+        )
+
+        if not content:
+            raise HTTPException(status_code=404, detail="Content not found")
+
+        return content.to_dict()
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception(f"Failed to schedule content {content_id}")
+        raise HTTPException(status_code=500, detail="Failed to schedule content")
+
+
+@router.delete("/api/{content_id}")
+async def delete_content(
+    content_id: str,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """API endpoint to delete content."""
+    try:
+        success = await service.delete_content(content_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Content not found")
+
+        return {"message": "Content deleted successfully"}
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to delete content {content_id}")
+        raise HTTPException(status_code=500, detail="Failed to delete content")
+
+
+# ==================== SEO CONTENT GENERATION ENDPOINT ====================
+
+@router.post("/api/generate-seo-content")
+async def generate_seo_content(
+    request: SEOContentGenerationRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """API endpoint to generate SEO-optimized content using AI."""
+    try:
+        # Import here to avoid circular imports
+        from app.features.core.connectors.seo_content_generator import create_seo_content_generator
+
+        # Create content generator
+        generator = await create_seo_content_generator(
+            tenant_id=tenant_id,
+            min_seo_score=request.min_seo_score,
+            max_iterations=request.max_iterations
+        )
+
+        # Start content generation in background
+        background_tasks.add_task(
+            _generate_content_background,
+            generator,
+            request.title,
+            current_user.id,
+            request.ai_provider,
+            request.fallback_ai,
+            request.search_provider,
+            request.scraping_provider,
+            request.auto_approve
+        )
+
+        return {
+            "message": f"SEO content generation started for '{request.title}'",
+            "title": request.title,
+            "status": "generating",
+            "estimated_time": "3-5 minutes"
+        }
+
+    except Exception as e:
+        logger.exception(f"Failed to start SEO content generation for '{request.title}'")
+        raise HTTPException(status_code=500, detail=f"Failed to start content generation: {str(e)}")
+
+
+async def _generate_content_background(
+    generator,
+    title: str,
+    created_by: str,
+    ai_provider: str,
+    fallback_ai: Optional[str],
+    search_provider: str,
+    scraping_provider: str,
+    auto_approve: bool
+):
+    """Background task for SEO content generation."""
+    try:
+        logger.info(f"Starting background SEO content generation for: '{title}'")
+
+        # Generate content
+        content_item = await generator.generate_content_from_title(
+            title=title,
+            created_by=created_by,
+            ai_provider=ai_provider,
+            fallback_ai=fallback_ai,
+            search_provider=search_provider,
+            scraping_provider=scraping_provider
+        )
+
+        # Auto-approve if requested and score is high enough
+        if auto_approve and content_item.content_metadata:
+            seo_score = content_item.content_metadata.get("seo_score", 0)
+            if seo_score >= generator.min_seo_score:
+                async with get_async_session() as session:
+                    content_service = ContentBroadcasterService(session, generator.tenant_id)
+                    await content_service.approve_content(
+                        content_id=content_item.id,
+                        approved_by=created_by,
+                        comment=f"Auto-approved: SEO score {seo_score}/100",
+                        auto_schedule=False
+                    )
+
+        logger.info(f"Successfully generated SEO content for '{title}': {content_item.id}")
+
+    except Exception as e:
+        logger.error(f"Background SEO content generation failed for '{title}': {str(e)}")
+        # TODO: Consider saving error state to content item or notification system
+
+
+# ==================== APPROVAL ENDPOINTS ====================
+
+@router.get("/api/approvals/pending")
+async def get_pending_approvals(
+    limit: int = Query(default=100, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """API endpoint to get pending approvals."""
+    try:
+        result = await service.get_pending_approvals(limit=limit, offset=offset)
+        return result
+
+    except Exception as e:
+        logger.exception("Failed to get pending approvals")
+        raise HTTPException(status_code=500, detail="Failed to retrieve pending approvals")
+
+
+# ==================== JOB MANAGEMENT ENDPOINTS ====================
+
+@router.get("/api/jobs")
+async def get_publish_jobs(
+    limit: int = Query(default=100, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
+    status: Optional[str] = Query(default=None),
+    connector_id: Optional[str] = Query(default=None),
+    content_id: Optional[str] = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """API endpoint to get publish jobs."""
+    try:
+        # Parse status enum
+        status_enum = None
+        if status:
+            try:
+                status_enum = JobStatus(status)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
+
+        result = await service.get_publish_jobs(
+            limit=limit,
+            offset=offset,
+            status=status_enum,
+            connector_id=connector_id,
+            content_id=content_id
+        )
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to get publish jobs")
+        raise HTTPException(status_code=500, detail="Failed to retrieve publish jobs")
+
+
+@router.post("/api/jobs/{job_id}/retry")
+async def retry_publish_job(
+    job_id: str,
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """API endpoint to retry a failed publish job."""
+    try:
+        job = await service.retry_job(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+
+        return job.to_dict()
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to retry job {job_id}")
+        raise HTTPException(status_code=500, detail="Failed to retry job")
+
+
+@router.post("/api/jobs/{job_id}/cancel")
+async def cancel_publish_job(
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """API endpoint to cancel a queued publish job."""
+    try:
+        job = await service.cancel_job(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+
+        return job.to_dict()
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to cancel job {job_id}")
+        raise HTTPException(status_code=500, detail="Failed to cancel job")
+
+
+# ==================== HTMX ENDPOINTS ====================
+
+@router.get("/content", response_class=HTMLResponse)
+async def content_table(
+    request: Request,
+    search: Optional[str] = Query(default=None),
+    state: Optional[str] = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """HTMX endpoint for content table partial."""
+    try:
+        # Parse state enum
+        state_enum = None
+        if state and state != "all":
+            try:
+                state_enum = ContentState(state)
+            except ValueError:
+                pass  # Ignore invalid states for web interface
+
+        result = await service.get_content_list(
+            limit=50,  # Reasonable limit for web interface
+            offset=0,
+            search=search,
+            state=state_enum
+        )
+
+        return templates.TemplateResponse(
+            "content_broadcaster/partials/list_content.html",
+            {
+                "request": request,
+                "content_items": result["data"],
+                "total": result["total"]
+            }
+        )
+
+    except Exception as e:
+        logger.exception("Failed to load content table")
+        return templates.TemplateResponse(
+            "components/errors/error_message.html",
+            {"request": request, "message": "Failed to load content"}
+        )
+
+
+@router.get("/partials/form", response_class=HTMLResponse)
+async def content_form_modal(
+    request: Request,
+    content_id: str = None,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user)
+):
+    """Standard partials/form endpoint for table_actions component."""
+    # For now, redirect to create modal since that's what exists
+    return templates.TemplateResponse(
+        "content_broadcaster/partials/create_modal.html",
+        {"request": request, "content_id": content_id}
+    )
+
+
+@router.get("/create-modal", response_class=HTMLResponse)
+async def create_content_modal(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user)
+):
+    """HTMX endpoint for AI content generation modal."""
+    return templates.TemplateResponse(
+        "content_broadcaster/partials/enhanced_create_modal.html",
+        {"request": request}
+    )
+
+
+@router.post("/create", response_class=HTMLResponse)
+async def create_content_form(
+    request: Request,
+    title: str = Form(...),
+    body: str = Form(...),
+    tags: Optional[str] = Form(default=""),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """HTMX endpoint for creating content via manual form (for editing AI-generated content)."""
+    try:
+        # Parse tags
+        tag_list = [tag.strip() for tag in tags.split(",") if tag.strip()] if tags else []
+
+        content = await service.create_content(
+            title=title,
+            body=body,
+            created_by_user=current_user,
+            tags=tag_list
+        )
+
+        # Return updated content table
+        result = await service.get_content_list(limit=50, offset=0)
+
+        return templates.TemplateResponse(
+            "content_broadcaster/partials/list_content.html",
+            {
+                "request": request,
+                "content_items": result["data"],
+                "total": result["total"],
+                "show_success": True,
+                "success_message": f"Content '{content.title}' created successfully"
+            }
+        )
+
+    except Exception as e:
+        logger.exception("Failed to create content")
+        return templates.TemplateResponse(
+            "components/errors/error_message.html",
+            {"request": request, "message": "Failed to create content"}
+        )
+
+
+@router.get("/approve-modal/{content_id}", response_class=HTMLResponse)
+async def approve_content_modal(
+    request: Request,
+    content_id: str,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """HTMX endpoint for approve content modal."""
+    try:
+        content = await service.get_content_by_id(content_id)
+        if not content:
+            raise HTTPException(status_code=404, detail="Content not found")
+
+        return templates.TemplateResponse(
+            "content_broadcaster/partials/approve_modal.html",
+            {"request": request, "content": content.to_dict()}
+        )
+
+    except Exception as e:
+        logger.exception(f"Failed to load approve modal for content {content_id}")
+        return templates.TemplateResponse(
+            "components/errors/error_message.html",
+            {"request": request, "message": "Failed to load approval form"}
+        )
+
+
+@router.get("/reject-modal/{content_id}", response_class=HTMLResponse)
+async def reject_content_modal(
+    request: Request,
+    content_id: str,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """HTMX endpoint for reject content modal."""
+    try:
+        content = await service.get_content_by_id(content_id)
+        if not content:
+            raise HTTPException(status_code=404, detail="Content not found")
+
+        return templates.TemplateResponse(
+            "content_broadcaster/partials/reject_modal.html",
+            {"request": request, "content": content.to_dict()}
+        )
+
+    except Exception as e:
+        logger.exception(f"Failed to load reject modal for content {content_id}")
+        return templates.TemplateResponse(
+            "components/errors/error_message.html",
+            {"request": request, "message": "Failed to load rejection form"}
+        )
+
+
+@router.post("/reject/{content_id}", response_class=HTMLResponse)
+async def reject_content_form(
+    request: Request,
+    content_id: str,
+    comment: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """HTMX endpoint for rejecting content via form."""
+    try:
+        content = await service.reject_content(
+            content_id=content_id,
+            rejected_by=current_user,
+            comment=comment
+        )
+
+        if not content:
+            raise HTTPException(status_code=404, detail="Content not found")
+
+        # Return updated content table
+        result = await service.get_content_list(limit=50, offset=0)
+
+        return templates.TemplateResponse(
+            "content_broadcaster/partials/list_content.html",
+            {
+                "request": request,
+                "content_items": result["data"],
+                "total": result["total"],
+                "show_success": True,
+                "success_message": f"Content '{content.title}' rejected"
+            }
+        )
+
+    except ValueError as e:
+        return templates.TemplateResponse(
+            "components/errors/error_message.html",
+            {"request": request, "message": str(e)}
+        )
+    except Exception as e:
+        logger.exception(f"Failed to reject content {content_id}")
+        return templates.TemplateResponse(
+            "components/errors/error_message.html",
+            {"request": request, "message": "Failed to reject content"}
+        )
+
+
+@router.get("/schedule-modal/{content_id}", response_class=HTMLResponse)
+async def schedule_content_modal(
+    request: Request,
+    content_id: str,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """HTMX endpoint for schedule content modal."""
+    try:
+        content = await service.get_content_by_id(content_id)
+        if not content:
+            raise HTTPException(status_code=404, detail="Content not found")
+
+        return templates.TemplateResponse(
+            "content_broadcaster/partials/schedule_modal.html",
+            {"request": request, "content": content.to_dict()}
+        )
+
+    except Exception as e:
+        logger.exception(f"Failed to load schedule modal for content {content_id}")
+        return templates.TemplateResponse(
+            "components/errors/error_message.html",
+            {"request": request, "message": "Failed to load scheduling form"}
+        )
+
+
+@router.post("/schedule/{content_id}", response_class=HTMLResponse)
+async def schedule_content_form(
+    request: Request,
+    content_id: str,
+    scheduled_date: str = Form(...),
+    scheduled_time: str = Form(...),
+    connector_ids: List[str] = Form(...),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """HTMX endpoint for scheduling content via form."""
+    try:
+        # Parse datetime
+        scheduled_datetime_str = f"{scheduled_date} {scheduled_time}"
+        scheduled_at = datetime.strptime(scheduled_datetime_str, "%Y-%m-%d %H:%M")
+
+        content = await service.schedule_content(
+            content_id=content_id,
+            scheduled_at=scheduled_at,
+            connector_ids=connector_ids,
+            updated_by=current_user.id
+        )
+
+        if not content:
+            raise HTTPException(status_code=404, detail="Content not found")
+
+        # Return updated content table
+        result = await service.get_content_list(limit=50, offset=0)
+
+        return templates.TemplateResponse(
+            "content_broadcaster/partials/list_content.html",
+            {
+                "request": request,
+                "content_items": result["data"],
+                "total": result["total"],
+                "show_success": True,
+                "success_message": f"Content '{content.title}' scheduled for {scheduled_at.strftime('%Y-%m-%d %H:%M')}"
+            }
+        )
+
+    except ValueError as e:
+        return templates.TemplateResponse(
+            "components/errors/error_message.html",
+            {"request": request, "message": str(e)}
+        )
+    except Exception as e:
+        logger.exception(f"Failed to schedule content {content_id}")
+        return templates.TemplateResponse(
+            "components/errors/error_message.html",
+            {"request": request, "message": "Failed to schedule content"}
+        )
+
+
+@router.post("/approve/{content_id}", response_class=HTMLResponse)
+async def approve_content_form(
+    request: Request,
+    content_id: str,
+    comment: Optional[str] = Form(default=None),
+    auto_schedule: bool = Form(default=False),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """HTMX endpoint for approving content via form."""
+    try:
+        content = await service.approve_content(
+            content_id=content_id,
+            approved_by=current_user,
+            comment=comment,
+            auto_schedule=auto_schedule
+        )
+
+        if not content:
+            raise HTTPException(status_code=404, detail="Content not found")
+
+        # Return updated content table
+        result = await service.get_content_list(limit=50, offset=0)
+
+        return templates.TemplateResponse(
+            "content_broadcaster/partials/list_content.html",
+            {
+                "request": request,
+                "content_items": result["data"],
+                "total": result["total"],
+                "show_success": True,
+                "success_message": f"Content '{content.title}' approved successfully"
+            }
+        )
+
+    except ValueError as e:
+        return templates.TemplateResponse(
+            "components/errors/error_message.html",
+            {"request": request, "message": str(e)}
+        )
+    except Exception as e:
+        logger.exception(f"Failed to approve content {content_id}")
+        return templates.TemplateResponse(
+            "components/errors/error_message.html",
+            {"request": request, "message": "Failed to approve content"}
+        )

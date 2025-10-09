@@ -36,7 +36,7 @@ return {"data": result, "pagination": {...}}
 ```
 routes/
 ├── form_routes.py      # UI forms, validations, dashboard pages
-├── crud_routes.py      # Database operations, API endpoints  
+├── crud_routes.py      # Database operations, API endpoints
 └── dashboard_routes.py # Stats, analytics (if needed)
 ```
 
@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (tableElement && !window.entityTableInitialized) {
         window.entityTableInitialized = true;
         initializeEntityTable();
-        
+
         setTimeout(() => {
             initializeQuickSearch('table-quick-search', 'clear-search-btn', 'entity-table');
         }, 100);
@@ -92,7 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 **❌ Anti-Patterns to AVOID:**
 - Custom `showToast()` functions (use `table-base.js` version)
-- Manual select-all checkbox handling (handled by `advancedTableConfig`)  
+- Manual select-all checkbox handling (handled by `advancedTableConfig`)
 - Custom HTMX listeners (use standard patterns)
 - Fixed `width` on all columns (causes horizontal overflow)
 
@@ -108,14 +108,14 @@ columns: [
         headerFilter: "input"
     },
     {
-        title: "Status", 
+        title: "Status",
         field: "status",
         width: 80,  // Fixed width only for predictable content
         headerFilter: "list"
     },
     {
         title: "Description",
-        field: "description", 
+        field: "description",
         minWidth: 150,  // Minimum width, can expand
         headerFilter: "input"
     },
@@ -143,7 +143,7 @@ class EntityManagementService:
     # Primary method: get_entity_by_id (matches CRUD service)
     async def get_entity_by_id(self, entity_id):
         return await self._crud_service.get_entity_by_id(entity_id)
-    
+
     # Standardized method for forms: get_[full_entity_name]_by_id
     async def get_full_entity_name_by_id(self, entity_id):
         """Standardized method name for form routes consistency."""
@@ -164,7 +164,7 @@ class EntityManagementService:
 // All view actions use same formatter
 {
     title: "Actions",
-    field: "id", 
+    field: "id",
     formatter: (cell) => formatViewAction(cell, 'viewEntityDetails')
 }
 
@@ -222,7 +222,7 @@ async def get_entity_details_partial(
     entity = await service.get_full_entity_name_by_id(entity_id)
     if not entity:
         raise HTTPException(status_code=404, detail="Entity not found")
-    
+
     return templates.TemplateResponse(
         "module/entity/partials/entity_details.html",
         {"request": request, "entity": entity}
@@ -240,13 +240,13 @@ async def get_entity_details_partial(
 **Root Cause**: API returns complex objects instead of simple arrays
 **Fix**: Ensure CRUD routes return `return result` not `return {"data": result}`
 
-### **Horizontal Scroll Issues**  
+### **Horizontal Scroll Issues**
 **Symptoms**: Table extends beyond screen width, no scroll bars
 **Root Cause**: Fixed `width` on too many columns
 **Fix**: Use `minWidth` for flexible columns, `width` only for small predictable columns
 
 ### **Modal Details Not Loading**
-**Symptoms**: Eye icon works but modal shows error 
+**Symptoms**: Eye icon works but modal shows error
 **Root Cause**: Missing standardized service method names
 **Fix**: Add `get_[full_entity_name]_by_id()` method to management service
 

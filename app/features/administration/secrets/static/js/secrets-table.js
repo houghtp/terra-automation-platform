@@ -1,51 +1,111 @@
-console.log('[secrets] secrets-table.js loaded');
-
-// Note: Delete and view functionality now handled by HTMX
-
-// HTMX event handlers for modal management
-document.addEventListener('htmx:afterSwap', function(event) {
-    if (event.detail.target.id === 'modal-content') {
-        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-form'));
-        if (!modal._isShown) {
-            modal.show();
-        }
+window.initializeSecretsTable = function () {
+    // Make sure appTables exists
+    if (!window.appTables) {
+        window.appTables = {};
     }
-});
 
-// Close modal on successful form submission and refresh stats cards
-document.addEventListener('htmx:afterRequest', function(event) {
-    if (event.detail.successful && event.detail.xhr.status === 204) {
-        const modal = bootstrap.Modal.getInstance(document.getElementById('modal-form'));
-        if (modal) {
-            modal.hide();
-        }
-        // Trigger refresh of stats cards (web components will handle this)
-        setTimeout(() => {
-            document.querySelectorAll('stats-card').forEach(card => {
-                if (card.refresh) card.refresh();
-            });
-        }, 100);
-
-        // Show success message
-        if (window.showToast) {
-            showToast('Secret saved successfully', 'success');
-        }
-
-        // Refresh the secrets list after short delay
-        setTimeout(() => location.reload(), 500);
-    }
-});
-
-// HTMX error handler
-document.addEventListener('htmx:responseError', function(event) {
-    if (window.showToast) {
-        showToast('Error: Failed to process request', 'error');
-    }
-});
-
-// Auto-refresh stats cards every 5 minutes (more efficient than full page reload)
-setInterval(() => {
-    document.querySelectorAll('stats-card').forEach(card => {
-        if (card.refresh) card.refresh();
+    const table = new Tabulator("#secrets-table", {
+        ...advancedTableConfig,
+        ajaxURL: "/features/administration/secrets/api/list",
+        columns: [
+            {
+                title: "Name",
+                field: "name",
+                minWidth: 150,
+                headerFilter: "input",
+                formatter: function (cell) {
+                    return `<strong>${cell.getValue()}</strong>`;
+                }
+            },
+            {
+                title: "Type",
+                field: "secret_type",
+                width: 120,
+                headerFilter: "input",
+                formatter: function (cell) {
+                    const type = cell.getValue();
+                    const color = type === 'api_key' ? 'blue' : 'gray';
+                    return `<span class="badge bg-${color}">${type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>`;
+                }
+            },
+            {
+                title: "Description",
+                field: "description",
+                minWidth: 200,
+                headerFilter: "input",
+                formatter: function (cell) {
+                    const desc = cell.getValue() || '';
+                    if (desc.length > 80) {
+                        return desc.substring(0, 80) + '...';
+                    }
+                    return desc;
+                }
+            },
+            {
+                title: "Status",
+                field: "is_active",
+                width: 100,
+                headerFilter: "list",
+                headerFilterParams: {
+                    values: {
+                        "": "All",
+                        "true": "Active",
+                        "false": "Inactive"
+                    }
+                },
+                formatter: formatStatusBadge
+            },
+            {
+                title: "Created",
+                field: "created_at",
+                minWidth: 120,
+                headerFilter: "input",
+                formatter: formatDate
+            },
+            {
+                title: "Actions",
+                field: "id",
+                width: 100,
+                headerSort: false,
+                formatter: (cell) => formatViewAction(cell, 'viewSecretDetails')
+            }
+        ]
     });
-}, 300000);
+
+    // Store table reference globally
+    window.secretsTable = table;
+    window.appTables["secrets-table"] = table;
+
+    return table;
+};
+
+// Export table function
+window.exportTable = function (format) {
+    return exportTabulatorTable('secrets-table', format, 'secrets');
+};
+
+window.viewSecretDetails = function (secretId) {
+    // Use HTMX to load secret details
+    htmx.ajax('GET', `/features/administration/secrets/partials/secret_details?secret_id=${secretId}`, {
+        target: '#modal-body',
+        swap: 'innerHTML'
+    }).then(() => {
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('modal'));
+        modal.show();
+    });
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+    const tableElement = document.getElementById("secrets-table");
+
+    if (tableElement && !window.secretsTableInitialized) {
+        window.secretsTableInitialized = true;
+        initializeSecretsTable();
+
+        // Initialize quick search after table is ready
+        setTimeout(() => {
+            initializeQuickSearch('table-quick-search', 'clear-search-btn', 'secrets-table');
+        }, 100);
+    }
+});

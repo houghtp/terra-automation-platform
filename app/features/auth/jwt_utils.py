@@ -2,7 +2,8 @@
 JWT token utilities for authentication.
 """
 import os
-from datetime import datetime, timedelta
+import structlog
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 from jose import JWTError, jwt
 from pydantic import BaseModel, ValidationError
@@ -25,26 +26,26 @@ class JWTUtils:
         secret = os.getenv("JWT_SECRET_KEY")
         if not secret:
             raise ValueError("JWT_SECRET_KEY environment variable is required")
-        
+
         # Security check: ensure secret is strong enough for production
         if len(secret) < 32:
             raise ValueError("JWT_SECRET_KEY must be at least 32 characters long")
-        
+
         # Enhanced entropy check
         if len(set(secret)) < 8:
             raise ValueError("JWT_SECRET_KEY has insufficient character diversity")
-        
+
         # Check for common patterns that indicate weak secrets
         if secret.isdigit():
             raise ValueError("JWT_SECRET_KEY cannot be all numbers")
-        
+
         if secret.isalpha():
             raise ValueError("JWT_SECRET_KEY should contain mixed characters (letters, numbers, symbols)")
-        
+
         # Check for sequential or repeated patterns
         if any(char * 3 in secret for char in set(secret)):
             raise ValueError("JWT_SECRET_KEY contains repeated character sequences")
-        
+
         # Warn if using default/weak secrets (expanded list)
         weak_secrets = [
             "dev-secret-key-change-in-production",
@@ -62,33 +63,33 @@ class JWTUtils:
         ]
         if secret.lower() in [s.lower() for s in weak_secrets]:
             raise ValueError("JWT_SECRET_KEY appears to be a weak/default value. Use a strong, random secret.")
-        
+
         # Additional security: check for common dictionary words or patterns
         common_weak_patterns = ["admin", "user", "api", "key", "token", "pass"]
         if any(pattern in secret.lower() for pattern in common_weak_patterns):
             import logging
-            logger = logging.getLogger(__name__)
+            logger = structlog.get_logger(__name__)
             logger.warning("JWT_SECRET_KEY contains common words that might reduce security")
-            
+
         return secret
 
     @staticmethod
     def _get_algorithm() -> str:
         """Get JWT algorithm from environment with security validation."""
         algorithm = os.getenv("JWT_ALGORITHM", "HS256")
-        
+
         # Security check: ensure algorithm is secure
         allowed_algorithms = ["HS256", "HS384", "HS512", "RS256", "RS384", "RS512"]
         if algorithm not in allowed_algorithms:
             raise ValueError(f"JWT_ALGORITHM '{algorithm}' is not supported. Use one of: {allowed_algorithms}")
-        
+
         # Warn about deprecated algorithms
         deprecated_algorithms = ["HS256"]  # Consider upgrading to HS512 or RS256
         if algorithm in deprecated_algorithms:
             import logging
-            logger = logging.getLogger(__name__)
+            logger = structlog.get_logger(__name__)
             logger.info(f"JWT_ALGORITHM '{algorithm}' is functional but consider upgrading to HS512 or RS256 for enhanced security")
-            
+
         return algorithm
 
     @staticmethod
@@ -100,7 +101,7 @@ class JWTUtils:
                 raise ValueError("Access token expiration too short (minimum 5 minutes)")
             if minutes > 240:  # 4 hours
                 import logging
-                logger = logging.getLogger(__name__)
+                logger = structlog.get_logger(__name__)
                 logger.warning(f"Access token expiration is long ({minutes} minutes). Consider shorter expiry for security.")
         elif token_type == "refresh":
             # Refresh tokens can be longer (1 hour to 30 days)
@@ -108,9 +109,9 @@ class JWTUtils:
                 raise ValueError("Refresh token expiration too short (minimum 1 hour)")
             if minutes > 43200:  # 30 days
                 import logging
-                logger = logging.getLogger(__name__)
+                logger = structlog.get_logger(__name__)
                 logger.warning(f"Refresh token expiration is very long ({minutes} minutes). Consider shorter expiry for security.")
-        
+
         return minutes
 
     @staticmethod
@@ -128,7 +129,7 @@ class JWTUtils:
             expire_minutes = JWTUtils._validate_expiration_time(expire_minutes, "access")
             expires_delta = timedelta(minutes=expire_minutes)
 
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
 
         payload = {
             "user_id": user_id,
@@ -136,7 +137,7 @@ class JWTUtils:
             "role": role,
             "email": email,
             "exp": expire,
-            "iat": datetime.utcnow(),
+            "iat": datetime.now(timezone.utc),
             "type": "access"
         }
 
@@ -160,13 +161,13 @@ class JWTUtils:
             expire_minutes = JWTUtils._validate_expiration_time(expire_minutes, "refresh")
             expires_delta = timedelta(minutes=expire_minutes)
 
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
 
         payload = {
             "user_id": user_id,
             "tenant_id": tenant_id,
             "exp": expire,
-            "iat": datetime.utcnow(),
+            "iat": datetime.now(timezone.utc),
             "type": "refresh"
         }
 

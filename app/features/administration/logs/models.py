@@ -1,14 +1,15 @@
 """
 Application logs model for storing structured logs in database with tenant isolation.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 from sqlalchemy import Column, String, DateTime, Text, Integer, Index
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP
 from app.features.core.database import Base
+from app.features.core.audit_mixin import AuditMixin
 
 
-class ApplicationLog(Base):
+class ApplicationLog(Base, AuditMixin):
     """
     Database model for storing application logs with tenant isolation.
 
@@ -24,7 +25,7 @@ class ApplicationLog(Base):
     # Log metadata
     level = Column(String(20), nullable=False, index=True)  # DEBUG, INFO, WARNING, ERROR, CRITICAL
     logger_name = Column(String(255), nullable=False)
-    timestamp = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    timestamp = Column(TIMESTAMP(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
 
     # Log content
     message = Column(Text, nullable=False)
@@ -52,7 +53,7 @@ class ApplicationLog(Base):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert log entry to dictionary for API responses."""
-        return {
+        base_dict = {
             "id": self.id,
             "tenant_id": self.tenant_id,
             "request_id": self.request_id,
@@ -70,6 +71,9 @@ class ApplicationLog(Base):
             "user_agent": self.user_agent,
             "extra_data": self.extra_data,
         }
+        # Add audit information with human-readable data
+        base_dict.update(self.get_audit_info())
+        return base_dict
 
     def __repr__(self) -> str:
         return f"<ApplicationLog(id={self.id}, tenant_id='{self.tenant_id}', level='{self.level}', timestamp='{self.timestamp}')>"

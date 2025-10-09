@@ -1,0 +1,239 @@
+<!-- AI-Powered Content Creation Modal -->
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="ti ti-robot"></i>
+        Generate SEO Content
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<div class="modal-body">
+    <!-- AI Content Generation Form -->
+    <div class="seo-ai-content">
+            <div class="alert alert-info mb-4">
+                <i class="ti ti-sparkles me-2"></i>
+                <strong>AI-Powered SEO Content Generation</strong><br>
+                Generate high-quality, SEO-optimized content using competitor research and AI analysis.
+            </div>
+
+            <form id="seo-ai-form">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="mb-3">
+                            <label for="seo-title" class="form-label">Content Topic/Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="seo-title" name="title" required maxlength="500"
+                                   placeholder="e.g., 'Best Project Management Tools for Remote Teams'">
+                            <div class="form-text">This will be used for competitor research and content generation</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Provider Configuration -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="ai-provider" class="form-label">Primary AI Provider</label>
+                            <select class="form-select" id="ai-provider" name="ai_provider">
+                                <option value="openai" selected>OpenAI GPT</option>
+                                <option value="anthropic">Claude (Anthropic)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="fallback-ai" class="form-label">Fallback AI Provider</label>
+                            <select class="form-select" id="fallback-ai" name="fallback_ai">
+                                <option value="">None</option>
+                                <option value="anthropic" selected>Claude (Anthropic)</option>
+                                <option value="openai">OpenAI GPT</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Research Provider Configuration -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="search-provider" class="form-label">Google Search Provider</label>
+                            <select class="form-select" id="search-provider" name="search_provider">
+                                <option value="firecrawl" selected>Firecrawl</option>
+                                <option value="serpapi">SerpAPI</option>
+                                <option value="scrapingdog">ScrapingDog</option>
+                                <option value="scrapingbee">ScrapingBee</option>
+                            </select>
+                            <div class="form-text">Service for finding competitor content</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="scraping-provider" class="form-label">Web Scraping Provider</label>
+                            <select class="form-select" id="scraping-provider" name="scraping_provider">
+                                <option value="firecrawl" selected>Firecrawl</option>
+                                <option value="scrapingbee">ScrapingBee</option>
+                                <option value="scrapingdog">ScrapingDog</option>
+                            </select>
+                            <div class="form-text">Service for extracting article content</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Settings -->
+                <div class="card border-0 bg-light mb-3">
+                    <div class="card-header bg-transparent border-0 pb-0">
+                        <button class="btn btn-link text-decoration-none p-0 w-100 text-start" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#advanced-settings" aria-expanded="false">
+                            <i class="ti ti-settings me-2"></i>Advanced Settings
+                            <i class="ti ti-chevron-down float-end mt-1"></i>
+                        </button>
+                    </div>
+                    <div class="collapse" id="advanced-settings">
+                        <div class="card-body pt-2">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="min-seo-score" class="form-label">Minimum SEO Score</label>
+                                        <input type="range" class="form-range" id="min-seo-score" name="min_seo_score"
+                                               min="80" max="100" value="95" oninput="updateScoreLabel(this.value)">
+                                        <div class="d-flex justify-content-between small text-muted">
+                                            <span>80</span>
+                                            <span id="score-value">95</span>
+                                            <span>100</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="max-iterations" class="form-label">Max Refinement Iterations</label>
+                                        <select class="form-select" id="max-iterations" name="max_iterations">
+                                            <option value="1">1 iteration</option>
+                                            <option value="2">2 iterations</option>
+                                            <option value="3" selected>3 iterations</option>
+                                            <option value="4">4 iterations</option>
+                                            <option value="5">5 iterations</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="auto-approve" name="auto_approve">
+                                        <label class="form-check-label" for="auto-approve">
+                                            Auto-approve content that meets SEO score threshold
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Generation Status -->
+                <div id="generation-status" class="alert alert-warning d-none">
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border spinner-border-sm me-3" role="status"></div>
+                        <div>
+                            <strong>Generating SEO Content...</strong><br>
+                            <span id="status-message">Starting content generation process...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-success" id="generate-btn">
+                        <i class="ti ti-sparkles me-1"></i>Generate SEO Content
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+    <div class="text-muted small">
+        <i class="ti ti-info-circle me-1"></i>
+        Content will be created in review state and require approval before publishing.
+    </div>
+</div>
+
+<script>
+// Update SEO score label
+function updateScoreLabel(value) {
+    document.getElementById('score-value').textContent = value;
+}
+
+// Handle SEO AI form submission
+document.getElementById('seo-ai-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const generateBtn = document.getElementById('generate-btn');
+    const statusDiv = document.getElementById('generation-status');
+    const statusMessage = document.getElementById('status-message');
+
+    // Show loading state
+    generateBtn.disabled = true;
+    generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+    statusDiv.classList.remove('d-none');
+
+    try {
+        const response = await fetch('/features/content-broadcaster/api/generate-seo-content', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                title: formData.get('title'),
+                ai_provider: formData.get('ai_provider'),
+                fallback_ai: formData.get('fallback_ai') || null,
+                search_provider: formData.get('search_provider'),
+                scraping_provider: formData.get('scraping_provider'),
+                min_seo_score: parseInt(formData.get('min_seo_score')),
+                max_iterations: parseInt(formData.get('max_iterations')),
+                auto_approve: formData.get('auto_approve') === 'on'
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            statusMessage.innerHTML = `✅ ${result.message}<br><small>Estimated completion time: ${result.estimated_time}</small>`;
+            statusDiv.className = 'alert alert-success';
+
+            // Show success and close modal after delay
+            setTimeout(() => {
+                bootstrap.Modal.getInstance(document.querySelector('.modal')).hide();
+                // Refresh content table
+                htmx.trigger('#content-table', 'refresh');
+            }, 2000);
+        } else {
+            throw new Error(result.detail || 'Generation failed');
+        }
+
+    } catch (error) {
+        statusMessage.innerHTML = `❌ Error: ${error.message}`;
+        statusDiv.className = 'alert alert-danger';
+
+        // Reset button
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = '<i class="ti ti-sparkles me-1"></i>Generate SEO Content';
+    }
+});
+
+// Auto-refresh content table every 30 seconds when modal is open
+let refreshInterval;
+document.querySelector('.modal').addEventListener('shown.bs.modal', function() {
+    refreshInterval = setInterval(() => {
+        // Only refresh if we're not actively generating
+        if (!document.getElementById('generate-btn').disabled) {
+            htmx.trigger('#content-table', 'refresh');
+        }
+    }, 30000);
+});
+
+document.querySelector('.modal').addEventListener('hidden.bs.modal', function() {
+    clearInterval(refreshInterval);
+});
+</script>

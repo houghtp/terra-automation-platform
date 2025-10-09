@@ -11,7 +11,7 @@ import hashlib
 import hmac
 from io import BytesIO
 from typing import List, Optional, Tuple, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from dataclasses import dataclass
 
@@ -19,11 +19,11 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, JSON
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from fastapi import HTTPException, status
-import logging
+import structlog
 
 from app.features.core.database import Base
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class MFAMethod(Enum):
@@ -102,8 +102,8 @@ class UserMFA(Base):
     locked_until = Column(DateTime, nullable=True)
 
     # Audit
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
     def has_any_method_enabled(self) -> bool:
         """Check if user has any MFA method enabled."""
@@ -113,7 +113,7 @@ class UserMFA(Base):
         """Check if MFA is temporarily locked due to failed attempts."""
         if not self.locked_until:
             return False
-        return datetime.utcnow() < self.locked_until
+        return datetime.now(timezone.utc) < self.locked_until
 
     def get_enabled_methods(self) -> List[MFAMethod]:
         """Get list of enabled MFA methods."""
@@ -149,14 +149,14 @@ class MFAChallenge(Base):
     max_attempts = Column(Integer, default=3, nullable=False)
 
     # Lifecycle
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     expires_at = Column(DateTime, nullable=False)
     completed_at = Column(DateTime, nullable=True)
     ip_address = Column(String(45), nullable=True)
 
     def is_expired(self) -> bool:
         """Check if challenge has expired."""
-        return datetime.utcnow() > self.expires_at
+        return datetime.now(timezone.utc) > self.expires_at
 
     def is_exhausted(self) -> bool:
         """Check if all attempts have been used."""
@@ -272,7 +272,7 @@ class MFAManager:
             # Update with TOTP setup (but don't enable yet)
             mfa_record.totp_secret = secret  # In production, encrypt this
             mfa_record.recovery_codes = hashed_codes
-            mfa_record.recovery_codes_generated_at = datetime.utcnow()
+            mfa_record.recovery_codes_generated_at = datetime.now(timezone.utc)
             mfa_record.status = MFAStatus.PENDING.value
 
             await session.commit()
@@ -331,9 +331,9 @@ class MFAManager:
 
             # Enable TOTP and update status
             mfa_record.totp_enabled = True
-            mfa_record.totp_verified_at = datetime.utcnow()
+            mfa_record.totp_verified_at = datetime.now(timezone.utc)
             mfa_record.status = MFAStatus.ENABLED.value
-            mfa_record.last_used_at = datetime.utcnow()
+            mfa_record.last_used_at = datetime.now(timezone.utc)
             mfa_record.last_used_method = MFAMethod.TOTP.value
 
             await session.commit()
@@ -374,7 +374,7 @@ class MFAManager:
             challenge_id = secrets.token_urlsafe(24)
 
             # Calculate expiration
-            expires_at = datetime.utcnow() + timedelta(minutes=expires_in_minutes)
+            expires_at = datetime.now(timezone.utc) + timedelta(minutes=expires_in_minutes)
 
             # Create challenge record
             challenge = MFAChallenge(
@@ -462,10 +462,10 @@ class MFAManager:
 
             if verification_success:
                 # Mark challenge as completed
-                challenge.completed_at = datetime.utcnow()
+                challenge.completed_at = datetime.now(timezone.utc)
 
                 # Update MFA record
-                mfa_record.last_used_at = datetime.utcnow()
+                mfa_record.last_used_at = datetime.now(timezone.utc)
                 mfa_record.last_used_method = method.value
                 mfa_record.failed_attempts = 0  # Reset failed attempts
 
@@ -476,7 +476,7 @@ class MFAManager:
 
                 # Lock account if too many failures
                 if mfa_record.failed_attempts >= 5:
-                    mfa_record.locked_until = datetime.utcnow() + timedelta(minutes=15)
+                    mfa_record.locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
                     logger.warning(f"MFA locked for user {challenge.user_id} due to failed attempts")
 
                 logger.warning(f"MFA verification failed for user {challenge.user_id}")
