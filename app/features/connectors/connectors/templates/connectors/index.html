@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Connectors - TerraAutomationPlatform{% endblock %}
+
+{% block head_extra %}
+<style>
+    .connector-card {
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    .connector-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+    .connector-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    .tab-content {
+        min-height: 400px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page header -->
+<div class="page-header d-print-none">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-pretitle">Business Automations</div>
+            <h2 class="page-title">
+                <i class="ti ti-plug me-2"></i>Connectors
+            </h2>
+        </div>
+        <div class="col-auto ms-auto d-print-none">
+            <div class="d-flex">
+                <div class="me-3">
+                    <div class="text-muted small">
+                        <strong>{{ catalog_count }}</strong> available
+                        <span class="mx-2">|</span>
+                        <strong>{{ installed_count }}</strong> installed
+                        <span class="mx-2">|</span>
+                        <strong>{{ active_count }}</strong> active
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs -->
+            <ul class="nav nav-tabs mb-4" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link {% if active_tab == 'catalog' %}active{% endif %}"
+                       href="/features/connectors/?tab=catalog"
+                       role="tab">
+                        <i class="ti ti-apps me-1"></i>
+                        Catalog
+                        <span class="badge bg-blue-lt ms-2">{{ catalog_count }}</span>
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link {% if active_tab == 'installed' %}active{% endif %}"
+                       href="/features/connectors/?tab=installed"
+                       role="tab">
+                        <i class="ti ti-plug-connected me-1"></i>
+                        Installed
+                        <span class="badge bg-green-lt ms-2">{{ installed_count }}</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Tab content -->
+            <div class="tab-content">
+    <!-- Catalog Tab -->
+    {% if active_tab == 'catalog' %}
+    <div class="tab-pane fade show active" id="catalog-tab">
+        <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <input type="text"
+                                       class="form-control"
+                                       placeholder="Search connectors..."
+                                       id="catalog-search"
+                                       hx-get="/features/connectors/catalog"
+                                       hx-trigger="keyup changed delay:500ms"
+                                       hx-target="#catalog-grid"
+                                       hx-include="[name='category']">
+                                <button class="btn btn-icon" type="button">
+                                    <i class="ti ti-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <select class="form-select"
+                                    name="category"
+                                    hx-get="/features/connectors/catalog"
+                                    hx-trigger="change"
+                                    hx-target="#catalog-grid"
+                                    hx-include="#catalog-search">
+                                <option value="">All Categories</option>
+                                <option value="Social">Social Media</option>
+                                <option value="Web">Web & CMS</option>
+                                <option value="Video">Video</option>
+                                <option value="Email">Email</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="catalog-grid"
+                         hx-get="/features/connectors/catalog"
+                         hx-trigger="load"
+                         hx-swap="innerHTML">
+                        <div class="text-center py-5">
+                            <div class="spinner-border" role="status"></div>
+                            <p class="text-muted mt-2">Loading connectors...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Installed Tab -->
+    {% if active_tab == 'installed' %}
+    <div class="tab-pane fade show active" id="installed-tab">
+        <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <input type="text"
+                                       class="form-control"
+                                       placeholder="Search installed..."
+                                       id="installed-search"
+                                       hx-get="/features/connectors/installed"
+                                       hx-trigger="keyup changed delay:500ms"
+                                       hx-target="#installed-grid"
+                                       hx-include="[name='status'],[name='category']">
+                                <button class="btn btn-icon" type="button">
+                                    <i class="ti ti-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select"
+                                    name="category"
+                                    hx-get="/features/connectors/installed"
+                                    hx-trigger="change"
+                                    hx-target="#installed-grid"
+                                    hx-include="#installed-search,[name='status']">
+                                <option value="">All Categories</option>
+                                <option value="Social">Social Media</option>
+                                <option value="Web">Web & CMS</option>
+                                <option value="Video">Video</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select"
+                                    name="status"
+                                    hx-get="/features/connectors/installed"
+                                    hx-trigger="change"
+                                    hx-target="#installed-grid"
+                                    hx-include="#installed-search,[name='category']">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                                <option value="error">Error</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="installed-grid"
+                         hx-get="/features/connectors/installed"
+                         hx-trigger="load"
+                         hx-swap="innerHTML">
+                        <div class="text-center py-5">
+                            <div class="spinner-border" role="status"></div>
+                            <p class="text-muted mt-2">Loading connectors...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal container for HTMX -->
+<div id="modal-container"></div>
+
+{% endblock %}

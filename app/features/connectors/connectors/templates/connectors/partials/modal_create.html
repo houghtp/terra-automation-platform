@@ -1,0 +1,209 @@
+<!-- Create Connector Modal -->
+<div class="modal modal-blur fade show" id="connector-modal" tabindex="-1" style="display: block;" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <form hx-post="/features/connectors/forms/create"
+                  hx-swap="outerHTML"
+                  hx-target="#modal-container">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="ti ti-plus me-2"></i>
+                        Add Connector: {{ catalog.name }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                            onclick="document.getElementById('modal-container').innerHTML=''"></button>
+                </div>
+
+                <div class="modal-body">
+                    {% if error %}
+                    <div class="alert alert-danger alert-dismissible" role="alert">
+                        <div class="d-flex">
+                            <div><i class="ti ti-alert-circle"></i></div>
+                            <div class="ms-2">{{ error }}</div>
+                        </div>
+                        <a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>
+                    </div>
+                    {% endif %}
+
+                    <!-- Hidden catalog ID -->
+                    <input type="hidden" name="catalog_id" value="{{ catalog.id }}">
+
+                    <!-- Connector Info -->
+                    <div class="row mb-3">
+                        <div class="col-md-2 text-center">
+                            <div style="font-size: 3rem;">
+                                {% if catalog.icon %}
+                                <i class="ti ti-{{ catalog.icon }} text-primary"></i>
+                                {% else %}
+                                <i class="ti ti-plug text-muted"></i>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-10">
+                            <h4>{{ catalog.name }}</h4>
+                            <p class="text-muted mb-0">{{ catalog.description }}</p>
+                            <div class="mt-2">
+                                <span class="badge badge-outline text-blue">{{ catalog.category }}</span>
+                                <span class="badge bg-azure-lt ms-1">
+                                    <i class="ti ti-lock me-1"></i>{{ catalog.auth_type|upper }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Basic Fields -->
+                    <div class="mb-3">
+                        <label class="form-label required">Connector Name</label>
+                        <input type="text"
+                               class="form-control"
+                               name="name"
+                               placeholder="e.g., Marketing Twitter"
+                               value="{{ form_data.name if form_data else '' }}"
+                               required
+                               hx-post="/features/connectors/forms/validate-name"
+                               hx-trigger="blur"
+                               hx-target="#name-feedback"
+                               hx-swap="innerHTML">
+                        <div id="name-feedback"></div>
+                        <small class="form-hint">A friendly name to identify this connector instance</small>
+                    </div>
+
+                    <!-- Configuration Fields (Dynamic from JSON Schema) -->
+                    {% if catalog.default_config_schema and catalog.default_config_schema.properties %}
+                    <h5 class="mb-3">Configuration</h5>
+                    {% for field_name, field_schema in catalog.default_config_schema.properties.items() %}
+                    <div class="mb-3">
+                        <label class="form-label {% if field_name in catalog.default_config_schema.get('required', []) %}required{% endif %}">
+                            {{ field_schema.get('title', field_name|title) }}
+                        </label>
+
+                        {% if field_schema.type == 'string' %}
+                            {% if field_schema.get('enum') %}
+                            <!-- Enum/Select -->
+                            <select class="form-select" name="config_{{ field_name }}" {% if field_name in catalog.default_config_schema.get('required', []) %}required{% endif %}>
+                                <option value="">Select...</option>
+                                {% for option in field_schema.enum %}
+                                <option value="{{ option }}">{{ option|title }}</option>
+                                {% endfor %}
+                            </select>
+                            {% elif field_schema.get('format') == 'uri' %}
+                            <!-- URL -->
+                            <input type="url"
+                                   class="form-control"
+                                   name="config_{{ field_name }}"
+                                   placeholder="https://"
+                                   {% if field_name in catalog.default_config_schema.get('required', []) %}required{% endif %}>
+                            {% else %}
+                            <!-- Text -->
+                            <input type="text"
+                                   class="form-control"
+                                   name="config_{{ field_name }}"
+                                   placeholder="{{ field_schema.get('description', '') }}"
+                                   {% if field_name in catalog.default_config_schema.get('required', []) %}required{% endif %}>
+                            {% endif %}
+                        {% elif field_schema.type == 'integer' or field_schema.type == 'number' %}
+                            <!-- Number -->
+                            <input type="number"
+                                   class="form-control"
+                                   name="config_{{ field_name }}"
+                                   {% if field_schema.get('minimum') %}min="{{ field_schema.minimum }}"{% endif %}
+                                   {% if field_schema.get('maximum') %}max="{{ field_schema.maximum }}"{% endif %}
+                                   {% if field_name in catalog.default_config_schema.get('required', []) %}required{% endif %}>
+                        {% elif field_schema.type == 'boolean' %}
+                            <!-- Checkbox -->
+                            <label class="form-check form-switch">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       name="config_{{ field_name }}"
+                                       value="true">
+                                <span class="form-check-label">{{ field_schema.get('description', 'Enable') }}</span>
+                            </label>
+                        {% elif field_schema.type == 'array' %}
+                            <!-- Array (comma-separated) -->
+                            <input type="text"
+                                   class="form-control"
+                                   name="config_{{ field_name }}"
+                                   placeholder="Comma-separated values">
+                            <small class="form-hint">Enter multiple values separated by commas</small>
+                        {% endif %}
+
+                        {% if field_schema.get('description') %}
+                        <small class="form-hint">{{ field_schema.description }}</small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+
+                    <!-- Authentication Fields -->
+                    <h5 class="mb-3">
+                        Authentication
+                        <span class="badge bg-azure-lt ms-2">{{ catalog.auth_type|upper }}</span>
+                    </h5>
+
+                    {% if catalog.auth_type == 'oauth' %}
+                    <div class="alert alert-info">
+                        <i class="ti ti-info-circle me-2"></i>
+                        OAuth authentication requires you to provide access tokens. You'll need to obtain these from the service provider.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Access Token</label>
+                        <input type="password" class="form-control" name="auth_access_token" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Refresh Token (Optional)</label>
+                        <input type="password" class="form-control" name="auth_refresh_token">
+                    </div>
+
+                    {% elif catalog.auth_type == 'api_key' %}
+                    <div class="mb-3">
+                        <label class="form-label required">API Key</label>
+                        <input type="password" class="form-control" name="auth_api_key" required>
+                    </div>
+
+                    {% elif catalog.auth_type == 'basic' %}
+                    <div class="mb-3">
+                        <label class="form-label required">Username</label>
+                        <input type="text" class="form-control" name="auth_username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">Password</label>
+                        <input type="password" class="form-control" name="auth_password" required>
+                    </div>
+                    {% endif %}
+
+                    <!-- Tags -->
+                    <div class="mb-3">
+                        <label class="form-label">Tags</label>
+                        <input type="text"
+                               class="form-control"
+                               name="tags"
+                               placeholder="production, marketing, social"
+                               value="{{ form_data.tags if form_data else '' }}">
+                        <small class="form-hint">Comma-separated tags for organization</small>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"
+                            onclick="document.getElementById('modal-container').innerHTML=''">
+                        <i class="ti ti-x icon"></i>
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="ti ti-plus icon"></i>
+                        Add Connector
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="modal-backdrop fade show"></div>
+
+<script>
+// Auto-show modal
+document.getElementById('connector-modal').classList.add('show');
+</script>
