@@ -2,7 +2,7 @@
 Content Broadcaster CRUD routes for Tabulator operations.
 """
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.core.database import get_db
@@ -58,7 +58,8 @@ async def get_content_list(
             created_by=created_by,
             approval_status=approval_enum
         )
-        return result
+        # Return simple array for Tabulator (matches planning_routes.py pattern)
+        return result.get("data", [])
 
     except HTTPException:
         raise
@@ -68,7 +69,7 @@ async def get_content_list(
 
 @router.get("/api/{content_id}")
 async def get_content(
-    content_id: int,
+    content_id: str,
     db: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user),
@@ -87,6 +88,46 @@ async def get_content(
     except Exception as e:
         logger.exception(f"Failed to get content {content_id}")
         raise HTTPException(status_code=500, detail="Failed to retrieve content")
+
+@router.patch("/{content_id}/field")
+async def update_content_field(
+    content_id: str,
+    field_update: dict = Body(...),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """Update single content field for inline editing (standard pattern)."""
+    try:
+        field = field_update.get("field")
+        value = field_update.get("value")
+
+        # Field type coercion for specific fields
+        if field == "priority" and value:
+            value = value.lower()  # Ensure lowercase for enum
+
+        if field == "state" and value:
+            value = value.lower()  # Ensure lowercase for enum
+
+        content = await service.update_content_field(content_id, field, value)
+        if not content:
+            raise HTTPException(status_code=404, detail="Content not found")
+
+        # Commit the transaction
+        await db.commit()
+
+        return {"success": True}
+
+    except ValueError as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.exception(f"Failed to update content field {content_id}")
+        raise HTTPException(status_code=500, detail="Failed to update content field")
 
 @router.put("/api/{content_id}")
 async def update_content(
@@ -121,7 +162,9 @@ async def update_content(
         logger.exception(f"Failed to update content {content_id}")
         raise HTTPException(status_code=500, detail="Failed to update content")
 
-@router.delete("/api/{content_id}")
+# Delete content (accept both DELETE and POST for compatibility) - STANDARD PATTERN
+@router.delete("/{content_id}/delete")
+@router.post("/{content_id}/delete")
 async def delete_content(
     content_id: str,
     db: AsyncSession = Depends(get_db),
@@ -129,16 +172,51 @@ async def delete_content(
     current_user: User = Depends(get_current_user),
     service: ContentBroadcasterService = Depends(get_content_service)
 ):
-    """API endpoint to delete content."""
+    """Delete content using standard pattern (matches users slice)."""
     try:
         success = await service.delete_content(content_id)
         if not success:
             raise HTTPException(status_code=404, detail="Content not found")
 
-        return {"success": True, "message": "Content deleted successfully"}
+        return {"status": "ok"}
 
     except HTTPException:
         raise
     except Exception as e:
         logger.exception(f"Failed to delete content {content_id}")
         raise HTTPException(status_code=500, detail="Failed to delete content")
+
+
+# --- HTMX/Modal Routes ---
+
+@router.get("/{content_id}/view")
+async def view_content_item(
+    request: Request,
+    content_id: str,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """Full-page content item viewer."""
+    from app.features.core.templates import templates
+
+    try:
+        content = await service.get_content_by_id(content_id)
+        if not content:
+            raise HTTPException(status_code=404, detail="Content not found")
+
+        return templates.TemplateResponse(
+            "content_broadcaster/view_content.html",
+            {
+                "request": request,
+                "content": content,
+                "current_user": current_user
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to load content view for {content_id}")
+        raise HTTPException(status_code=500, detail="Failed to load content")

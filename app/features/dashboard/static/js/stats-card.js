@@ -241,7 +241,14 @@ class StatsCard extends HTMLElement {
         try {
             console.log(`[stats-card:${this.id || 'unnamed'}] Loading data from:`, this.dataUrl);
             this.setAttribute('loading', '');
-            const response = await fetch(this.dataUrl);
+            const response = await fetch(this.dataUrl, {
+                credentials: 'same-origin'  // Include cookies for authentication
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
             const data = await response.json();
 
             let value = data;

@@ -2,17 +2,19 @@
 Authentication routes providing JWT-based authentication endpoints.
 """
 import os
-import structlog
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+
 from app.features.core.database import get_db
 from app.features.core.templates import templates
 from app.features.core.rate_limiter import rate_limit_login, rate_limit_register, rate_limit_refresh
 from app.features.core.security import validate_password_complexity
+from app.features.core.sqlalchemy_imports import get_logger
 from app.deps.tenant import tenant_dependency
 
-logger = structlog.get_logger(__name__)
+logger = get_logger(__name__)
 
 # Simple tenant resolution for login (avoids circular dependency)
 async def simple_tenant_dependency(request: Request) -> str:
@@ -21,7 +23,6 @@ async def simple_tenant_dependency(request: Request) -> str:
 
 async def get_user_tenant_for_login(session: AsyncSession, email: str) -> str:
     """Find the tenant for a user by email for login purposes."""
-    from sqlalchemy import select
     from app.features.auth.models import User
 
     # Look up user across all tenants to find their actual tenant
@@ -31,6 +32,7 @@ async def get_user_tenant_for_login(session: AsyncSession, email: str) -> str:
     tenant_id = result.scalar_one_or_none()
 
     return tenant_id or "global"
+
 from app.features.auth.services import AuthService
 from app.features.auth.dependencies import get_current_active_user, get_optional_current_user
 from app.features.auth.schemas import (
@@ -47,9 +49,6 @@ from app.features.auth.schemas import (
 from app.features.auth.models import User
 
 router = APIRouter(tags=["auth"])
-
-# Initialize auth service
-auth_service = AuthService()
 
 # Include MFA routes
 from .mfa_routes import router as mfa_router
@@ -68,9 +67,11 @@ async def register_user(
 ):
     """Register a new user and return tokens."""
     try:
+        # Initialize auth service with session
+        auth_service = AuthService(session)
+
         # Create user
         user = await auth_service.create_user(
-            session=session,
             email=user_data.email,
             password=user_data.password,
             tenant_id=tenant_id,
@@ -118,8 +119,10 @@ async def login_user(
     if tenant_id == "global":
         actual_tenant_id = await get_user_tenant_for_login(session, login_data.email)
 
+    # Initialize auth service with session
+    auth_service = AuthService(session)
+
     user = await auth_service.authenticate_user(
-        session=session,
         email=login_data.email,
         password=login_data.password,
         tenant_id=actual_tenant_id
@@ -153,8 +156,10 @@ async def refresh_token(
     _rate_limit: dict = Depends(rate_limit_refresh)
 ):
     """Refresh access token using refresh token."""
+    # Initialize auth service with session
+    auth_service = AuthService(session)
+
     access_token = await auth_service.refresh_access_token(
-        session=session,
         refresh_token=refresh_data.refresh_token
     )
 
@@ -243,7 +248,11 @@ async def list_users_api(
 ):
     """API endpoint to list users for table."""
     try:
-        users = await auth_service.list_users(session, tenant_id)
+        # Query users directly (list_users method doesn't exist in AuthService)
+        from sqlalchemy import select
+        stmt = select(User).where(User.tenant_id == tenant_id)
+        result = await session.execute(stmt)
+        users = result.scalars().all()
 
         # Convert to table format
         user_data = []
@@ -313,9 +322,11 @@ async def login_form_submit(
         actual_tenant_id = await get_user_tenant_for_login(session, email)
         print(f"🔍 Found tenant for {email}: {actual_tenant_id}")
 
+        # Create auth service instance
+        auth_service = AuthService(session)
+
         # Authenticate user with their actual tenant
         user = await auth_service.authenticate_user(
-            session=session,
             email=email,
             password=password,
             tenant_id=actual_tenant_id
@@ -462,9 +473,11 @@ async def register_form_submit(
         )
 
     try:
+        # Create auth service instance
+        auth_service = AuthService(session)
+
         # Create user
         user = await auth_service.create_user(
-            session=session,
             email=email,
             password=password,
             tenant_id=tenant_id,

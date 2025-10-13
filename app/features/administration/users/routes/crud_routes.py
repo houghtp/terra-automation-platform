@@ -16,7 +16,7 @@ async def update_user_field_api(
     user_id: str,
     field_update: dict = Body(...),
     db: AsyncSession = Depends(get_db),
-    tenant: str = Depends(tenant_dependency),
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user)
 ):
     """Update single user field using gold standard patterns."""
@@ -37,7 +37,7 @@ async def update_user_field_api(
                 except Exception:
                     pass  # Keep string value if parse fails
 
-        service = UserManagementService(db, tenant)
+        service = UserManagementService(db, tenant_id)
         updated_user = await service.update_user_field(user_id, field, value)
 
         if not updated_user:
@@ -58,12 +58,12 @@ async def update_user_field_api(
 async def user_list_partial(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    tenant: str = Depends(tenant_dependency),
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user)
 ):
     """Get users list partial using standardized patterns."""
     try:
-        service = UserManagementService(db, tenant)
+        service = UserManagementService(db, tenant_id)
         filters = UserSearchFilter()
 
         # Use centralized global admin check
@@ -85,12 +85,12 @@ async def user_list_partial(
 @router.get("/api/list", response_class=JSONResponse)
 async def get_users_api(
     db: AsyncSession = Depends(get_db),
-    tenant: str = Depends(tenant_dependency),
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user)
 ):
     """Get users list for Tabulator API using standardized patterns."""
     try:
-        service = UserManagementService(db, tenant)
+        service = UserManagementService(db, tenant_id)
         filters = UserSearchFilter()
 
         # Use centralized global admin check
@@ -119,12 +119,12 @@ async def get_users_api(
 async def user_delete_api(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    tenant: str = Depends(tenant_dependency),
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user)
 ):
     """Delete user using gold standard patterns."""
     try:
-        service = UserManagementService(db, tenant)
+        service = UserManagementService(db, tenant_id)
         success = await service.delete_user(user_id)
 
         if not success:
@@ -147,7 +147,7 @@ async def user_delete_api(
 async def user_create(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    tenant: str = Depends(tenant_dependency),
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user)
 ):
     """Create user using gold standard patterns."""
@@ -187,7 +187,7 @@ async def user_create(
             # Get tenant data for form redisplay
             available_tenants = []
             if global_admin:
-                service = UserManagementService(db, tenant)
+                service = UserManagementService(db, tenant_id)
                 available_tenants = await service.get_available_tenants_for_user_forms()
 
             # Return the form with error messages
@@ -222,7 +222,7 @@ async def user_create(
         logger.info(f"User data to create: {user_data}")
 
         # Create user with optional cross-tenant assignment
-        service = UserManagementService(db, tenant)
+        service = UserManagementService(db, tenant_id)
         user = await service.create_user(user_data, target_tenant_id)
         await commit_transaction(db, "create_user")
         logger.info(f"User created successfully: {user.id}")
@@ -247,7 +247,7 @@ async def user_create(
         available_tenants = []
         global_admin = is_global_admin(current_user)
         if global_admin:
-            service = UserManagementService(db, tenant)
+            service = UserManagementService(db, tenant_id)
             available_tenants = await service.get_available_tenants_for_user_forms()
 
         # Return the form with error messages
@@ -272,7 +272,7 @@ async def user_edit(
     request: Request,
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    tenant: str = Depends(tenant_dependency),
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user)
 ):
     """Update user using gold standard patterns."""
@@ -300,7 +300,7 @@ async def user_edit(
             tags=tags
         )
 
-        service = UserManagementService(db, tenant)
+        service = UserManagementService(db, tenant_id)
 
         # Handle tenant reassignment for global admins
         if global_admin and target_tenant_id:

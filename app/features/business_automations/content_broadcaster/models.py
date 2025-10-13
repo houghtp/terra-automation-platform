@@ -6,7 +6,7 @@ supporting multi-tenant content management, approval workflows, scheduling,
 and publishing across various connectors.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 from enum import Enum
 from sqlalchemy import Column, String, DateTime, Text, Integer, Boolean, ForeignKey, JSON
@@ -14,6 +14,18 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from app.features.core.database import Base
 from app.features.core.audit_mixin import AuditMixin
+
+
+class ContentPlanStatus(str, Enum):
+    """Content plan status enumeration."""
+    PLANNED = "planned"
+    RESEARCHING = "researching"
+    GENERATING = "generating"
+    REFINING = "refining"
+    DRAFT_READY = "draft_ready"
+    APPROVED = "approved"
+    ARCHIVED = "archived"
+    FAILED = "failed"
 
 
 class ContentState(str, Enum):
@@ -42,6 +54,126 @@ class JobStatus(str, Enum):
     FAILED = "failed"
     RETRYING = "retrying"
     CANCELED = "canceled"
+
+
+class VariantPurpose(str, Enum):
+    """Content variant purpose enumeration."""
+    DEFAULT = "default"
+    SHORT = "short"
+    LONG = "long"
+    TEASER = "teaser"
+    SUMMARY = "summary"
+    A = "A"
+    B = "B"
+
+
+class ContentPlan(Base, AuditMixin):
+    """
+    Content planning table - the entry point for AI-driven content generation.
+
+    Users create content plans with topic ideas, and background workers automatically:
+    1. Research competitors and analyze SEO opportunities
+    2. Generate first drafts using AI
+    3. Validate and score content (0-100)
+    4. Iteratively refine until SEO score meets target
+    5. Present final draft to users for approval
+    """
+    __tablename__ = "content_plans"
+
+    id = Column(String(36), primary_key=True, index=True)
+    tenant_id = Column(String(50), nullable=False, index=True, default="global")
+
+    # Content idea/topic
+    title = Column(String(500), nullable=False)
+    description = Column(Text, nullable=True)
+
+    # Target configuration
+    target_channels = Column(JSON, nullable=False, default=list)  # ["wordpress", "twitter", "linkedin"]
+    target_audience = Column(String(100), nullable=True)  # "developers", "executives"
+    tone = Column(String(50), nullable=True)  # "professional", "casual", "technical"
+    seo_keywords = Column(JSON, nullable=False, default=list)  # Optional user-provided keywords
+    competitor_urls = Column(JSON, nullable=False, default=list)  # Optional URLs to analyze
+
+    # AI generation parameters
+    min_seo_score = Column(Integer, nullable=False, default=95)  # Target SEO score (80-100)
+    max_iterations = Column(Integer, nullable=False, default=3)  # Max refinement loops
+    skip_research = Column(Boolean, nullable=False, default=False)  # Skip competitor research phase
+
+    # Status tracking
+    status = Column(String(20), nullable=False, default=ContentPlanStatus.PLANNED.value, index=True)
+    current_iteration = Column(Integer, nullable=False, default=0)
+    latest_seo_score = Column(Integer, nullable=True)
+
+    # Processing results (JSONB for flexible storage)
+    research_data = Column(JSONB, nullable=False, default=dict)
+    # Structure: {
+    #   "top_results": [{"title": "...", "url": "...", "scraped_content": "..."}],
+    #   "seo_analysis": "AI-generated SEO gap analysis",
+    #   "keywords_found": ["api", "best practices", ...]
+    # }
+
+    generation_metadata = Column(JSONB, nullable=False, default=dict)
+    # Structure: {
+    #   "model": "gpt-4",
+    #   "prompt_tokens": 1500,
+    #   "completion_tokens": 2000,
+    #   "cost_estimate": 0.15,
+    #   "generated_at": "2025-10-11T..."
+    # }
+
+    refinement_history = Column(JSONB, nullable=False, default=list)
+    # Structure: [
+    #   {
+    #     "iteration": 1,
+    #     "score": 78,
+    #     "issues": ["Schema Markup", "Keyword Density"],
+    #     "feedback": {...},
+    #     "refined_at": "2025-10-11T..."
+    #   },
+    #   ...
+    # ]
+
+    # Link to generated content item (one-to-one)
+    generated_content_item_id = Column(String(36), ForeignKey("content_items.id"), nullable=True, index=True)
+
+    # Error handling
+    error_log = Column(Text, nullable=True)
+    retry_count = Column(Integer, nullable=False, default=0)
+
+    # Relationships
+    generated_content = relationship("ContentItem", foreign_keys=[generated_content_item_id], uselist=False)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert model to dictionary for API responses."""
+        base_dict = {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "title": self.title,
+            "description": self.description,
+            "target_channels": self.target_channels or [],
+            "target_audience": self.target_audience,
+            "tone": self.tone,
+            "seo_keywords": self.seo_keywords or [],
+            "competitor_urls": self.competitor_urls or [],
+            "min_seo_score": self.min_seo_score,
+            "max_iterations": self.max_iterations,
+            "skip_research": self.skip_research,
+            "status": self.status,
+            "current_iteration": self.current_iteration,
+            "latest_seo_score": self.latest_seo_score,
+            "research_data": self.research_data or {},
+            "generation_metadata": self.generation_metadata or {},
+            "refinement_history": self.refinement_history or [],
+            "generated_content_item_id": self.generated_content_item_id,
+            "error_log": self.error_log,
+            "retry_count": self.retry_count,
+        }
+        # Add audit information
+        base_dict.update(self.get_audit_info())
+        return base_dict
+
+    def __repr__(self) -> str:
+        return f"<ContentPlan(id={self.id}, tenant_id='{self.tenant_id}', title='{self.title}', status='{self.status}')>"
 
 
 class ContentItem(Base, AuditMixin):
@@ -107,6 +239,66 @@ class ContentItem(Base, AuditMixin):
 
     def __repr__(self) -> str:
         return f"<ContentItem(id={self.id}, tenant_id='{self.tenant_id}', title='{self.title}', state='{self.state}')>"
+
+
+class ContentVariant(Base):
+    """
+    Per-channel content variants for multi-platform publishing.
+
+    Each content item can have multiple variants optimized for different
+    platforms (Twitter 280 chars, LinkedIn professional, WordPress long-form, etc.)
+    """
+    __tablename__ = "content_variants"
+
+    id = Column(String(36), primary_key=True, index=True)
+    tenant_id = Column(String(50), nullable=False, index=True, default="global")
+
+    # Relationship to parent content
+    content_item_id = Column(String(36), ForeignKey("content_items.id"), nullable=False, index=True)
+
+    # Channel identification
+    connector_catalog_key = Column(String(100), nullable=False, index=True)  # "twitter", "wordpress", "linkedin"
+
+    # Variant purpose/type
+    purpose = Column(String(20), nullable=False, default=VariantPurpose.DEFAULT.value)
+
+    # Channel-optimized content
+    body = Column(Text, nullable=False)
+
+    # Variant metadata (channel-specific formatting, constraints)
+    # Note: Cannot use 'metadata' as column name - it's reserved by SQLAlchemy
+    variant_metadata = Column(JSONB, nullable=False, default=dict)
+    # Structure: {
+    #   "char_count": 240,
+    #   "hashtags": ["#API", "#Development"],
+    #   "html": true,
+    #   "mentions": ["@username"],
+    #   "truncated": false
+    # }
+
+    # Audit fields
+    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
+    updated_at = Column(DateTime, nullable=True, onupdate=lambda: datetime.now(timezone.utc))
+
+    # Relationships
+    content_item = relationship("ContentItem", foreign_keys=[content_item_id])
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert model to dictionary for API responses."""
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "content_item_id": self.content_item_id,
+            "connector_catalog_key": self.connector_catalog_key,
+            "purpose": self.purpose,
+            "body": self.body,
+            "variant_metadata": self.variant_metadata or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+    def __repr__(self) -> str:
+        return f"<ContentVariant(id={self.id}, content_item_id='{self.content_item_id}', channel='{self.connector_catalog_key}', purpose='{self.purpose}')>"
 
 
 class PublishJob(Base):

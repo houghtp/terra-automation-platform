@@ -28,7 +28,7 @@ router = APIRouter(tags=["smtp-api"])
 async def send_test_email(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    tenant: str = Depends(tenant_dependency),
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user)
 ):
     """Send a test email using the email service."""
@@ -49,7 +49,7 @@ async def send_test_email(
             }, status_code=400)
 
         # Get email service
-        email_service = await get_email_service(db, tenant)
+        email_service = await get_email_service(db, tenant_id)
 
         # Send test email based on type
         if email_type == "welcome":
@@ -74,13 +74,13 @@ async def send_test_email(
             # Custom email
             result = await email_service.send_email(
                 to_emails=test_email,
-                subject=f"Test Email from {tenant}",
+                subject=f"Test Email from {tenant_id}",
                 html_body=f"""
                 <h2>Test Email</h2>
-                <p>This is a test email sent from the {tenant} email service.</p>
+                <p>This is a test email sent from the {tenant_id} email service.</p>
                 <p>If you received this email, the email service is working correctly!</p>
                 """,
-                text_body=f"Test email from {tenant}. If you received this, the email service is working!"
+                text_body=f"Test email from {tenant_id}. If you received this, the email service is working!"
             )
 
         if result.success:

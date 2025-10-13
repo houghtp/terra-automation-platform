@@ -1,0 +1,68 @@
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="ti ti-eye me-2"></i>
+        View Content
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<div class="modal-body">
+    <!-- Content Information -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">{{ content.title }}</h5>
+
+            <div class="d-flex gap-3 flex-wrap mt-3 mb-3">
+                <span class="badge {% if content.state == 'draft' %}bg-secondary{% elif content.state == 'published' %}bg-success{% elif content.state == 'scheduled' %}bg-info{% else %}bg-warning{% endif %}">
+                    <i class="ti ti-circle-dot me-1"></i>{{ content.state|capitalize }}
+                </span>
+
+                <span class="badge {% if content.approval_status == 'approved' %}bg-success{% elif content.approval_status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+                    <i class="ti ti-check me-1"></i>{{ content.approval_status|capitalize }}
+                </span>
+            </div>
+
+            <div class="row text-muted small">
+                <div class="col-md-6">
+                    <i class="ti ti-user me-1"></i>
+                    <strong>Created by:</strong> {{ content.created_by_email or 'System' }}
+                </div>
+                <div class="col-md-6">
+                    <i class="ti ti-calendar me-1"></i>
+                    <strong>Created:</strong> {{ content.created_at.strftime('%Y-%m-%d %H:%M') if content.created_at }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Body -->
+    <div class="card">
+        <div class="card-header">
+            <h6 class="mb-0">
+                <i class="ti ti-file-text me-2"></i>
+                Content
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="content-preview" style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.375rem; padding: 1rem; background-color: #f8f9fa;">
+                <pre style="white-space: pre-wrap; word-wrap: break-word; font-family: inherit; margin: 0;">{{ content.body }}</pre>
+            </div>
+
+            <!-- Tags -->
+            {% if content.tags and content.tags|length > 0 %}
+            <div class="mt-3">
+                <strong>Tags:</strong>
+                {% for tag in content.tags %}
+                <span class="badge bg-secondary me-1">{{ tag }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        Close
+    </button>
+</div>

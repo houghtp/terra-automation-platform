@@ -33,7 +33,7 @@ router = APIRouter(tags=["smtp-crud"])
 # --- TABULATOR CRUD ROUTES ---
 
 @router.patch("/{config_id}/field")
-async def update_smtp_field_api(config_id: str, field_update: dict = Body(...), db: AsyncSession = Depends(get_db), tenant: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
+async def update_smtp_field_api(config_id: str, field_update: dict = Body(...), db: AsyncSession = Depends(get_db), tenant_id: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
     field = field_update.get("field")
     value = field_update.get("value")
 
@@ -59,7 +59,7 @@ async def update_smtp_field_api(config_id: str, field_update: dict = Body(...), 
                 # keep string value if parse fails
                 pass
 
-    service = SMTPConfigurationService(db, tenant)
+    service = SMTPConfigurationService(db, tenant_id)
     updated_config = await service.update_smtp_field(config_id, field, value, updated_by_user=current_user)
     if not updated_config:
         raise HTTPException(status_code=404, detail="SMTP configuration not found")
@@ -69,9 +69,9 @@ async def update_smtp_field_api(config_id: str, field_update: dict = Body(...), 
 
 # List content (for HTMX updates)
 @router.get("/partials/list_content", response_class=HTMLResponse)
-async def smtp_list_content(request: Request, search: str = "", status: str = "", db: AsyncSession = Depends(get_db), tenant: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
+async def smtp_list_content(request: Request, search: str = "", status: str = "", db: AsyncSession = Depends(get_db), tenant_id: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
     """Get the list content partial for HTMX updates."""
-    service = SMTPConfigurationService(db, tenant)
+    service = SMTPConfigurationService(db, tenant_id)
 
     # Build search filters
     filters = SMTPSearchFilter()
@@ -89,9 +89,9 @@ async def smtp_list_content(request: Request, search: str = "", status: str = ""
 
 # API endpoint for Tabulator
 @router.get("/api/list", response_class=JSONResponse)
-async def get_smtp_configurations_api(search: str = "", status: str = "", db: AsyncSession = Depends(get_db), tenant: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
+async def get_smtp_configurations_api(search: str = "", status: str = "", db: AsyncSession = Depends(get_db), tenant_id: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
     """Get SMTP configurations as JSON for Tabulator."""
-    service = SMTPConfigurationService(db, tenant)
+    service = SMTPConfigurationService(db, tenant_id)
 
     # Build search filters
     filters = SMTPSearchFilter()
@@ -148,9 +148,9 @@ async def get_smtp_configurations_api(search: str = "", status: str = "", db: As
     return result# Delete SMTP configuration (accept both DELETE and POST for compatibility)
 @router.delete("/{config_id}/delete")
 @router.post("/{config_id}/delete")
-async def smtp_delete_api(config_id: str, db: AsyncSession = Depends(get_db), tenant: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
+async def smtp_delete_api(config_id: str, db: AsyncSession = Depends(get_db), tenant_id: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
     """Delete SMTP configuration by ID. Accepts both DELETE and POST for frontend compatibility."""
-    service = SMTPConfigurationService(db, tenant)
+    service = SMTPConfigurationService(db, tenant_id)
 
     # Get config name for response message
     config = await service.get_configuration_by_id(config_id)
@@ -167,7 +167,7 @@ async def smtp_delete_api(config_id: str, db: AsyncSession = Depends(get_db), te
 
 # Create SMTP configuration
 @router.post("/")
-async def smtp_create(request: Request, db: AsyncSession = Depends(get_db), tenant: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
+async def smtp_create(request: Request, db: AsyncSession = Depends(get_db), tenant_id: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
     """Create a new SMTP configuration via form submission."""
     try:
         # Initialize form handler
@@ -202,7 +202,7 @@ async def smtp_create(request: Request, db: AsyncSession = Depends(get_db), tena
             # Get tenant data for form redisplay
             available_tenants = []
             if global_admin:
-                service = SMTPConfigurationService(db, tenant)
+                service = SMTPConfigurationService(db, tenant_id)
                 available_tenants = await service.get_available_tenants_for_smtp_forms()
 
             # Return the form with error messages
@@ -229,7 +229,7 @@ async def smtp_create(request: Request, db: AsyncSession = Depends(get_db), tena
             # Return form with error
             available_tenants = []
             if global_admin:
-                service = SMTPConfigurationService(db, tenant)
+                service = SMTPConfigurationService(db, tenant_id)
                 available_tenants = await service.get_available_tenants_for_smtp_forms()
             return templates.TemplateResponse("administration/smtp/partials/form.html", {
                 "request": request,
@@ -264,7 +264,7 @@ async def smtp_create(request: Request, db: AsyncSession = Depends(get_db), tena
         logger.info(f"SMTP config data to create: {config_data}")
 
         # Create configuration with optional cross-tenant assignment
-        service = SMTPConfigurationService(db, tenant)
+        service = SMTPConfigurationService(db, tenant_id)
         new_config = await service.create_smtp_configuration(config_data, created_by_user=current_user, target_tenant_id=target_tenant_id)
         await commit_transaction(db, "create_smtp_configuration")
         logger.info(f"SMTP configuration created successfully: {new_config.id}")
@@ -282,7 +282,7 @@ async def smtp_create(request: Request, db: AsyncSession = Depends(get_db), tena
         # Get tenant data for form redisplay
         available_tenants = []
         if global_admin:
-            service = SMTPConfigurationService(db, tenant)
+            service = SMTPConfigurationService(db, tenant_id)
             available_tenants = await service.get_available_tenants_for_smtp_forms()
 
         # Map service errors for consistent response
@@ -318,7 +318,7 @@ async def smtp_create(request: Request, db: AsyncSession = Depends(get_db), tena
 
 # Update SMTP configuration
 @router.put("/{config_id}")
-async def smtp_update(request: Request, config_id: str, db: AsyncSession = Depends(get_db), tenant: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
+async def smtp_update(request: Request, config_id: str, db: AsyncSession = Depends(get_db), tenant_id: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
     """Update an existing SMTP configuration via form submission."""
     try:
         logger.info(f"Starting SMTP configuration update process for ID: {config_id}")
@@ -360,7 +360,7 @@ async def smtp_update(request: Request, config_id: str, db: AsyncSession = Depen
             logger.error(f"First error: {form_handler.get_first_error()}")
 
             # Get current config for form context
-            service = SMTPConfigurationService(db, tenant)
+            service = SMTPConfigurationService(db, tenant_id)
             config = await service.get_configuration_by_id(config_id)
 
             # Return the form with error messages
@@ -380,7 +380,7 @@ async def smtp_update(request: Request, config_id: str, db: AsyncSession = Depen
         # Validate TLS/SSL combination
         if use_tls and use_ssl:
             form_handler.add_error("use_ssl", "Cannot use both TLS and SSL")
-            service = SMTPConfigurationService(db, tenant)
+            service = SMTPConfigurationService(db, tenant_id)
             config = await service.get_configuration_by_id(config_id)
             return templates.TemplateResponse("administration/smtp/partials/form.html", {
                 "request": request,
@@ -420,7 +420,7 @@ async def smtp_update(request: Request, config_id: str, db: AsyncSession = Depen
         global_admin = current_user.role == "global_admin" and current_user.tenant_id == "global"
 
         # Update configuration using service
-        service = SMTPConfigurationService(db, tenant)
+        service = SMTPConfigurationService(db, tenant_id)
         updated_config = await service.update_smtp_configuration(config_id, config_data, updated_by_user=current_user)
 
         if not updated_config:
@@ -446,7 +446,7 @@ async def smtp_update(request: Request, config_id: str, db: AsyncSession = Depen
     except ValueError as e:
         logger.error(f"Validation error: {e}")
         # Get current config for form context
-        service = SMTPConfigurationService(db, tenant)
+        service = SMTPConfigurationService(db, tenant_id)
         config = await service.get_configuration_by_id(config_id)
         # Return form with error message
         return templates.TemplateResponse("administration/smtp/partials/form.html", {
@@ -459,7 +459,7 @@ async def smtp_update(request: Request, config_id: str, db: AsyncSession = Depen
         logger.error(f"Failed to update SMTP configuration: {e}")
         await db.rollback()
         # Get current config for form context
-        service = SMTPConfigurationService(db, tenant)
+        service = SMTPConfigurationService(db, tenant_id)
         config = await service.get_configuration_by_id(config_id)
         # Return form with error message
         return templates.TemplateResponse("administration/smtp/partials/form.html", {

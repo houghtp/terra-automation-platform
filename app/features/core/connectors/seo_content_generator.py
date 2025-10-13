@@ -9,7 +9,7 @@ import asyncio
 import json
 import structlog
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -62,11 +62,12 @@ class SEOContentGenerator:
         self,
         title: str,
         created_by: str,
-        db_session: AsyncSession,  # Add database session parameter
+        db_session: Optional[AsyncSession] = None,
         ai_provider: str = "openai",
         fallback_ai: Optional[str] = "anthropic",
         search_provider: str = "serpapi",
-        scraping_provider: str = "firecrawl"
+        scraping_provider: str = "firecrawl",
+        progress_callback: Optional[Callable[[str, str, Optional[Dict[str, Any]]], Awaitable[None]]] = None
     ) -> ContentItem:
         """
         Generate SEO-optimized content from a title.
@@ -76,35 +77,102 @@ class SEOContentGenerator:
         Args:
             title: Content title/topic to generate content for
             created_by: User ID who requested the content
+            db_session: Optional AsyncSession if caller already has one
             ai_provider: Primary AI provider for content generation
             fallback_ai: Fallback AI provider if primary fails
             search_provider: Search service for competitor research
             scraping_provider: Web scraping service for content extraction
+            progress_callback: Optional coroutine for streaming progress updates
 
         Returns:
             ContentItem saved to database for review/approval
         """
+        if db_session is not None:
+            return await self._generate_with_session(
+                db_session=db_session,
+                title=title,
+                created_by=created_by,
+                ai_provider=ai_provider,
+                fallback_ai=fallback_ai,
+                search_provider=search_provider,
+                scraping_provider=scraping_provider,
+                progress_callback=progress_callback
+            )
+
+        async with get_async_session() as session:
+            return await self._generate_with_session(
+                db_session=session,
+                title=title,
+                created_by=created_by,
+                ai_provider=ai_provider,
+                fallback_ai=fallback_ai,
+                search_provider=search_provider,
+                scraping_provider=scraping_provider,
+                progress_callback=progress_callback
+            )
+
+    async def _generate_with_session(
+        self,
+        db_session: AsyncSession,
+        title: str,
+        created_by: str,
+        ai_provider: str,
+        fallback_ai: Optional[str],
+        search_provider: str,
+        scraping_provider: str,
+        progress_callback: Optional[Callable[[str, str, Optional[Dict[str, Any]]], Awaitable[None]]]
+    ) -> ContentItem:
+        async def emit(stage: str, message: str, data: Optional[Dict[str, Any]] = None) -> None:
+            if progress_callback:
+                await progress_callback(stage, message, data or {})
+
         try:
             logger.info(f"Starting SEO content generation for: '{title}'")
+            await emit("start", f"Starting SEO content generation for '{title}'.")
 
             # Initialize connector service with database session and tenant
             self.connector_service = ConnectorService(db_session, self.tenant_id)
 
             # Step 1: Research competitor content
+            await emit("research.start", "Researching competitor content...")
             competitor_data = await self._research_competitors(title, search_provider, scraping_provider)
+            await emit(
+                "research.complete",
+                "Competitor research completed.",
+                {"sources": len(competitor_data)}
+            )
 
             # Step 2: Analyze competitor content for SEO insights
+            await emit("analysis.start", "Analyzing competitor SEO insights...")
             seo_analysis = await self._analyze_competitor_content(competitor_data, ai_provider, fallback_ai)
+            await emit("analysis.complete", "SEO analysis ready.")
 
             # Step 3: Generate initial content
+            await emit("generation.start", "Generating initial draft...")
             blog_content = await self._generate_initial_content(title, seo_analysis, ai_provider, fallback_ai)
+            await emit(
+                "generation.draft_ready",
+                "Initial draft generated.",
+                {"content_length": len(blog_content)}
+            )
 
             # Step 4: Iterative quality improvement
             final_content, final_score = await self._improve_content_quality(
-                title, blog_content, seo_analysis, ai_provider, fallback_ai
+                title,
+                blog_content,
+                seo_analysis,
+                ai_provider,
+                fallback_ai,
+                progress_callback=progress_callback
+            )
+            await emit(
+                "quality.complete",
+                "SEO quality validation complete.",
+                {"seo_score": final_score}
             )
 
             # Step 5: Save to Content Broadcaster for review
+            await emit("saving.start", "Saving generated content to Content Broadcaster...")
             content_item = await self._save_to_content_broadcaster(
                 title=title,
                 content=final_content,
@@ -119,11 +187,17 @@ class SEOContentGenerator:
                     "generation_type": "seo_optimized"
                 }
             )
+            await emit(
+                "saving.complete",
+                "Content saved and ready for review.",
+                {"content_id": content_item.id, "seo_score": final_score}
+            )
 
             logger.info(f"Content generation completed for '{title}' with SEO score: {final_score}")
             return content_item
 
         except Exception as e:
+            await emit("error", f"Content generation failed: {str(e)}")
             logger.error(f"Content generation failed for '{title}': {str(e)}")
             raise SEOContentGenerationError(f"Content generation failed: {str(e)}")
 
@@ -647,7 +721,8 @@ You are an **SEO quality control specialist** and **Google ranking expert**. You
         initial_content: str,
         seo_analysis: str,
         ai_provider: str,
-        fallback_ai: Optional[str]
+        fallback_ai: Optional[str],
+        progress_callback: Optional[Callable[[str, str, Optional[Dict[str, Any]]], Awaitable[None]]] = None
     ) -> Tuple[str, int]:
         """
         Iteratively improve content quality until SEO score threshold is met.
@@ -662,12 +737,21 @@ You are an **SEO quality control specialist** and **Google ranking expert**. You
         Returns:
             Tuple of (final_content, final_score)
         """
+        async def emit(stage: str, message: str, data: Optional[Dict[str, Any]] = None) -> None:
+            if progress_callback:
+                await progress_callback(stage, message, data or {})
+
         current_content = initial_content
         iteration = 0
 
         while iteration < self.max_iterations:
             iteration += 1
             logger.info(f"Content quality iteration {iteration} for '{title}'")
+            await emit(
+                "quality.iteration_start",
+                f"Running SEO validation iteration {iteration}...",
+                {"iteration": iteration}
+            )
 
             # Validate current content
             validation_result = await self._validate_content_quality(
@@ -678,16 +762,39 @@ You are an **SEO quality control specialist** and **Google ranking expert**. You
             status = validation_result.get("status", "FAIL")
 
             logger.info(f"Content score: {score}/100, Status: {status}")
+            await emit(
+                "quality.validation_result",
+                f"Iteration {iteration} scored {score}/100 ({status}).",
+                {
+                    "iteration": iteration,
+                    "score": score,
+                    "status": status,
+                    "issues": validation_result.get("issues"),
+                }
+            )
 
             # Check if quality threshold is met
             if score >= self.min_seo_score or status == "PASS":
                 logger.info(f"Quality threshold met after {iteration} iterations")
+                await emit(
+                    "quality.threshold_met",
+                    f"SEO score target met after {iteration} iterations.",
+                    {"iteration": iteration, "score": score, "status": status}
+                )
                 return current_content, score
 
             # Generate improved content if score is too low
             if iteration < self.max_iterations:
                 logger.info(f"Improving content (score: {score}/{self.min_seo_score})")
-
+                await emit(
+                    "quality.refine",
+                    f"Refining content for iteration {iteration + 1}...",
+                    {
+                        "iteration": iteration,
+                        "score": score,
+                        "remaining_iterations": self.max_iterations - iteration
+                    }
+                )
                 validation_feedback = json.dumps(validation_result, indent=2)
                 improved_content = await self._generate_initial_content(
                     title=title,
@@ -701,6 +808,11 @@ You are an **SEO quality control specialist** and **Google ranking expert**. You
                 current_content = improved_content
             else:
                 logger.warning(f"Max iterations reached, accepting content with score: {score}")
+                await emit(
+                    "quality.max_iterations",
+                    "Max iterations reached. Accepting current content.",
+                    {"iteration": iteration, "score": score}
+                )
                 return current_content, score
 
         # Final validation
@@ -708,6 +820,11 @@ You are an **SEO quality control specialist** and **Google ranking expert**. You
             title, current_content, ai_provider, fallback_ai
         )
         final_score = final_validation.get("score", score)
+        await emit(
+            "quality.final_validation",
+            "Completed final SEO validation.",
+            {"score": final_score}
+        )
 
         return current_content, final_score
 

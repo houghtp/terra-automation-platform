@@ -1,22 +1,5 @@
-# Gold Standard Route Imports - Secrets CRUD
-"""
-Secrets CRUD routes - Database operations and API endpoints.
-"""
-from app.features.core.route_imports import (
-    APIRouter, Depends, Request, HTTPException, Body, Query,
-    JSONResponse, Response, AsyncSession, get_db,
-    tenant_dependency, get_current_user, get_global_admin_user, User,
-    Optional, List, Dict, Any, structlog, get_logger,
-    # Template rendering
-    templates,
-    # Transaction and response utilities
-    commit_transaction, create_success_response,
-    # Form handling
-    FormHandler,
-    # Rate limiting
-    rate_limit_api
-)
-
+# Use centralized imports for consistency
+from app.features.core.route_imports import *
 from app.features.administration.secrets.models import (
     SecretCreate,
     SecretUpdate,
@@ -115,10 +98,11 @@ async def create_secret_form(
     """Create a new secret via form submission."""
     try:
         # Initialize form handler
-        form_handler = FormHandler(await request.form())
+        form_handler = FormHandler(request)
+        await form_handler.parse_form()
 
-        # Check if current user is global admin
-        global_admin = current_user.role == "global_admin" and current_user.tenant_id == "global"
+        # Use centralized global admin check
+        global_admin = is_global_admin(current_user)
         target_tenant_id = None
 
         if global_admin:
@@ -189,8 +173,8 @@ async def create_secret_form(
         error_message = str(e)
         logger.error(f"Service validation error: {error_message}")
 
-        # Check if current user is global admin for form context
-        global_admin = current_user.role == "global_admin" and current_user.tenant_id == "global"
+        # Use centralized global admin check
+        global_admin = is_global_admin(current_user)
 
         # Get tenant data for form redisplay
         available_tenants = []
@@ -222,8 +206,8 @@ async def create_secret_form(
         await db.rollback()
         logger.exception(f"Failed to create secret via form")
 
-        # Check if current user is global admin for form context
-        global_admin = current_user.role == "global_admin" and current_user.tenant_id == "global"
+        # Use centralized global admin check
+        global_admin = is_global_admin(current_user)
 
         # Get tenant data for form redisplay
         available_tenants = []

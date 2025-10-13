@@ -1,0 +1,86 @@
+{% if catalog_items %}
+<div class="row row-cards">
+    {% for item in catalog_items %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card connector-card">
+            <div class="card-body text-center">
+                <!-- Icon -->
+                <div class="connector-icon">
+                    {% if item.icon %}
+                    <i class="ti ti-{{ item.icon }} text-primary"></i>
+                    {% else %}
+                    <i class="ti ti-plug text-muted"></i>
+                    {% endif %}
+                </div>
+
+                <!-- Name and Category -->
+                <h3 class="card-title mb-1">{{ item.name }}</h3>
+                <div class="text-muted small mb-3">
+                    <span class="badge badge-outline text-blue">{{ item.category }}</span>
+                </div>
+
+                <!-- Description -->
+                <p class="text-muted small mb-3">
+                    {{ item.description[:120] }}{% if item.description|length > 120 %}...{% endif %}
+                </p>
+
+                <!-- Auth Type -->
+                <div class="mb-3">
+                    <span class="badge bg-azure-lt">
+                        <i class="ti ti-lock me-1"></i>
+                        {{ item.auth_type|upper }}
+                    </span>
+                </div>
+
+                <!-- Capabilities -->
+                {% if item.capabilities %}
+                <div class="mb-3">
+                    <div class="d-flex flex-wrap justify-content-center gap-1">
+                        {% if item.capabilities.get('post_text') %}
+                        <span class="badge bg-green-lt" title="Text posts">
+                            <i class="ti ti-text"></i>
+                        </span>
+                        {% endif %}
+                        {% if item.capabilities.get('post_media') %}
+                        <span class="badge bg-blue-lt" title="Media uploads">
+                            <i class="ti ti-photo"></i>
+                        </span>
+                        {% endif %}
+                        {% if item.capabilities.get('supports_html') %}
+                        <span class="badge bg-purple-lt" title="HTML support">
+                            <i class="ti ti-code"></i>
+                        </span>
+                        {% endif %}
+                        {% if item.capabilities.get('supports_scheduling') %}
+                        <span class="badge bg-yellow-lt" title="Scheduling">
+                            <i class="ti ti-clock"></i>
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Add Button -->
+                <button class="btn btn-primary w-100"
+                        hx-get="/features/connectors/forms/create?catalog_id={{ item.id }}"
+                        hx-target="#modal-container"
+                        hx-swap="innerHTML">
+                    <i class="ti ti-plus me-1"></i>
+                    Add Connector
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty">
+    <div class="empty-icon">
+        <i class="ti ti-plug"></i>
+    </div>
+    <p class="empty-title">No connectors found</p>
+    <p class="empty-subtitle text-muted">
+        Try adjusting your search or filters
+    </p>
+</div>
+{% endif %}

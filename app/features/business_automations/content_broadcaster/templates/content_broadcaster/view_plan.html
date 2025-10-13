@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}{{ plan.title }} - Content Plan{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none mb-4">
+    <div class="row g-2 align-items-center">
+        <div class="col">
+            <!-- Breadcrumb Navigation -->
+            <div class="page-pretitle">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="/features/content-broadcaster">Content Broadcaster</a>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <a href="/features/content-broadcaster/planning">Planning</a>
+                        </li>
+                        <li class="breadcrumb-item active" aria-current="page">{{ plan.title }}</li>
+                    </ol>
+                </nav>
+            </div>
+            <h2 class="page-title mb-0">
+                <i class="ti ti-file-text me-2"></i>{{ plan.title }}
+            </h2>
+        </div>
+        <!-- Actions -->
+        <div class="col-auto ms-auto d-print-none">
+            <div class="btn-list">
+                <a href="/features/content-broadcaster/planning" class="btn">
+                    <i class="ti ti-arrow-left me-1"></i>
+                    Back to Planning
+                </a>
+                <a href="#" class="btn btn-primary" onclick="editPlan('{{ plan.id }}')">
+                    <i class="ti ti-edit me-1"></i>
+                    Edit
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Badges -->
+<div class="row mb-4">
+    <div class="col-12">
+        {% set status_colors = {
+            'planned': 'secondary',
+            'researching': 'info',
+            'generating': 'warning',
+            'refining': 'warning',
+            'draft_ready': 'success',
+            'approved': 'success',
+            'failed': 'danger'
+        } %}
+        <span class="badge bg-{{ status_colors.get(plan.status, 'secondary') }} badge-lg">
+            {{ plan.status.replace('_', ' ').title() }}
+        </span>
+
+        {% if plan.skip_research %}
+        <span class="badge bg-info badge-lg ms-2">
+            <i class="ti ti-bolt me-1"></i>Direct Generation (No Research)
+        </span>
+        {% else %}
+        <span class="badge bg-primary badge-lg ms-2">
+            <i class="ti ti-search me-1"></i>With Competitor Research
+        </span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Tab Navigation -->
+<div class="row">
+    <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <a href="#tab-research" class="nav-link active" data-bs-toggle="tab" aria-selected="true" role="tab">
+                                        <i class="ti ti-search me-2"></i>
+                                        Research
+                                    </a>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <a href="#tab-content" class="nav-link" data-bs-toggle="tab" aria-selected="false" role="tab" tabindex="-1">
+                                        <i class="ti ti-file-text me-2"></i>
+                                        Generated Content
+                                    </a>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <a href="#tab-metadata" class="nav-link" data-bs-toggle="tab" aria-selected="false" role="tab" tabindex="-1">
+                                        <i class="ti ti-info-circle me-2"></i>
+                                        Metadata
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="card-body">
+                            <div class="tab-content">
+                                <!-- Research Tab -->
+                                <div class="tab-pane active show" id="tab-research" role="tabpanel">
+                                    {% include 'content_broadcaster/partials/research_tab.html' %}
+                                </div>
+
+                                <!-- Content Tab -->
+                                <div class="tab-pane" id="tab-content" role="tabpanel">
+                                    {% include 'content_broadcaster/partials/content_tab.html' %}
+                                </div>
+
+                                <!-- Metadata Tab -->
+                                <div class="tab-pane" id="tab-metadata" role="tabpanel">
+                                    {% include 'content_broadcaster/partials/metadata_tab.html' %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Edit function using HTMX modal
+function editPlan(planId) {
+    htmx.ajax('GET', `/features/content-broadcaster/planning/${planId}/edit`, {
+        target: '#modal-body',
+        swap: 'innerHTML'
+    }).then(() => {
+        const modal = new bootstrap.Modal(document.getElementById('modal'));
+        modal.show();
+    });
+}
+</script>
+{% endblock %}

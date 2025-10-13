@@ -6,6 +6,7 @@ Secure storage and retrieval of API keys, tokens, and other sensitive data.
 # Use centralized imports for consistency
 from app.features.core.sqlalchemy_imports import *
 from app.features.core.enhanced_base_service import BaseService
+from sqlalchemy.exc import IntegrityError
 
 from app.features.administration.secrets.models import (
     TenantSecret,
@@ -17,6 +18,7 @@ from app.features.administration.secrets.models import (
 )
 from app.features.core.audit_mixin import AuditContext
 from app.features.core.encryption import encrypt_secret, decrypt_secret, verify_secret_encryption
+from datetime import datetime
 
 logger = get_logger(__name__)
 
@@ -87,6 +89,8 @@ class SecretsCrudService(BaseService[TenantSecret]):
 
             # Set audit information
             secret.set_created_by(audit_ctx.user_email, audit_ctx.user_name)
+            secret.created_at = datetime.now()
+            secret.updated_at = datetime.now()
 
             self.db.add(secret)
             await self.db.flush()

@@ -164,76 +164,169 @@ function updateScoreLabel(value) {
     document.getElementById('score-value').textContent = value;
 }
 
-// Handle SEO AI form submission
-document.getElementById('seo-ai-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    const formData = new FormData(this);
+(function () {
+    const form = document.getElementById('seo-ai-form');
     const generateBtn = document.getElementById('generate-btn');
     const statusDiv = document.getElementById('generation-status');
     const statusMessage = document.getElementById('status-message');
+    const modalElement = document.getElementById('modal');
+    const defaultButtonLabel = generateBtn.innerHTML;
 
-    // Show loading state
-    generateBtn.disabled = true;
-    generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
-    statusDiv.classList.remove('d-none');
+    let activeJobId = null;
+    let unsubscribeProgress = null;
+    let refreshInterval;
 
-    try {
-        const response = await fetch('/features/content-broadcaster/api/generate-seo-content', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                title: formData.get('title'),
-                ai_provider: formData.get('ai_provider'),
-                fallback_ai: formData.get('fallback_ai') || null,
-                search_provider: formData.get('search_provider'),
-                scraping_provider: formData.get('scraping_provider'),
-                min_seo_score: parseInt(formData.get('min_seo_score')),
-                max_iterations: parseInt(formData.get('max_iterations')),
-                auto_approve: formData.get('auto_approve') === 'on'
-            })
+    function sanitize(value) {
+        if (value == null) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function setStatus(state, message) {
+        const classes = {
+            running: 'alert alert-info',
+            success: 'alert alert-success',
+            error: 'alert alert-danger'
+        };
+        statusDiv.className = classes[state] || classes.running;
+        statusDiv.classList.remove('d-none');
+        statusMessage.innerHTML = message;
+    }
+
+    function cleanupProgressSubscription() {
+        if (typeof unsubscribeProgress === 'function') {
+            unsubscribeProgress();
+            unsubscribeProgress = null;
+        }
+        activeJobId = null;
+    }
+
+    function closeModalWithDelay(delayMs) {
+        if (!modalElement) return;
+        setTimeout(() => {
+            const modalInstance = bootstrap.Modal.getInstance(modalElement);
+            if (modalInstance) {
+                modalInstance.hide();
+            }
+        }, delayMs);
+    }
+
+    function handleGenerationEvent(event) {
+        if (!activeJobId || event.job_id !== activeJobId) {
+            return;
+        }
+
+        const baseMessage = sanitize(event.message || `Stage: ${event.stage}`);
+        const details = [];
+        if (event.data && event.data.seo_score != null) {
+            details.push(`SEO Score: <strong>${sanitize(event.data.seo_score)}</strong>`);
+        }
+        if (event.data && event.data.content_id) {
+            details.push(`Content ID: <code>${sanitize(event.data.content_id)}</code>`);
+        }
+        const detailHtml = details.length ? `<br><small>${details.join(' • ')}</small>` : '';
+
+        if (event.status === 'success') {
+            setStatus('success', `✅ ${baseMessage}${detailHtml}`);
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = defaultButtonLabel;
+            document.body.dispatchEvent(new Event('refreshTable'));
+            cleanupProgressSubscription();
+            closeModalWithDelay(1500);
+            return;
+        }
+
+        if (event.status === 'error') {
+            setStatus('error', `❌ ${baseMessage}${detailHtml}`);
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = defaultButtonLabel;
+            cleanupProgressSubscription();
+            return;
+        }
+
+        setStatus('running', `${baseMessage}${detailHtml}`);
+    }
+
+    function subscribeToProgress(jobId) {
+        if (!window.GenerationTracker || typeof window.GenerationTracker.subscribe !== 'function') {
+            return;
+        }
+        unsubscribeProgress = window.GenerationTracker.subscribe(handleGenerationEvent);
+        activeJobId = jobId;
+    }
+
+    if (form) {
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            cleanupProgressSubscription();
+
+            // Show loading state
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+            setStatus('running', 'Queued content generation request...');
+
+            try {
+                const response = await fetch('/features/content-broadcaster/api/generate-seo-content', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        title: formData.get('title'),
+                        ai_provider: formData.get('ai_provider'),
+                        fallback_ai: formData.get('fallback_ai') || null,
+                        search_provider: formData.get('search_provider'),
+                        scraping_provider: formData.get('scraping_provider'),
+                        min_seo_score: parseInt(formData.get('min_seo_score')),
+                        max_iterations: parseInt(formData.get('max_iterations')),
+                        auto_approve: formData.get('auto_approve') === 'on'
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Generation failed');
+                }
+
+                setStatus(
+                    'running',
+                    `🚀 ${sanitize(result.message)}<br><small>Estimated completion time: ${sanitize(result.estimated_time || 'a few minutes')}</small>`
+                );
+                subscribeToProgress(result.job_id);
+
+            } catch (error) {
+                setStatus('error', `❌ ${sanitize(error.message)}`);
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = defaultButtonLabel;
+            }
+        });
+    }
+
+    if (modalElement) {
+        modalElement.addEventListener('shown.bs.modal', () => {
+            refreshInterval = setInterval(() => {
+                if (!generateBtn.disabled) {
+                    document.body.dispatchEvent(new Event('refreshTable'));
+                }
+            }, 30000);
         });
 
-        const result = await response.json();
-
-        if (response.ok) {
-            statusMessage.innerHTML = `✅ ${result.message}<br><small>Estimated completion time: ${result.estimated_time}</small>`;
-            statusDiv.className = 'alert alert-success';
-
-            // Show success and close modal after delay
-            setTimeout(() => {
-                bootstrap.Modal.getInstance(document.querySelector('.modal')).hide();
-                // Refresh content table
-                htmx.trigger('#content-table', 'refresh');
-            }, 2000);
-        } else {
-            throw new Error(result.detail || 'Generation failed');
-        }
-
-    } catch (error) {
-        statusMessage.innerHTML = `❌ Error: ${error.message}`;
-        statusDiv.className = 'alert alert-danger';
-
-        // Reset button
-        generateBtn.disabled = false;
-        generateBtn.innerHTML = '<i class="ti ti-sparkles me-1"></i>Generate SEO Content';
+        modalElement.addEventListener('hidden.bs.modal', () => {
+            clearInterval(refreshInterval);
+            cleanupProgressSubscription();
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = defaultButtonLabel;
+            statusDiv.classList.add('d-none');
+            statusDiv.className = 'alert alert-warning d-none';
+            statusMessage.textContent = 'Starting content generation process...';
+        });
     }
-});
-
-// Auto-refresh content table every 30 seconds when modal is open
-let refreshInterval;
-document.querySelector('.modal').addEventListener('shown.bs.modal', function() {
-    refreshInterval = setInterval(() => {
-        // Only refresh if we're not actively generating
-        if (!document.getElementById('generate-btn').disabled) {
-            htmx.trigger('#content-table', 'refresh');
-        }
-    }, 30000);
-});
-
-document.querySelector('.modal').addEventListener('hidden.bs.modal', function() {
-    clearInterval(refreshInterval);
-});
+})();
 </script>

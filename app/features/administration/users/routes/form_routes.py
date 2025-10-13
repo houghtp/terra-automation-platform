@@ -16,7 +16,7 @@ router = APIRouter(tags=["users-forms"])
 async def user_list(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    tenant: str = Depends(tenant_dependency),
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user)
 ):
     """Users list page using standardized patterns."""
@@ -35,14 +35,14 @@ async def user_form_partial(
     request: Request,
     user_id: str = None,
     db: AsyncSession = Depends(get_db),
-    tenant: str = Depends(tenant_dependency),
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user)
 ):
     """User form partial using standardized patterns."""
     try:
         user = None
         if user_id:
-            service = UserManagementService(db, tenant)
+            service = UserManagementService(db, tenant_id)
             user = await service.get_user_by_id(user_id)
 
         # Use centralized global admin check
@@ -50,7 +50,7 @@ async def user_form_partial(
         global_admin = is_global_admin(current_user)
 
         if global_admin:
-            service = UserManagementService(db, tenant)
+            service = UserManagementService(db, tenant_id)
             available_tenants = await service.get_available_tenants_for_user_forms()
 
         return templates.TemplateResponse("administration/users/partials/form.html", {
@@ -66,8 +66,8 @@ async def user_form_partial(
 
 # Modal edit endpoint
 @router.get("/{user_id}/edit", response_class=HTMLResponse)
-async def user_edit_form(request: Request, user_id: str, db: AsyncSession = Depends(get_db), tenant: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
-    service = UserManagementService(db, tenant)
+async def user_edit_form(request: Request, user_id: str, db: AsyncSession = Depends(get_db), tenant_id: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
+    service = UserManagementService(db, tenant_id)
     user = await service.get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -94,7 +94,7 @@ async def validate_email_field(
     request: Request,
     email: str = Form(...),
     db: AsyncSession = Depends(get_db),
-    tenant: str = Depends(tenant_dependency),
+    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user)
 ):
     """Validate email field in real-time via HTMX using gold standard patterns."""
@@ -109,7 +109,7 @@ async def validate_email_field(
             return HTMLResponse('<span class="invalid-feedback d-block">Invalid email format</span>')
 
         # Check for duplicate email in tenant
-        service = UserManagementService(db, tenant)
+        service = UserManagementService(db, tenant_id)
         existing = await service.get_user_by_email(email)
         if existing:
             return HTMLResponse('<span class="invalid-feedback d-block">Email already exists</span>')

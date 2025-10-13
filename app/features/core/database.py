@@ -43,8 +43,15 @@ def _discover_and_import_models():
         return models_imported
 
     # Walk through all feature directories looking for models.py files
+    # Exclude routes, templates, and other non-model directories
+    excluded_dirs = {'routes', 'templates', 'static', 'tests', '__pycache__'}
+
     for feature_path in features_dir.rglob("*/"):
         if feature_path.is_dir():
+            # Skip excluded directories (routes, templates, etc.)
+            if any(excluded_dir in feature_path.parts for excluded_dir in excluded_dirs):
+                continue
+
             models_file = feature_path / "models.py"
             db_models_file = feature_path / "db_models.py"
 

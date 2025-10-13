@@ -6,6 +6,8 @@ SMTP CRUD services implementing FastAPI/SQLAlchemy best practices.
 # Use centralized imports for consistency
 from app.features.core.sqlalchemy_imports import *
 from app.features.core.enhanced_base_service import BaseService
+from sqlalchemy.exc import IntegrityError
+from datetime import datetime
 
 import smtplib
 import ssl
@@ -88,9 +90,11 @@ class SMTPCrudService(BaseService[SMTPConfiguration]):
                 tenant_id=effective_tenant_id
             )
 
-            # Apply audit context
+            # Apply audit context with explicit timestamps
             if audit_ctx:
                 configuration.set_created_by(audit_ctx.user_email, audit_ctx.user_name)
+            configuration.created_at = datetime.now()
+            configuration.updated_at = datetime.now()
 
             self.db.add(configuration)
             await self.db.flush()
@@ -100,6 +104,16 @@ class SMTPCrudService(BaseService[SMTPConfiguration]):
 
             return self._configuration_to_response(configuration)
 
+        except IntegrityError as e:
+            await self.db.rollback()
+            error_str = str(e)
+            logger.error("Failed to create SMTP configuration - IntegrityError",
+                        error=error_str,
+                        name=config_data.name,
+                        tenant_id=effective_tenant_id)
+            if "unique constraint" in error_str.lower():
+                raise ValueError(f"SMTP configuration with name '{config_data.name}' already exists")
+            raise ValueError(f"Database constraint violation: {error_str}")
         except Exception as e:
             await self.db.rollback()
             logger.error(f"Failed to create SMTP configuration: {e}")
@@ -151,10 +165,11 @@ class SMTPCrudService(BaseService[SMTPConfiguration]):
             elif 'status' in update_fields and update_fields['status'] != SMTPStatus.ACTIVE:
                 update_fields['is_active'] = False
 
-            # Apply audit context for updates
+            # Apply audit context for updates with explicit timestamp
             if updated_by_user:
                 audit_ctx = AuditContext.from_user(updated_by_user)
                 configuration.set_updated_by(audit_ctx.user_email, audit_ctx.user_name)
+            configuration.updated_at = datetime.now()
 
             for field, value in update_fields.items():
                 if hasattr(configuration, field):
@@ -167,6 +182,13 @@ class SMTPCrudService(BaseService[SMTPConfiguration]):
 
             return self._configuration_to_response(configuration)
 
+        except IntegrityError as e:
+            await self.db.rollback()
+            error_str = str(e)
+            logger.error("Failed to update SMTP configuration - IntegrityError",
+                        error=error_str,
+                        config_id=config_id)
+            raise ValueError(f"Database constraint violation: {error_str}")
         except Exception as e:
             await self.db.rollback()
             logger.error(f"Failed to update SMTP configuration {config_id}: {e}")
@@ -207,7 +229,7 @@ class SMTPCrudService(BaseService[SMTPConfiguration]):
 
             configuration.is_active = True
             configuration.status = SMTPStatus.ACTIVE
-            configuration.updated_at = datetime.now(timezone.utc)
+            configuration.updated_at = datetime.now()
 
             await self.db.flush()
             await self.db.refresh(configuration)
@@ -232,7 +254,7 @@ class SMTPCrudService(BaseService[SMTPConfiguration]):
 
             configuration.is_active = False
             configuration.status = SMTPStatus.INACTIVE
-            configuration.updated_at = datetime.now(timezone.utc)
+            configuration.updated_at = datetime.now()
 
             await self.db.flush()
             await self.db.refresh(configuration)

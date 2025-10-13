@@ -1,0 +1,328 @@
+<div class="metadata-content">
+    <!-- Plan Configuration -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="ti ti-settings me-2"></i>
+                Plan Configuration
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="text-muted small mb-1">Title</div>
+                    <div><strong>{{ plan.title }}</strong></div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="text-muted small mb-1">Status</div>
+                    <div>
+                        <span class="badge bg-{{ 'success' if plan.status == 'draft_ready' else 'info' }}">
+                            {{ plan.status.replace('_', ' ').title() }}
+                        </span>
+                    </div>
+                </div>
+                {% if plan.description %}
+                <div class="col-12 mb-3">
+                    <div class="text-muted small mb-1">Description</div>
+                    <div>{{ plan.description }}</div>
+                </div>
+                {% endif %}
+                <div class="col-md-6 mb-3">
+                    <div class="text-muted small mb-1">Target Audience</div>
+                    <div>{{ plan.target_audience or 'Not specified' }}</div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="text-muted small mb-1">Tone</div>
+                    <div>{{ plan.tone.title() if plan.tone else 'Not specified' }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generation Parameters -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="ti ti-robot me-2"></i>
+                AI Generation Parameters
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <div class="text-muted small mb-1">Research Mode</div>
+                    <div>
+                        {% if plan.skip_research %}
+                        <span class="badge bg-info">
+                            <i class="ti ti-bolt me-1"></i>Direct Generation
+                        </span>
+                        {% else %}
+                        <span class="badge bg-primary">
+                            <i class="ti ti-search me-1"></i>With Research
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="text-muted small mb-1">Min SEO Score Target</div>
+                    <div><strong>{{ plan.min_seo_score }}</strong></div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="text-muted small mb-1">Max Iterations</div>
+                    <div><strong>{{ plan.max_iterations }}</strong></div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="text-muted small mb-1">Current Iteration</div>
+                    <div><strong>{{ plan.current_iteration }}</strong></div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="text-muted small mb-1">Latest SEO Score</div>
+                    <div>
+                        {% if plan.latest_seo_score %}
+                        <span class="badge bg-{{ 'success' if plan.latest_seo_score >= 95 else 'warning' if plan.latest_seo_score >= 80 else 'danger' }}">
+                            {{ plan.latest_seo_score }}/100
+                        </span>
+                        {% else %}
+                        <span class="text-muted">Not scored yet</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if plan.generation_metadata %}
+            <hr class="my-3">
+            <h4 class="mb-3">Generation Metadata</h4>
+            <div class="row">
+                {% if plan.generation_metadata.get('model') %}
+                <div class="col-md-4 mb-2">
+                    <div class="text-muted small">AI Model</div>
+                    <div><code>{{ plan.generation_metadata.get('model') }}</code></div>
+                </div>
+                {% endif %}
+                {% if plan.generation_metadata.get('prompt_tokens') %}
+                <div class="col-md-4 mb-2">
+                    <div class="text-muted small">Prompt Tokens</div>
+                    <div>{{ plan.generation_metadata.get('prompt_tokens') }}</div>
+                </div>
+                {% endif %}
+                {% if plan.generation_metadata.get('completion_tokens') %}
+                <div class="col-md-4 mb-2">
+                    <div class="text-muted small">Completion Tokens</div>
+                    <div>{{ plan.generation_metadata.get('completion_tokens') }}</div>
+                </div>
+                {% endif %}
+                {% if plan.generation_metadata.get('cost_estimate') %}
+                <div class="col-md-4 mb-2">
+                    <div class="text-muted small">Estimated Cost</div>
+                    <div>${{ "%.4f"|format(plan.generation_metadata.get('cost_estimate')) }}</div>
+                </div>
+                {% endif %}
+                {% if plan.generation_metadata.get('generated_at') %}
+                <div class="col-md-8 mb-2">
+                    <div class="text-muted small">Generated At</div>
+                    <div>{{ plan.generation_metadata.get('generated_at') }}</div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Target Configuration -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="ti ti-target me-2"></i>
+                Target Configuration
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="text-muted small mb-2">Target Channels</div>
+                    {% if plan.target_channels %}
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for channel in plan.target_channels %}
+                        <span class="badge bg-light text-dark">{{ channel }}</span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-muted">No channels specified</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="text-muted small mb-2">SEO Keywords</div>
+                    {% if plan.seo_keywords %}
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for keyword in plan.seo_keywords %}
+                        <span class="badge bg-light text-primary">{{ keyword }}</span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-muted">No keywords specified</div>
+                    {% endif %}
+                </div>
+                {% if plan.competitor_urls %}
+                <div class="col-12 mb-3">
+                    <div class="text-muted small mb-2">Competitor URLs</div>
+                    <ul class="mb-0">
+                        {% for url in plan.competitor_urls %}
+                        <li><a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ url }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="ti ti-calendar me-2"></i>
+                Timeline
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-badge bg-primary">
+                        <i class="ti ti-plus"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <div><strong>Plan Created</strong></div>
+                        <div class="text-muted small">
+                            <i class="ti ti-clock me-1"></i>
+                            {{ plan.created_at.strftime('%B %d, %Y at %I:%M %p') if plan.created_at else 'Unknown' }}
+                        </div>
+                        {% if plan.created_by %}
+                        <div class="text-muted small">
+                            <i class="ti ti-user me-1"></i>
+                            By: {{ plan.created_by }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if plan.research_data and plan.research_data.get('research_completed_at') %}
+                <div class="timeline-item">
+                    <div class="timeline-badge bg-info">
+                        <i class="ti ti-search"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <div><strong>Research Completed</strong></div>
+                        <div class="text-muted small">
+                            <i class="ti ti-clock me-1"></i>
+                            {{ plan.research_data.get('research_completed_at') }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if content %}
+                <div class="timeline-item">
+                    <div class="timeline-badge bg-success">
+                        <i class="ti ti-file-text"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <div><strong>Content Generated</strong></div>
+                        <div class="text-muted small">
+                            <i class="ti ti-clock me-1"></i>
+                            {{ content.created_at.strftime('%B %d, %Y at %I:%M %p') if content.created_at else 'Unknown' }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if plan.updated_at and plan.updated_at != plan.created_at %}
+                <div class="timeline-item">
+                    <div class="timeline-badge bg-warning">
+                        <i class="ti ti-edit"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <div><strong>Last Updated</strong></div>
+                        <div class="text-muted small">
+                            <i class="ti ti-clock me-1"></i>
+                            {{ plan.updated_at.strftime('%B %d, %Y at %I:%M %p') if plan.updated_at else 'Unknown' }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Technical Details -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="ti ti-code me-2"></i>
+                Technical Details
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-2">
+                    <div class="text-muted small">Plan ID</div>
+                    <div><code>{{ plan.id }}</code></div>
+                </div>
+                <div class="col-md-6 mb-2">
+                    <div class="text-muted small">Tenant ID</div>
+                    <div><code>{{ plan.tenant_id }}</code></div>
+                </div>
+                {% if content %}
+                <div class="col-md-6 mb-2">
+                    <div class="text-muted small">Generated Content ID</div>
+                    <div><code>{{ content.id }}</code></div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 3rem;
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 2rem;
+}
+
+.timeline-item:last-child {
+    padding-bottom: 0;
+}
+
+.timeline-badge {
+    position: absolute;
+    left: -3rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+}
+
+.timeline-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: -2.25rem;
+    top: 2.5rem;
+    width: 2px;
+    height: calc(100% - 2.5rem);
+    background: #e9ecef;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+}
+</style>

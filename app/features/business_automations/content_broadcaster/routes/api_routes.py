@@ -1,9 +1,11 @@
 """
 Content Broadcaster external API routes.
 """
+import asyncio
+import uuid
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.core.database import get_db, get_async_session
 from app.deps.tenant import tenant_dependency
@@ -15,6 +17,11 @@ from .models import (
 )
 from ..models import JobStatus
 from ..services import ContentBroadcasterService
+from ..services.progress_stream import ProgressEvent, progress_stream_manager
+import structlog
+
+logger = structlog.get_logger(__name__)
+router = APIRouter(tags=["content-broadcaster-api"])
 
 
 async def get_content_service(
@@ -23,11 +30,6 @@ async def get_content_service(
 ) -> ContentBroadcasterService:
     """Get Content Broadcaster service with tenant context."""
     return ContentBroadcasterService(session, tenant_id)
-from ..services import ContentBroadcasterService
-import structlog
-
-logger = structlog.get_logger(__name__)
-router = APIRouter(tags=["content-broadcaster-api"])
 
 # --- EXTERNAL API ROUTES ---
 
@@ -89,7 +91,7 @@ async def approve_content(
     try:
         content = await service.approve_content(
             content_id=content_id,
-            approved_by=current_user,
+            approved_by=current_user.id,
             comment=request.comment,
             auto_schedule=request.auto_schedule
         )
@@ -118,7 +120,7 @@ async def reject_content(
     try:
         content = await service.reject_content(
             content_id=content_id,
-            rejected_by=current_user,
+            rejected_by=current_user.id,
             comment=request.comment
         )
 
@@ -183,10 +185,31 @@ async def generate_seo_content(
             max_iterations=request.max_iterations
         )
 
+        job_id = str(uuid.uuid4())
+
+        # Emit initial queued event so the UI can display pending work immediately
+        await progress_stream_manager.publish(
+            tenant_id=tenant_id,
+            user_id=current_user.id,
+            event=ProgressEvent(
+                job_id=job_id,
+                stage="queued",
+                message=f"SEO content generation queued for '{request.title}'.",
+                status="running",
+                data={
+                    "title": request.title,
+                    "min_seo_score": request.min_seo_score,
+                    "auto_approve": request.auto_approve,
+                }
+            ),
+            broadcast=True
+        )
+
         # Start content generation in background
         background_tasks.add_task(
             _generate_content_background,
             generator,
+            job_id,
             request.title,
             current_user.id,
             request.ai_provider,
@@ -200,12 +223,41 @@ async def generate_seo_content(
             "message": f"SEO content generation started for '{request.title}'",
             "title": request.title,
             "status": "generating",
-            "estimated_time": "3-5 minutes"
+            "estimated_time": "3-5 minutes",
+            "job_id": job_id
         }
 
     except Exception as e:
         logger.exception(f"Failed to start SEO content generation for '{request.title}'")
         raise HTTPException(status_code=500, detail=f"Failed to start content generation: {str(e)}")
+
+@router.get("/api/generation-stream")
+async def generation_progress_stream(
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    SSE endpoint that streams SEO generation progress events for the current user.
+    """
+
+    async def event_generator():
+        try:
+            async for chunk in progress_stream_manager.stream(tenant_id, current_user.id):
+                yield chunk
+        except asyncio.CancelledError:
+            # Propagate cancellation so Starlette can close the connection gracefully.
+            raise
+
+    headers = {
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+    }
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers=headers
+    )
 
 @router.get("/api/jobs")
 async def get_jobs(
@@ -288,6 +340,7 @@ async def cancel_job(
 
 async def _generate_content_background(
     generator,
+    job_id: str,
     title: str,
     created_by: str,
     ai_provider: str,
@@ -300,14 +353,35 @@ async def _generate_content_background(
     try:
         logger.info(f"Starting background SEO content generation for: '{title}'")
 
+        async def emit(stage: str, message: str, status: str = "running", data: Optional[dict] = None):
+            await progress_stream_manager.publish(
+                tenant_id=generator.tenant_id,
+                user_id=created_by,
+                event=ProgressEvent(
+                    job_id=job_id,
+                    stage=stage,
+                    message=message,
+                    status=status,
+                    data=data or {}
+                ),
+                broadcast=True
+            )
+
+        await emit("started", f"SEO content generation started for '{title}'.")
+
+        async def progress_callback(stage: str, message: str, data: Optional[dict] = None):
+            await emit(stage, message, status="running", data=data)
+
         # Generate content
         content_item = await generator.generate_content_from_title(
             title=title,
             created_by=created_by,
+            db_session=None,
             ai_provider=ai_provider,
             fallback_ai=fallback_ai,
             search_provider=search_provider,
-            scraping_provider=scraping_provider
+            scraping_provider=scraping_provider,
+            progress_callback=progress_callback
         )
 
         # Auto-approve if requested and score is high enough
@@ -322,9 +396,36 @@ async def _generate_content_background(
                         comment=f"Auto-approved: SEO score {seo_score}/100",
                         auto_schedule=False
                     )
+                    await emit(
+                        "auto_approved",
+                        f"Content auto-approved with SEO score {seo_score}/100.",
+                        data={"content_id": content_item.id, "seo_score": seo_score}
+                    )
+
+        await emit(
+            "completed",
+            f"SEO content generation completed for '{title}'.",
+            status="success",
+            data={
+                "content_id": content_item.id,
+                "seo_score": content_item.content_metadata.get("seo_score") if content_item.content_metadata else None
+            }
+        )
 
         logger.info(f"Successfully generated SEO content for '{title}': {content_item.id}")
 
     except Exception as e:
+        await progress_stream_manager.publish(
+            tenant_id=generator.tenant_id,
+            user_id=created_by,
+            event=ProgressEvent(
+                job_id=job_id,
+                stage="error",
+                message=f"SEO content generation failed for '{title}': {str(e)}",
+                status="error",
+                data={"error": str(e)}
+            ),
+            broadcast=True
+        )
         logger.error(f"Background SEO content generation failed for '{title}': {str(e)}")
         # TODO: Consider saving error state to content item or notification system

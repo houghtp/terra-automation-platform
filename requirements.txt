@@ -29,9 +29,10 @@ python-jose[cryptography]>=3.3.0  # JWT handling
 passlib[bcrypt]>=1.7.4,<2.0.0     # Password hashing
 bcrypt>=3.2.0,<4.0.0              # Compatible bcrypt version (passlib 1.7.4 compatible)
 email-validator>=2.0.0            # Email validation for Pydantic
-cryptography>=41.0.0              # Encryption for sensitive data (SMTP passwords)
+cryptography>=41.0.0              # Encryption for sensitive data (SMTP passwords, connector auth)
 qrcode>=7.4.2                     # QR code generation for MFA
 pyotp>=2.9.0                      # TOTP/HOTP generation for MFA
+jsonschema>=4.17.0                # JSON Schema validation for connector configs
 
 # Optional cloud secrets management dependencies
 # Uncomment based on your deployment environment:

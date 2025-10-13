@@ -104,9 +104,8 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
 
         try:
             async with async_session() as session:
-                auth_service = AuthService()
+                auth_service = AuthService(session)
                 user = await auth_service.get_user_by_id(
-                    session,
                     token_data.user_id,
                     token_data.tenant_id
                 )

@@ -93,5 +93,14 @@ def create_error_response(message: str, status_code: int = 400):
 
 
 def is_global_admin(user: User) -> bool:
-    """Check if user is global admin."""
-    return user.role == "global_admin" and user.tenant_id == "global"
+    """
+    Check if user is global admin.
+    Uses __dict__ to avoid lazy-loading when session is closed.
+    """
+    try:
+        # Access from __dict__ to avoid triggering lazy loading after session closes
+        user_dict = user.__dict__
+        return user_dict.get("role") == "global_admin" and user_dict.get("tenant_id") == "global"
+    except Exception:
+        # If attributes can't be accessed, user is not global admin
+        return False

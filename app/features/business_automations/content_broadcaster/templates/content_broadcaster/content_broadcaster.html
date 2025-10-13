@@ -14,6 +14,22 @@
 
 {% block content %}
 
+<!-- Navigation Tabs -->
+<ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" href="/features/content-broadcaster/planning" role="tab">
+            <i class="ti ti-bulb me-2"></i>
+            Content Ideas
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link active" href="/features/content-broadcaster" role="tab">
+            <i class="ti ti-file-text me-2"></i>
+            Content Library
+        </a>
+    </li>
+</ul>
+
 <!-- Statistics Cards -->
 <div class="row mb-4">
     <div class="col-sm-6 col-lg-3">
@@ -81,6 +97,22 @@
         {% include 'components/ui/table_actions.html' with context %}
     </div>
     <div class="card-body p-0">
+        <div id="generation-activity-panel" class="border-bottom px-3 py-2 d-none">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="d-flex align-items-center">
+                    <i class="ti ti-activity-heartbeat me-2 text-primary"></i>
+                    <h6 class="mb-0">Active Generations</h6>
+                </div>
+                <button
+                    type="button"
+                    class="btn btn-link btn-sm text-decoration-none"
+                    id="clear-generation-activity"
+                >
+                    Clear completed
+                </button>
+            </div>
+            <div id="generation-activity-list" class="list-unstyled mb-0"></div>
+        </div>
         <div id="content-broadcaster-table"></div>
     </div>
 </div>
@@ -99,279 +131,17 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://unpkg.com/tabulator-tables@6.2.1/dist/js/tabulator.min.js"></script>
+<script src="/features/content-broadcaster/static/js/content-table.js"></script>
 <script>
-let contentTable;
-
-document.addEventListener('DOMContentLoaded', function() {
-    initializeContentTable();
-});
-
-function initializeContentTable() {
-    if (typeof Tabulator === 'undefined') {
-        console.error('Tabulator not loaded');
-        return;
-    }
-
-    contentTable = new Tabulator("#content-broadcaster-table", {
-        ...advancedTableConfig,
-        // Content broadcaster-specific overrides
-        ajaxURL: "/features/content-broadcaster/api/list",
-        pagination: "remote",
-        paginationMode: "remote",
-        paginationSize: 25,
-        paginationSizeSelector: [10, 25, 50, 100],
-        responsiveLayout: "hide",
-        selectable: true,
-        selectableRangeMode: "click",
-        selectableRows: true,
-        rowHeader: false,
-        headerFilterPlaceholder: "Filter...",
-        columns: [
-            {
-                title: "<input type='checkbox' id='select-all-content'>",
-                field: "select",
-                formatter: "rowSelection",
-                titleFormatter: "rowSelection",
-                width: 40,
-                headerSort: false,
-                cellClick: function (e, cell) {
-                    cell.getRow().toggleSelect();
-                }
-            },
-            {
-                title: "Title",
-                field: "title",
-                width: 200,
-                headerFilter: "input",
-                formatter: function(cell) {
-                    const data = cell.getRow().getData();
-                    return `<strong>${data.title}</strong>`;
-                }
-            },
-            {
-                title: "State",
-                field: "state",
-                width: 120,
-                headerFilter: "select",
-                headerFilterParams: {
-                    values: ["", "draft", "in_review", "rejected", "scheduled", "published"]
-                },
-                formatter: function(cell) {
-                    const state = cell.getValue();
-                    const stateClasses = {
-                        'draft': 'bg-secondary',
-                        'in_review': 'bg-warning',
-                        'rejected': 'bg-danger',
-                        'scheduled': 'bg-info',
-                        'published': 'bg-success'
-                    };
-                    const className = stateClasses[state] || 'bg-secondary';
-                    return `<span class="badge ${className}">${state.replace('_', ' ')}</span>`;
-                }
-            },
-            {
-                title: "Approval",
-                field: "approval_status",
-                width: 120,
-                headerFilter: "select",
-                headerFilterParams: {
-                    values: ["", "pending", "approved", "rejected"]
-                },
-                formatter: function(cell) {
-                    const status = cell.getValue();
-                    const statusClasses = {
-                        'pending': 'bg-warning',
-                        'approved': 'bg-success',
-                        'rejected': 'bg-danger'
-                    };
-                    const className = statusClasses[status] || 'bg-secondary';
-                    return `<span class="badge ${className}">${status}</span>`;
-                }
-            },
-            {
-                title: "Created By",
-                field: "created_by",
-                width: 120,
-                headerFilter: "input"
-            },
-            {
-                title: "Created",
-                field: "created_at",
-                width: 130,
-                formatter: function(cell) {
-                    return new Date(cell.getValue()).toLocaleDateString();
-                }
-            },
-            {
-                title: "Tags",
-                field: "tags",
-                width: 150,
-                headerFilter: "input",
-                formatter: function(cell) {
-                    const tags = cell.getValue() || [];
-                    if (tags.length === 0) return '<span class="text-muted">None</span>';
-                    return tags.map(tag => `<span class="badge bg-light text-dark me-1">${tag}</span>`).join('');
-                }
-            },
-            {
-                title: "Actions",
-                field: "id",
-                width: 120,
-                headerSort: false,
-                formatter: function(cell) {
-                    const data = cell.getRow().getData();
-                    return `<i class="ti ti-eye row-action-icon" title="View Details" onclick="viewContentDetails(${cell.getValue()})"></i>`;
-                }
-            }
-        ],
-        ajaxResponse: function(url, params, response) {
-            return {
-                data: response.data || response.items || [],
-                last_page: Math.ceil((response.total || 0) / (params.size || 25))
-            };
-        },
-        rowClick: function(e, row) {
-            viewContentDetails(row.getData().id);
-        }
-    });
-}
-
-// HTMX event handlers for modal management
-document.addEventListener('htmx:afterSwap', function(event) {
-    if (event.detail.target.id === 'modal-body') {
-        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal'));
-        if (!modal._isShown) {
-            modal.show();
-        }
-    }
-});
-
-// Close modal on successful form submission and refresh table
-document.addEventListener('htmx:afterRequest', function(event) {
-    if (event.detail.successful && event.detail.xhr.status === 204) {
-        const modal = bootstrap.Modal.getInstance(document.getElementById('modal'));
-        if (modal) {
-            modal.hide();
-        }
-        if (contentTable) {
-            contentTable.setData();
-        }
-        showToast('Operation completed successfully', 'success');
-    }
-});
-
-async function viewContentDetails(contentId) {
-    try {
-        const response = await fetch(`/features/content-broadcaster/api/${contentId}`, {
-            credentials: 'same-origin'
-        });
-        const content = await response.json();
-
-        const modalBody = document.getElementById('modal-body');
-        modalBody.innerHTML = `
-            <div class="modal-header">
-                <h5 class="modal-title">Content Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Basic Information</h6>
-                        <table class="table table-sm">
-                            <tr><td><strong>ID:</strong></td><td>${content.id}</td></tr>
-                            <tr><td><strong>Title:</strong></td><td>${content.title}</td></tr>
-                            <tr><td><strong>State:</strong></td><td><span class="badge bg-info">${content.state}</span></td></tr>
-                            <tr><td><strong>Approval:</strong></td><td><span class="badge bg-warning">${content.approval_status}</span></td></tr>
-                            <tr><td><strong>Created:</strong></td><td>${new Date(content.created_at).toLocaleString()}</td></tr>
-                        </table>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Tags</h6>
-                        <div class="mb-3">
-                            ${content.tags && content.tags.length > 0 ?
-                                content.tags.map(tag => `<span class="badge bg-light text-dark me-1">${tag}</span>`).join('') :
-                                '<span class="text-muted">No tags</span>'
-                            }
-                        </div>
-                    </div>
-                </div>
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <h6>Content</h6>
-                        <div class="border p-3" style="max-height: 300px; overflow-y: auto;">
-                            ${content.body || '<span class="text-muted">No content</span>'}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        `;
-
-        new bootstrap.Modal(document.getElementById('modal')).show();
-
-    } catch (error) {
-        console.error('Failed to load content details:', error);
-        showToast('Failed to load content details', 'error');
-    }
-}
-
+// Refresh stats cards helper function
 function refreshContent() {
-    if (contentTable) {
-        contentTable.setData();
+    if (window.contentTable) {
+        window.contentTable.setData();
     }
     // Refresh stats cards
     document.querySelectorAll('stats-card').forEach(card => {
         if (card.refresh) card.refresh();
     });
 }
-
-// Export table function for table_actions component
-window.exportTable = function(format) {
-    if (contentTable) {
-        if (format === 'csv') {
-            contentTable.download("csv", "content_broadcaster_data.csv");
-        } else if (format === 'xlsx') {
-            contentTable.download("xlsx", "content_broadcaster_data.xlsx");
-        } else if (format === 'json') {
-            contentTable.download("json", "content_broadcaster_data.json");
-        }
-    }
-};
-
-// Table refresh function for table_actions component
-window.refreshTable = function(tableId) {
-    if (tableId === 'content-broadcaster-table' && contentTable) {
-        contentTable.setData();
-    }
-};
-
-// Group by function for table_actions component
-window.setTableGrouping = function(field, tableId) {
-    if (tableId === 'content-broadcaster-table' && contentTable) {
-        if (field && field !== 'none') {
-            contentTable.setGroupBy(field);
-        } else {
-            contentTable.setGroupBy(false);
-        }
-    }
-};
-
-// Utility functions
-window.showToast = function(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed top-0 end-0 m-3`;
-    toast.style.zIndex = '9999';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-        if (document.body.contains(toast)) {
-            document.body.removeChild(toast);
-        }
-    }, 3000);
-};
 </script>
 {% endblock %}

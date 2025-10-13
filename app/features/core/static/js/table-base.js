@@ -548,6 +548,7 @@ function deleteTabulatorRow(deleteUrl, tableSelector, options = {}) {
 
             fetch(deleteUrl, {
                 method: "DELETE",
+                credentials: "same-origin",
                 headers: {
                     "X-Requested-With": "XMLHttpRequest",
                     "Content-Type": "application/json"
@@ -735,6 +736,7 @@ function addCellEditedHandler(table, baseUrl, entityName) {
 
         fetch(`${baseUrl}/${data.id}/field`, {
             method: "PATCH",
+            credentials: "same-origin",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ field, value })
         }).then(res => {
@@ -834,7 +836,10 @@ function addBulkDeleteHandler(table, deleteUrl, entityName, buttonId = "delete-s
                     showToast(`Deleting selected ${entityName.toLowerCase()}s...`, "info", 1000);
                     Promise.all(
                         itemsToDelete.map(row =>
-                            fetch(`${deleteUrl}/${row.id}/delete`, { method: "POST" })
+                            fetch(`${deleteUrl}/${row.id}/delete`, {
+                                method: "POST",
+                                credentials: "same-origin"
+                            })
                         )
                     ).then(() => {
                         table.replaceData();

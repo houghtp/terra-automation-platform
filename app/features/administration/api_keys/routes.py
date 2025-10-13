@@ -9,13 +9,14 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.database import get_db
-from app.features.core.api_security import APIKeyManager, APIKeyScope, APIKey
+from app.features.core.api_security import APIKeyScope
 from app.features.auth.dependencies import get_current_user
 from app.features.auth.models import User
+from app.features.administration.api_keys.services import APIKeyCrudService
 from app.deps.tenant import tenant_dependency
-import structlog
+from app.features.core.sqlalchemy_imports import get_logger
 
-logger = structlog.get_logger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter(tags=["admin-api-keys"])
 
@@ -83,11 +84,11 @@ class APIKeyStatsResponse(BaseModel):
 @router.get("/stats", response_model=APIKeyStatsResponse)
 async def get_api_key_stats(
     current_user: User = Depends(get_current_user),
-    tenant: str = Depends(tenant_dependency),
-    session: AsyncSession = Depends(get_db)
+    tenant_id: str = Depends(tenant_dependency),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get API key usage statistics (admin only)."""
-    # Check admin permissions and tenant isolation
+    # Check admin permissions
     is_global_admin = current_user.role == "global_admin" and current_user.tenant_id == "global"
     if not is_global_admin and current_user.role != "admin":
         raise HTTPException(
@@ -96,62 +97,12 @@ async def get_api_key_stats(
         )
 
     try:
-        from sqlalchemy import select, func
-        from app.features.core.api_security import APIKeyStatus
-
-        # Get total counts
-        total_stmt = select(func.count(APIKey.id))
-        total_result = await session.execute(total_stmt)
-        total_keys = total_result.scalar() or 0
-
-        # Get active keys
-        active_stmt = select(func.count(APIKey.id)).where(
-            APIKey.status == APIKeyStatus.ACTIVE.value,
-            APIKey.is_active == True
-        )
-        active_result = await session.execute(active_stmt)
-        active_keys = active_result.scalar() or 0
-
-        # Get revoked keys
-        revoked_stmt = select(func.count(APIKey.id)).where(
-            APIKey.status == APIKeyStatus.REVOKED.value
-        )
-        revoked_result = await session.execute(revoked_stmt)
-        revoked_keys = revoked_result.scalar() or 0
-
-        # Get expired keys
-        from datetime import datetime
-        expired_stmt = select(func.count(APIKey.id)).where(
-            APIKey.expires_at < datetime.now(timezone.utc)
-        )
-        expired_result = await session.execute(expired_stmt)
-        expired_keys = expired_result.scalar() or 0
-
-        # Get top tenants by usage
-        top_tenants_stmt = select(
-            APIKey.tenant_id,
-            func.sum(APIKey.usage_count).label('total_usage')
-        ).group_by(APIKey.tenant_id).order_by(
-            func.sum(APIKey.usage_count).desc()
-        ).limit(5)
-
-        top_tenants_result = await session.execute(top_tenants_stmt)
-        top_tenants = [
-            {"tenant_id": row.tenant_id, "usage_count": row.total_usage}
-            for row in top_tenants_result
-        ]
-
-        return APIKeyStatsResponse(
-            total_keys=total_keys,
-            active_keys=active_keys,
-            revoked_keys=revoked_keys,
-            expired_keys=expired_keys,
-            total_requests_today=0,  # Would need daily tracking
-            top_tenants=top_tenants
-        )
+        service = APIKeyCrudService(db, tenant_id)
+        stats = await service.get_api_key_stats()
+        return APIKeyStatsResponse(**stats)
 
     except Exception as e:
-        logger.error(f"Failed to get API key stats: {e}")
+        logger.error("Failed to get API key stats", error=str(e), tenant_id=tenant_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve API key statistics"
@@ -162,33 +113,32 @@ async def get_api_key_stats(
 async def create_api_key(
     request: APIKeyCreateRequest,
     current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Create new API key for tenant (admin only)."""
     # Check admin permissions
-    if current_user.role != "admin":
+    if current_user.role != "admin" and current_user.role != "global_admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
         )
 
     try:
-        # Validate scopes
-        valid_scopes = [scope.value for scope in APIKeyScope]
-        invalid_scopes = [s for s in request.scopes if s not in valid_scopes]
-        if invalid_scopes:
+        # Global admin can create keys for any tenant
+        # Regular admin can only create for their own tenant
+        if current_user.role == "admin" and request.tenant_id != current_user.tenant_id:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid scopes: {invalid_scopes}"
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cannot create API key for different tenant"
             )
 
-        # Create API key
-        api_key, secret = await APIKeyManager.create_api_key(
-            session=session,
+        service = APIKeyCrudService(db, current_user.tenant_id)
+
+        api_key, secret = await service.create_api_key(
             name=request.name,
-            tenant_id=request.tenant_id,
+            target_tenant_id=request.tenant_id,
             scopes=request.scopes,
-            created_by=current_user.id,
+            created_by_user_id=current_user.id,
             description=request.description,
             expires_in_days=request.expires_in_days,
             rate_limit_per_hour=request.rate_limit_per_hour,
@@ -200,6 +150,8 @@ async def create_api_key(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to create API key"
             )
+
+        await db.commit()
 
         return APIKeyResponse(
             id=api_key.id,
@@ -221,8 +173,15 @@ async def create_api_key(
 
     except HTTPException:
         raise
+    except ValueError as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
     except Exception as e:
-        logger.error(f"Failed to create API key: {e}")
+        await db.rollback()
+        logger.error("Failed to create API key", error=str(e), name=request.name)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create API key"
@@ -231,38 +190,30 @@ async def create_api_key(
 
 @router.get("/list", response_model=List[APIKeyListResponse])
 async def list_api_keys(
-    tenant_id: Optional[str] = Query(None, description="Filter by tenant ID"),
+    filter_tenant_id: Optional[str] = Query(None, description="Filter by tenant ID"),
     include_inactive: bool = Query(False, description="Include inactive keys"),
     limit: int = Query(50, ge=1, le=100, description="Number of keys to return"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
     current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db)
+    tenant_id: str = Depends(tenant_dependency),
+    db: AsyncSession = Depends(get_db)
 ):
     """List API keys with optional filtering (admin only)."""
     # Check admin permissions
-    if current_user.role != "admin":
+    if current_user.role != "admin" and current_user.role != "global_admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
         )
 
     try:
-        from sqlalchemy import select
-
-        stmt = select(APIKey)
-
-        # Apply filters
-        if tenant_id:
-            stmt = stmt.where(APIKey.tenant_id == tenant_id)
-
-        if not include_inactive:
-            stmt = stmt.where(APIKey.is_active == True)
-
-        # Apply pagination
-        stmt = stmt.order_by(APIKey.created_at.desc()).limit(limit).offset(offset)
-
-        result = await session.execute(stmt)
-        api_keys = result.scalars().all()
+        service = APIKeyCrudService(db, tenant_id)
+        api_keys = await service.list_api_keys(
+            filter_tenant_id=filter_tenant_id,
+            include_inactive=include_inactive,
+            limit=limit,
+            offset=offset
+        )
 
         return [
             APIKeyListResponse(
@@ -283,7 +234,7 @@ async def list_api_keys(
         ]
 
     except Exception as e:
-        logger.error(f"Failed to list API keys: {e}")
+        logger.error("Failed to list API keys", error=str(e), tenant_id=tenant_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list API keys"
@@ -294,22 +245,20 @@ async def list_api_keys(
 async def get_api_key(
     key_id: str,
     current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db)
+    tenant_id: str = Depends(tenant_dependency),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get API key details (admin only, secret not included)."""
     # Check admin permissions
-    if current_user.role != "admin":
+    if current_user.role != "admin" and current_user.role != "global_admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
         )
 
     try:
-        from sqlalchemy import select
-
-        stmt = select(APIKey).where(APIKey.key_id == key_id)
-        result = await session.execute(stmt)
-        api_key = result.scalar_one_or_none()
+        service = APIKeyCrudService(db, tenant_id)
+        api_key = await service.get_api_key(key_id)
 
         if not api_key:
             raise HTTPException(
@@ -337,8 +286,13 @@ async def get_api_key(
 
     except HTTPException:
         raise
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
     except Exception as e:
-        logger.error(f"Failed to get API key {key_id}: {e}")
+        logger.error("Failed to get API key", key_id=key_id, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve API key"
@@ -349,35 +303,20 @@ async def get_api_key(
 async def revoke_api_key(
     key_id: str,
     current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db)
+    tenant_id: str = Depends(tenant_dependency),
+    db: AsyncSession = Depends(get_db)
 ):
     """Revoke API key (admin only)."""
     # Check admin permissions
-    if current_user.role != "admin":
+    if current_user.role != "admin" and current_user.role != "global_admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
         )
 
     try:
-        # Find the API key first to get tenant_id
-        from sqlalchemy import select
-        stmt = select(APIKey).where(APIKey.key_id == key_id)
-        result = await session.execute(stmt)
-        api_key = result.scalar_one_or_none()
-
-        if not api_key:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="API key not found"
-            )
-
-        # Revoke the key
-        success = await APIKeyManager.revoke_api_key(
-            session=session,
-            key_id=key_id,
-            tenant_id=api_key.tenant_id
-        )
+        service = APIKeyCrudService(db, tenant_id)
+        success = await service.revoke_api_key(key_id)
 
         if not success:
             raise HTTPException(
@@ -385,12 +324,21 @@ async def revoke_api_key(
                 detail="Failed to revoke API key"
             )
 
+        await db.commit()
+
         return {"message": "API key revoked successfully", "key_id": key_id}
 
     except HTTPException:
         raise
+    except ValueError as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
     except Exception as e:
-        logger.error(f"Failed to revoke API key {key_id}: {e}")
+        await db.rollback()
+        logger.error("Failed to revoke API key", key_id=key_id, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to revoke API key"
@@ -399,28 +347,18 @@ async def revoke_api_key(
 
 @router.get("/scopes/available")
 async def get_available_scopes(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get list of available API key scopes."""
     # Check admin permissions
-    if current_user.role != "admin":
+    if current_user.role != "admin" and current_user.role != "global_admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
         )
 
-    scopes = {
-        scope.value: {
-            "name": scope.name,
-            "description": {
-                "read": "Read-only access to resources",
-                "write": "Create and update resources",
-                "admin": "Full administrative access",
-                "webhook": "Webhook and event access",
-                "monitoring": "System monitoring and metrics"
-            }.get(scope.value, f"Access scope: {scope.value}")
-        }
-        for scope in APIKeyScope
-    }
+    service = APIKeyCrudService(db, current_user.tenant_id)
+    scopes = await service.get_available_scopes()
 
     return {"scopes": scopes}

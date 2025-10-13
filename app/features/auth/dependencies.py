@@ -21,14 +21,14 @@ async def get_current_user_token(
 ) -> Optional[TokenData]:
     """Extract and validate JWT token from Authorization header or cookies."""
     token = None
-    
+
     # Try Authorization header first
     if credentials:
         token = credentials.credentials
     # Fall back to cookie if no Authorization header
     elif request.cookies.get("access_token"):
         token = request.cookies.get("access_token")
-    
+
     if not token:
         return None
 
@@ -57,9 +57,8 @@ async def get_current_user(
         )
 
     # Get user from database
-    auth_service = AuthService()
+    auth_service = AuthService(session)
     user = await auth_service.get_user_by_id(
-        session,
         token_data.user_id,
         token_data.tenant_id
     )
@@ -137,9 +136,8 @@ async def get_optional_current_user(
         return None
 
     # Get user from database
-    auth_service = AuthService()
+    auth_service = AuthService(session)
     user = await auth_service.get_user_by_id(
-        session,
         token_data.user_id,
         token_data.tenant_id
     )

@@ -12,16 +12,17 @@ from typing import Optional, List, Dict, Any, Tuple
 from sqlalchemy import desc, and_, func, select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy.exc import IntegrityError
 
-from .models import (
+from ..models import (
     ContentItem, PublishJob, Delivery, EngagementSnapshot,
     ContentState, ApprovalStatus, JobStatus
 )
 from app.features.core.audit_mixin import AuditContext
-from app.features.core.base_service import BaseService
-import structlog
+from app.features.core.enhanced_base_service import BaseService
+from app.features.core.sqlalchemy_imports import get_logger
 
-logger = structlog.get_logger(__name__)
+logger = get_logger(__name__)
 
 
 class ContentBroadcasterService(BaseService[ContentItem]):
@@ -135,10 +136,10 @@ class ContentBroadcasterService(BaseService[ContentItem]):
         tags: Optional[List[str]] = None
     ) -> ContentItem:
         """Create new content item in draft state."""
-        # Create audit context
-        audit_ctx = AuditContext.from_user(created_by_user)
-
         try:
+            # Create audit context
+            audit_ctx = AuditContext.from_user(created_by_user)
+
             content = ContentItem(
                 id=str(uuid.uuid4()),
                 tenant_id=self.tenant_id,
@@ -149,16 +150,27 @@ class ContentBroadcasterService(BaseService[ContentItem]):
                 content_metadata=metadata or {},
                 tags=tags or []
             )
-            # Set audit information
+
+            # Set audit information with explicit timestamps
             content.set_created_by(audit_ctx.user_email, audit_ctx.user_name)
+            content.created_at = datetime.now()
+            content.updated_at = datetime.now()
 
             self.db.add(content)
             await self.db.flush()
             await self.db.refresh(content)
 
-            logger.info(f"Created content: {content.title} (ID: {content.id}) for tenant {self.tenant_id}")
+            logger.info("Created content", title=content.title, content_id=content.id, tenant_id=self.tenant_id)
             return content
 
+        except IntegrityError as e:
+            await self.db.rollback()
+            error_str = str(e)
+            logger.error("Failed to create content - IntegrityError",
+                        error=error_str,
+                        title=title,
+                        tenant_id=self.tenant_id)
+            raise ValueError(f"Failed to create content: {error_str}")
         except Exception as e:
             await self.db.rollback()
             logger.exception(f"Failed to create content for tenant {self.tenant_id}")
@@ -169,7 +181,7 @@ class ContentBroadcasterService(BaseService[ContentItem]):
         content_id: str,
         title: Optional[str] = None,
         body: Optional[str] = None,
-        updated_by: Optional[str] = None,
+        updated_by_user=None,
         metadata: Optional[Dict[str, Any]] = None,
         tags: Optional[List[str]] = None
     ) -> Optional[ContentItem]:
@@ -183,18 +195,23 @@ class ContentBroadcasterService(BaseService[ContentItem]):
             if content.state not in [ContentState.DRAFT.value, ContentState.REJECTED.value]:
                 raise ValueError(f"Cannot update content in {content.state} state")
 
+            # Create audit context
+            audit_ctx = AuditContext.from_user(updated_by_user) if updated_by_user else None
+
             if title is not None:
                 content.title = title
             if body is not None:
                 content.body = body
-            if updated_by is not None:
-                content.updated_by = updated_by
             if metadata is not None:
                 content.content_metadata = metadata
             if tags is not None:
                 content.tags = tags
 
-            content.updated_at = datetime.now(timezone.utc)
+            # Set audit information with explicit timestamp
+            if audit_ctx:
+                content.set_updated_by(audit_ctx.user_email, audit_ctx.user_name)
+            content.updated_at = datetime.now()
+
             await self.db.flush()
             await self.db.refresh(content)
 
@@ -203,6 +220,34 @@ class ContentBroadcasterService(BaseService[ContentItem]):
         except Exception as e:
             await self.db.rollback()
             logger.exception(f"Failed to update content {content_id} for tenant {self.tenant_id}")
+            raise
+
+    async def update_content_field(
+        self,
+        content_id: str,
+        field: str,
+        value: Any
+    ) -> Optional[ContentItem]:
+        """Update single content field for inline editing (standard pattern)."""
+        try:
+            content = await self.get_content_by_id(content_id)
+            if not content:
+                return None
+
+            # Update the specific field
+            if hasattr(content, field):
+                setattr(content, field, value)
+                content.updated_at = datetime.now()
+                await self.db.flush()
+                await self.db.refresh(content)
+                logger.info(f"Updated content field", content_id=content_id, field=field, value=value)
+                return content
+            else:
+                raise ValueError(f"Invalid field: {field}")
+
+        except Exception as e:
+            await self.db.rollback()
+            logger.exception(f"Failed to update content field {content_id}.{field}")
             raise
 
     async def submit_for_review(self, content_id: str, updated_by: str) -> Optional[ContentItem]:
@@ -218,12 +263,12 @@ class ContentBroadcasterService(BaseService[ContentItem]):
             content.state = ContentState.IN_REVIEW.value
             content.approval_status = ApprovalStatus.PENDING.value
             content.updated_by = updated_by
-            content.updated_at = datetime.now(timezone.utc)
+            content.updated_at = datetime.now()
 
             await self.db.flush()
             await self.db.refresh(content)
 
-            logger.info(f"Submitted content {content_id} for review")
+            logger.info("Submitted content for review", content_id=content_id)
             return content
 
         except Exception as e:
@@ -294,7 +339,7 @@ class ContentBroadcasterService(BaseService[ContentItem]):
 
             content.approval_status = ApprovalStatus.APPROVED.value
             content.approved_by = approved_by
-            content.approved_at = datetime.now(timezone.utc)
+            content.approved_at = datetime.now()
             content.approval_comment = comment
 
             # Move to scheduled state if has scheduled_at time
@@ -306,7 +351,7 @@ class ContentBroadcasterService(BaseService[ContentItem]):
             await self.db.flush()
             await self.db.refresh(content)
 
-            logger.info(f"Approved content {content_id} by user {approved_by}")
+            logger.info("Approved content", content_id=content_id, approved_by=approved_by)
             return content
 
         except Exception as e:
@@ -332,13 +377,13 @@ class ContentBroadcasterService(BaseService[ContentItem]):
             content.state = ContentState.REJECTED.value
             content.approval_status = ApprovalStatus.REJECTED.value
             content.approved_by = rejected_by
-            content.approved_at = datetime.now(timezone.utc)
+            content.approved_at = datetime.now()
             content.approval_comment = comment
 
             await self.db.flush()
             await self.db.refresh(content)
 
-            logger.info(f"Rejected content {content_id} by user {rejected_by}")
+            logger.info("Rejected content", content_id=content_id, rejected_by=rejected_by)
             return content
 
         except Exception as e:
@@ -372,7 +417,7 @@ class ContentBroadcasterService(BaseService[ContentItem]):
             content.scheduled_at = scheduled_at
             content.state = ContentState.SCHEDULED.value
             content.updated_by = updated_by
-            content.updated_at = datetime.now(timezone.utc)
+            content.updated_at = datetime.now()
 
             # Create publish jobs for each connector
             for connector_id in connector_ids:
@@ -389,7 +434,7 @@ class ContentBroadcasterService(BaseService[ContentItem]):
             await self.db.flush()
             await self.db.refresh(content)
 
-            logger.info(f"Scheduled content {content_id} for {len(connector_ids)} connectors")
+            logger.info("Scheduled content for publishing", content_id=content_id, connector_count=len(connector_ids))
             return content
 
         except Exception as e:
@@ -471,12 +516,12 @@ class ContentBroadcasterService(BaseService[ContentItem]):
 
             job.status = JobStatus.QUEUED.value
             job.last_error = None
-            job.updated_at = datetime.now(timezone.utc)
+            job.updated_at = datetime.now()
 
             await self.db.flush()
             await self.db.refresh(job)
 
-            logger.info(f"Retrying publish job {job_id}")
+            logger.info("Retrying publish job", job_id=job_id)
             return job
 
         except Exception as e:
@@ -503,12 +548,12 @@ class ContentBroadcasterService(BaseService[ContentItem]):
                 raise ValueError(f"Cannot cancel job in {job.status} state")
 
             job.status = JobStatus.CANCELED.value
-            job.updated_at = datetime.now(timezone.utc)
+            job.updated_at = datetime.now()
 
             await self.db.flush()
             await self.db.refresh(job)
 
-            logger.info(f"Canceled publish job {job_id}")
+            logger.info("Canceled publish job", job_id=job_id)
             return job
 
         except Exception as e:
@@ -540,7 +585,7 @@ class ContentBroadcasterService(BaseService[ContentItem]):
             await self.db.flush()
             await self.db.refresh(delivery)
 
-            logger.info(f"Created delivery record for job {job_id}")
+            logger.info("Created delivery record", job_id=job_id, record_id=delivery.id)
             return delivery
 
         except Exception as e:
@@ -563,7 +608,7 @@ class ContentBroadcasterService(BaseService[ContentItem]):
                 id=str(uuid.uuid4()),
                 tenant_id=self.tenant_id,
                 delivery_id=delivery_id,
-                captured_at=datetime.now(timezone.utc),
+                captured_at=datetime.now(),
                 likes=likes,
                 comments=comments,
                 shares=shares,
@@ -623,7 +668,7 @@ class ContentBroadcasterService(BaseService[ContentItem]):
                 and_(
                     PublishJob.tenant_id == self.tenant_id,
                     PublishJob.status == JobStatus.QUEUED.value,
-                    PublishJob.run_at > datetime.now(timezone.utc)
+                    PublishJob.run_at > datetime.now()  # Use timezone-naive for PostgreSQL TIMESTAMP WITHOUT TIME ZONE
                 )
             ).order_by(PublishJob.run_at).limit(5)
 
@@ -656,7 +701,7 @@ class ContentBroadcasterService(BaseService[ContentItem]):
             await self.db.delete(content)
             await self.db.flush()
 
-            logger.info(f"Deleted content {content_id}")
+            logger.info("Deleted content", content_id=content_id)
             return True
 
         except Exception as e:

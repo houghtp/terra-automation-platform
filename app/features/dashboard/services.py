@@ -1,45 +1,53 @@
 """
-Dashboard service for aggregating and providing chart data
+Dashboard service for aggregating and providing chart data.
+
+Uses BaseService for consistent patterns and proper tenant isolation.
 """
-from typing import Dict, List, Any
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text, func
+from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
+import json
+
+from app.features.core.sqlalchemy_imports import *
+from app.features.core.enhanced_base_service import BaseService
 from app.features.auth.models import User
 
+logger = get_logger(__name__)
 
-class DashboardService:
-    """Service for dashboard data aggregation and analytics"""
 
-    @staticmethod
-    async def get_user_status_breakdown(session: AsyncSession, tenant: str = None) -> Dict[str, Any]:
-        """Get breakdown of users by status for bar chart"""
+class DashboardService(BaseService[User]):
+    """
+    Service for dashboard data aggregation and analytics.
+
+    Inherits from BaseService for consistent tenant isolation patterns.
+    """
+
+    async def get_user_status_breakdown(self) -> Dict[str, Any]:
+        """
+        Get breakdown of users by status for bar chart.
+
+        Returns:
+            Dict with categories, values, and total count
+        """
         try:
-            # Query status counts with tenant filtering
-            # Global admin (tenant="global") should see all data
-            if tenant and tenant != "global":
-                query = text("""
-                    SELECT status, COUNT(*) as count
-                    FROM users
-                    WHERE status IS NOT NULL AND tenant_id = :tenant
-                    GROUP BY status
-                    ORDER BY count DESC
-                """)
-                result = await session.execute(query, {"tenant": tenant})
-            else:
-                query = text("""
-                    SELECT status, COUNT(*) as count
-                    FROM users
-                    WHERE status IS NOT NULL
-                    GROUP BY status
-                    ORDER BY count DESC
-                """)
-                result = await session.execute(query)
+            # Use BaseService query builder for automatic tenant filtering
+            stmt = self.create_base_query(User).where(User.status.isnot(None))
 
-            rows = result.fetchall()
+            # Group by status and count
+            stmt = select(
+                User.status,
+                func.count(User.id).label('count')
+            ).select_from(stmt.subquery()).group_by(User.status).order_by(desc('count'))
+
+            result = await self.db.execute(stmt)
+            rows = result.all()
 
             categories = [row.status.title() for row in rows]
             values = [row.count for row in rows]
+
+            self.log_operation("user_status_breakdown", {
+                "categories_count": len(categories),
+                "total": sum(values)
+            })
 
             return {
                 "categories": categories,
@@ -47,71 +55,79 @@ class DashboardService:
                 "total": sum(values)
             }
         except Exception as e:
-            print(f"Error getting user status breakdown: {e}")
+            await self.handle_error("get_user_status_breakdown", e)
             return {"categories": [], "values": [], "total": 0}
 
-    @staticmethod
-    async def get_user_enabled_breakdown(session: AsyncSession, tenant: str = None) -> Dict[str, Any]:
-        """Get breakdown of enabled vs disabled users for donut chart"""
-        try:
-            # Global admin (tenant="global") should see all data
-            if tenant and tenant != "global":
-                query = text("""
-                    SELECT
-                        CASE WHEN enabled = true THEN 'Enabled' ELSE 'Disabled' END as status,
-                        COUNT(*) as count
-                    FROM users
-                    WHERE tenant_id = :tenant
-                    GROUP BY enabled
-                """)
-                result = await session.execute(query, {"tenant": tenant})
-            else:
-                query = text("""
-                    SELECT
-                        CASE WHEN enabled = true THEN 'Enabled' ELSE 'Disabled' END as status,
-                        COUNT(*) as count
-                    FROM users
-                    GROUP BY enabled
-                """)
-                result = await session.execute(query)
+    async def get_user_enabled_breakdown(self) -> Dict[str, Any]:
+        """
+        Get breakdown of enabled vs disabled users for donut chart.
 
-            rows = result.fetchall()
+        Returns:
+            Dict with items (name, value, color) and total count
+        """
+        try:
+            # Use BaseService query builder for automatic tenant filtering
+            stmt = select(
+                User.enabled,
+                func.count(User.id).label('count')
+            )
+
+            # Apply tenant filtering
+            if self.tenant_id is not None:
+                stmt = stmt.where(User.tenant_id == self.tenant_id)
+
+            stmt = stmt.group_by(User.enabled)
+
+            result = await self.db.execute(stmt)
+            rows = result.all()
 
             items = []
             colors = ['#3b82f6', '#ef4444']  # Blue for enabled, red for disabled
 
             for i, row in enumerate(rows):
+                status_name = 'Enabled' if row.enabled else 'Disabled'
                 items.append({
-                    "name": row.status,
+                    "name": status_name,
                     "value": row.count,
-                    "itemStyle": {"color": colors[i % len(colors)]}
+                    "itemStyle": {"color": colors[0 if row.enabled else 1]}
                 })
+
+            total = sum(item["value"] for item in items)
+
+            self.log_operation("user_enabled_breakdown", {"total": total})
 
             return {
                 "items": items,
-                "total": sum(item["value"] for item in items)
+                "total": total
             }
         except Exception as e:
-            print(f"Error getting enabled breakdown: {e}")
+            await self.handle_error("get_user_enabled_breakdown", e)
             return {"items": [], "total": 0}
 
-    @staticmethod
-    async def get_user_tag_distribution(session: AsyncSession) -> Dict[str, Any]:
-        """Get tag distribution for pie chart"""
+    async def get_user_tag_distribution(self) -> Dict[str, Any]:
+        """
+        Get tag distribution for pie chart.
+
+        Returns:
+            Dict with items (name, value, color) and total count
+        """
         try:
-            # Process JSON array fields - PostgreSQL can handle JSON but we'll process in Python for simplicity
-            query = text("SELECT tags FROM users WHERE tags IS NOT NULL AND tags != '[]'")
-            result = await session.execute(query)
-            rows = result.fetchall()
+            # Use BaseService query builder for automatic tenant filtering
+            stmt = self.create_base_query(User).where(
+                User.tags.isnot(None),
+                User.tags != cast('[]', JSON)
+            )
+
+            result = await self.db.execute(stmt)
+            users = result.scalars().all()
 
             tag_counts = {}
 
-            for row in rows:
-                if row.tags:
+            for user in users:
+                if user.tags:
                     try:
                         # Parse JSON tags
-                        import json
-                        tags = json.loads(row.tags) if isinstance(row.tags, str) else row.tags
+                        tags = json.loads(user.tags) if isinstance(user.tags, str) else user.tags
                         if isinstance(tags, list):
                             for tag in tags:
                                 tag_counts[tag] = tag_counts.get(tag, 0) + 1
@@ -134,34 +150,46 @@ class DashboardService:
                     "itemStyle": {"color": colors[i % len(colors)]}
                 })
 
+            total = sum(item["value"] for item in items)
+
+            self.log_operation("user_tag_distribution", {"total_tags": len(items)})
+
             return {
                 "items": items,
-                "total": sum(item["value"] for item in items)
+                "total": total
             }
         except Exception as e:
-            print(f"Error getting tag distribution: {e}")
+            await self.handle_error("get_user_tag_distribution", e)
             return {"items": [], "total": 0}
 
-    @staticmethod
-    async def get_user_items_over_time(session: AsyncSession) -> Dict[str, Any]:
-        """Get users created over time for line chart"""
+    async def get_user_items_over_time(self) -> Dict[str, Any]:
+        """
+        Get users created over time for line chart (last 30 days).
+
+        Returns:
+            Dict with categories (dates), values (counts), and total
+        """
         try:
             # Get items created over the last 30 days
             end_date = datetime.now()
             start_date = end_date - timedelta(days=30)
 
-            query = text("""
-                SELECT
-                    DATE(created_at) as date,
-                    COUNT(*) as count
-                FROM users
-                WHERE created_at >= :start_date
-                GROUP BY DATE(created_at)
-                ORDER BY date ASC
-            """)
+            # Use BaseService query builder for automatic tenant filtering
+            stmt = select(
+                func.date(User.created_at).label('date'),
+                func.count(User.id).label('count')
+            )
 
-            result = await session.execute(query, {"start_date": start_date})
-            rows = result.fetchall()
+            # Apply tenant filtering
+            if self.tenant_id is not None:
+                stmt = stmt.where(User.tenant_id == self.tenant_id)
+
+            stmt = stmt.where(
+                User.created_at >= start_date
+            ).group_by(func.date(User.created_at)).order_by('date')
+
+            result = await self.db.execute(stmt)
+            rows = result.all()
 
             # Fill in missing dates with zero counts
             date_counts = {row.date: row.count for row in rows}
@@ -171,70 +199,79 @@ class DashboardService:
             current_date = start_date.date()
 
             while current_date <= end_date.date():
-                date_str = current_date.strftime('%Y-%m-%d')
                 categories.append(current_date.strftime('%m/%d'))
-                values.append(date_counts.get(date_str, 0))
+                values.append(date_counts.get(current_date, 0))
                 current_date += timedelta(days=1)
+
+            total = sum(values)
+
+            self.log_operation("user_items_over_time", {"total": total, "days": 30})
 
             return {
                 "categories": categories,
                 "values": values,
-                "total": sum(values)
+                "total": total
             }
         except Exception as e:
-            print(f"Error getting items over time: {e}")
+            await self.handle_error("get_user_items_over_time", e)
             return {"categories": [], "values": [], "total": 0}
 
-    @staticmethod
-    async def get_dashboard_summary(session: AsyncSession, tenant: str = None) -> Dict[str, Any]:
-        """Get overall dashboard summary statistics"""
+    async def get_dashboard_summary(self) -> Dict[str, Any]:
+        """
+        Get overall dashboard summary statistics.
+
+        Returns:
+            Dict with total_items, active_items, enabled_items, recent_items, completion_rate
+        """
         try:
-            # Global admin (tenant="global") should see all data
+            # Base query with tenant filtering
+            base_query = self.create_base_query(User)
+
             # Total items
-            if tenant and tenant != "global":
-                total_query = text("SELECT COUNT(*) as total FROM users WHERE tenant_id = :tenant")
-                total_result = await session.execute(total_query, {"tenant": tenant})
-            else:
-                total_query = text("SELECT COUNT(*) as total FROM users")
-                total_result = await session.execute(total_query)
-            total_items = total_result.scalar()
+            total_stmt = select(func.count(User.id)).select_from(base_query.subquery())
+            total_result = await self.db.execute(total_stmt)
+            total_items = total_result.scalar() or 0
 
             # Active items
-            if tenant and tenant != "global":
-                active_query = text("SELECT COUNT(*) as active FROM users WHERE status = 'active' AND tenant_id = :tenant")
-                active_result = await session.execute(active_query, {"tenant": tenant})
-            else:
-                active_query = text("SELECT COUNT(*) as active FROM users WHERE status = 'active'")
-                active_result = await session.execute(active_query)
-            active_items = active_result.scalar()
+            active_stmt = select(func.count(User.id)).select_from(
+                base_query.where(User.status == 'active').subquery()
+            )
+            active_result = await self.db.execute(active_stmt)
+            active_items = active_result.scalar() or 0
 
             # Enabled items
-            if tenant and tenant != "global":
-                enabled_query = text("SELECT COUNT(*) as enabled FROM users WHERE enabled = true AND tenant_id = :tenant")
-                enabled_result = await session.execute(enabled_query, {"tenant": tenant})
-            else:
-                enabled_query = text("SELECT COUNT(*) as enabled FROM users WHERE enabled = true")
-                enabled_result = await session.execute(enabled_query)
-            enabled_items = enabled_result.scalar()
+            enabled_stmt = select(func.count(User.id)).select_from(
+                base_query.where(User.enabled == True).subquery()
+            )
+            enabled_result = await self.db.execute(enabled_stmt)
+            enabled_items = enabled_result.scalar() or 0
 
-            # Items created in last 7 days (replace due dates)
-            if tenant and tenant != "global":
-                recent_query = text("SELECT COUNT(*) as recent FROM users WHERE created_at >= NOW() - INTERVAL '7 days' AND tenant_id = :tenant")
-                recent_result = await session.execute(recent_query, {"tenant": tenant})
-            else:
-                recent_query = text("SELECT COUNT(*) as recent FROM users WHERE created_at >= NOW() - INTERVAL '7 days'")
-                recent_result = await session.execute(recent_query)
-            recent_items = recent_result.scalar()
+            # Items created in last 7 days
+            seven_days_ago = datetime.now() - timedelta(days=7)
+            recent_stmt = select(func.count(User.id)).select_from(
+                base_query.where(User.created_at >= seven_days_ago).subquery()
+            )
+            recent_result = await self.db.execute(recent_stmt)
+            recent_items = recent_result.scalar() or 0
+
+            completion_rate = round((active_items / total_items * 100) if total_items > 0 else 0, 1)
+
+            self.log_operation("dashboard_summary", {
+                "total_items": total_items,
+                "active_items": active_items,
+                "enabled_items": enabled_items,
+                "recent_items": recent_items
+            })
 
             return {
                 "total_items": total_items,
                 "active_items": active_items,
                 "enabled_items": enabled_items,
                 "recent_items": recent_items,
-                "completion_rate": round((active_items / total_items * 100) if total_items > 0 else 0, 1)
+                "completion_rate": completion_rate
             }
         except Exception as e:
-            print(f"Error getting dashboard summary: {e}")
+            await self.handle_error("get_dashboard_summary", e)
             return {
                 "total_items": 0,
                 "active_items": 0,

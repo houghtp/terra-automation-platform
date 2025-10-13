@@ -1,188 +1,263 @@
 """
-Seed data for available connectors.
+Seed connector catalog with pre-defined connector types.
+
+This script is idempotent and can be run multiple times safely.
+Seeds Twitter and WordPress connectors as specified in the PRP.
 """
+
 import asyncio
+import uuid
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.core.database import async_session
-from app.features.connectors.connectors.models import AvailableConnector, ConnectorCategory
+from app.features.connectors.connectors.models import ConnectorCatalog, AuthType
+import structlog
 
-async def seed_connector_data():
-    """Seed available connector data into the database."""
-    async with async_session() as session:
-        # Check if connector data already exists
-        try:
-            result = await session.execute("SELECT COUNT(*) FROM available_connectors")
-            count = result.scalar()
-            if count > 0:
-                print("Connector data already exists, skipping seed.")
-                return
-        except Exception as e:
-            print(f"Error checking existing data: {e}")
-            # Table might not exist yet, continue with seeding
-            pass
+logger = structlog.get_logger(__name__)
 
-        # Popular connector configurations
-        available_connectors = [
-            AvailableConnector(
-                name="wordpress",
-                display_name="WordPress",
-                category=ConnectorCategory.CMS,
-                description="Connect to WordPress sites for content management and automation",
-                icon_url="https://s.w.org/style/images/about/WordPress-logotype-standard.png",
-                icon_class="fab fa-wordpress",
-                brand_color="#21759b",
-                schema_definition={
+
+# Connector catalog seed data
+CONNECTOR_SEEDS = [
+    {
+        "key": "twitter",
+        "name": "Twitter (X)",
+        "description": "Post text and images to X (formerly Twitter). Supports threads, media uploads, and scheduling.",
+        "category": "Social",
+        "icon": "brand-x",
+        "auth_type": AuthType.OAUTH.value,
+        "capabilities": {
+            "post_text": True,
+            "post_media": True,
+            "post_video": False,
+            "max_length": 280,
+            "supports_threads": True,
+            "supports_scheduling": True,
+        },
+        "default_config_schema": {
+            "type": "object",
+            "required": ["account_label"],
+            "properties": {
+                "account_label": {
+                    "type": "string",
+                    "title": "Account Label",
+                    "description": "Friendly name for this Twitter account",
+                    "minLength": 2,
+                    "maxLength": 100,
+                },
+                "post_defaults": {
                     "type": "object",
+                    "title": "Default Posting Options",
                     "properties": {
-                        "site_url": {
-                            "type": "string",
-                            "title": "Site URL",
-                            "description": "Your WordPress site URL (e.g., https://yoursite.com)"
+                        "append_hashtags": {
+                            "type": "array",
+                            "title": "Default Hashtags",
+                            "description": "Hashtags to append to posts",
+                            "items": {"type": "string"},
+                            "maxItems": 5,
                         },
-                        "username": {
-                            "type": "string",
-                            "title": "Username",
-                            "description": "WordPress admin username"
-                        },
-                        "password": {
-                            "type": "string",
-                            "title": "Application Password",
-                            "description": "WordPress application password",
-                            "secret": True
-                        },
-                        "use_ssl": {
+                        "include_link_preview": {
                             "type": "boolean",
-                            "title": "Use SSL",
-                            "description": "Use HTTPS for connections",
-                            "default": True
-                        }
+                            "title": "Include Link Preview",
+                            "default": True,
+                        },
                     },
-                    "required": ["site_url", "username", "password"]
-                }
-            ),
-            AvailableConnector(
-                name="twitter",
-                display_name="Twitter / X",
-                category=ConnectorCategory.SOCIAL_MEDIA,
-                description="Post tweets, monitor mentions, and analyze engagement",
-                icon_class="fab fa-twitter",
-                brand_color="#1da1f2",
-                schema_definition={
-                    "type": "object",
-                    "properties": {
-                        "api_key": {
-                            "type": "string",
-                            "title": "API Key",
-                            "description": "Twitter API Key",
-                            "secret": True
-                        },
-                        "api_secret": {
-                            "type": "string",
-                            "title": "API Secret",
-                            "description": "Twitter API Secret Key",
-                            "secret": True
-                        },
-                        "access_token": {
-                            "type": "string",
-                            "title": "Access Token",
-                            "description": "Twitter Access Token",
-                            "secret": True
-                        },
-                        "access_token_secret": {
-                            "type": "string",
-                            "title": "Access Token Secret",
-                            "description": "Twitter Access Token Secret",
-                            "secret": True
-                        }
-                    },
-                    "required": ["api_key", "api_secret", "access_token", "access_token_secret"]
-                }
-            ),
-            AvailableConnector(
-                name="linkedin",
-                display_name="LinkedIn",
-                category=ConnectorCategory.SOCIAL_MEDIA,
-                description="Share content and engage with professional networks",
-                icon_class="fab fa-linkedin",
-                brand_color="#0077b5",
-                schema_definition={
-                    "type": "object",
-                    "properties": {
-                        "client_id": {
-                            "type": "string",
-                            "title": "Client ID",
-                            "description": "LinkedIn App Client ID"
-                        },
-                        "client_secret": {
-                            "type": "string",
-                            "title": "Client Secret",
-                            "description": "LinkedIn App Client Secret",
-                            "secret": True
-                        },
-                        "access_token": {
-                            "type": "string",
-                            "title": "Access Token",
-                            "description": "LinkedIn Access Token",
-                            "secret": True
-                        }
-                    },
-                    "required": ["client_id", "client_secret", "access_token"]
-                }
-            ),
-            AvailableConnector(
-                name="shopify",
-                display_name="Shopify",
-                category=ConnectorCategory.OTHER,
-                description="Sync products, orders, and customer data with Shopify stores",
-                icon_class="fab fa-shopify",
-                brand_color="#96bf48",
-                schema_definition={
-                    "type": "object",
-                    "properties": {
-                        "shop_domain": {
-                            "type": "string",
-                            "title": "Shop Domain",
-                            "description": "Your Shopify shop domain (e.g., mystore.myshopify.com)"
-                        },
-                        "access_token": {
-                            "type": "string",
-                            "title": "Access Token",
-                            "description": "Shopify Private App Access Token",
-                            "secret": True
-                        }
-                    },
-                    "required": ["shop_domain", "access_token"]
-                }
-            ),
-            AvailableConnector(
-                name="slack",
-                display_name="Slack",
-                category=ConnectorCategory.COMMUNICATION,
-                description="Send messages and notifications to Slack channels",
-                icon_class="fab fa-slack",
-                brand_color="#4a154b",
-                schema_definition={
-                    "type": "object",
-                    "properties": {
-                        "bot_token": {
-                            "type": "string",
-                            "title": "Bot Token",
-                            "description": "Slack Bot User OAuth Token",
-                            "secret": True
-                        },
-                        "default_channel": {
-                            "type": "string",
-                            "title": "Default Channel",
-                            "description": "Default channel for notifications (e.g., #general)"
-                        }
-                    },
-                    "required": ["bot_token"]
-                }
-            )
-        ]
+                },
+            },
+        },
+    },
+    {
+        "key": "wordpress",
+        "name": "WordPress",
+        "description": "Publish posts and pages to WordPress sites via REST API. Supports custom post types, categories, and featured images.",
+        "category": "Web",
+        "icon": "brand-wordpress",
+        "auth_type": AuthType.BASIC.value,
+        "capabilities": {
+            "post_text": True,
+            "post_media": True,
+            "supports_html": True,
+            "supports_markdown": False,
+            "supports_categories": True,
+            "supports_tags": True,
+            "supports_featured_image": True,
+        },
+        "default_config_schema": {
+            "type": "object",
+            "required": ["base_url", "site_label"],
+            "properties": {
+                "base_url": {
+                    "type": "string",
+                    "title": "WordPress Site URL",
+                    "description": "Full URL to your WordPress site (e.g., https://example.com)",
+                    "format": "uri",
+                },
+                "site_label": {
+                    "type": "string",
+                    "title": "Site Label",
+                    "description": "Friendly name for this WordPress site",
+                    "minLength": 2,
+                    "maxLength": 100,
+                },
+                "default_status": {
+                    "type": "string",
+                    "title": "Default Post Status",
+                    "description": "Default status for new posts",
+                    "enum": ["draft", "publish", "pending"],
+                    "default": "draft",
+                },
+                "default_category": {
+                    "type": "string",
+                    "title": "Default Category",
+                    "description": "Default category for posts (category name or ID)",
+                },
+                "author_id": {
+                    "type": "integer",
+                    "title": "Author ID",
+                    "description": "WordPress user ID to attribute posts to",
+                    "minimum": 1,
+                },
+            },
+        },
+    },
+    {
+        "key": "linkedin",
+        "name": "LinkedIn",
+        "description": "Share posts to LinkedIn profiles and company pages. Supports text, images, documents, and articles.",
+        "category": "Social",
+        "icon": "brand-linkedin",
+        "auth_type": AuthType.OAUTH.value,
+        "capabilities": {
+            "post_text": True,
+            "post_media": True,
+            "post_document": True,
+            "max_length": 3000,
+            "supports_articles": True,
+        },
+        "default_config_schema": {
+            "type": "object",
+            "required": ["account_type", "account_label"],
+            "properties": {
+                "account_type": {
+                    "type": "string",
+                    "title": "Account Type",
+                    "enum": ["personal", "company"],
+                    "default": "personal",
+                },
+                "account_label": {
+                    "type": "string",
+                    "title": "Account Label",
+                    "minLength": 2,
+                    "maxLength": 100,
+                },
+                "company_id": {
+                    "type": "string",
+                    "title": "Company Page ID",
+                    "description": "Required for company page posts",
+                },
+            },
+        },
+    },
+    {
+        "key": "medium",
+        "name": "Medium",
+        "description": "Publish articles to Medium. Supports rich text formatting, code blocks, and image embedding.",
+        "category": "Web",
+        "icon": "brand-medium",
+        "auth_type": AuthType.API_KEY.value,
+        "capabilities": {
+            "post_text": True,
+            "post_media": True,
+            "supports_html": True,
+            "supports_markdown": True,
+            "supports_tags": True,
+        },
+        "default_config_schema": {
+            "type": "object",
+            "required": ["publication_label"],
+            "properties": {
+                "publication_label": {
+                    "type": "string",
+                    "title": "Publication Label",
+                    "minLength": 2,
+                },
+                "default_publish_status": {
+                    "type": "string",
+                    "title": "Default Publish Status",
+                    "enum": ["public", "draft", "unlisted"],
+                    "default": "draft",
+                },
+            },
+        },
+    },
+]
 
-        session.add_all(available_connectors)
+
+async def seed_connector_catalog(session: AsyncSession):
+    """
+    Seed the connector catalog with predefined connectors.
+    This function is idempotent - it will not create duplicates.
+    """
+    logger.info("Starting connector catalog seeding...")
+
+    seeded_count = 0
+    updated_count = 0
+    skipped_count = 0
+
+    for seed_data in CONNECTOR_SEEDS:
+        try:
+            # Check if connector already exists
+            from sqlalchemy import select
+            stmt = select(ConnectorCatalog).where(ConnectorCatalog.key == seed_data["key"])
+            result = await session.execute(stmt)
+            existing = result.scalar_one_or_none()
+
+            if existing:
+                # Update existing connector
+                logger.info(f"Updating existing connector: {seed_data['key']}")
+                existing.name = seed_data["name"]
+                existing.description = seed_data["description"]
+                existing.category = seed_data["category"]
+                existing.icon = seed_data["icon"]
+                existing.auth_type = seed_data["auth_type"]
+                existing.capabilities = seed_data["capabilities"]
+                existing.default_config_schema = seed_data["default_config_schema"]
+                updated_count += 1
+            else:
+                # Create new connector
+                logger.info(f"Creating new connector: {seed_data['key']}")
+                connector = ConnectorCatalog(
+                    id=str(uuid.uuid4()),
+                    **seed_data
+                )
+                session.add(connector)
+                seeded_count += 1
+
+        except Exception as e:
+            logger.error(f"Failed to seed connector {seed_data['key']}: {e}")
+            skipped_count += 1
+
+    try:
         await session.commit()
-        print(f"Seeded {len(available_connectors)} available connectors")
+        logger.info(
+            f"Connector catalog seeding complete: "
+            f"{seeded_count} created, {updated_count} updated, {skipped_count} skipped"
+        )
+        return seeded_count, updated_count, skipped_count
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Failed to commit connector catalog seeds: {e}")
+        raise
+
+
+async def main():
+    """Main entry point for seeding script."""
+    async with async_session() as session:
+        try:
+            await seed_connector_catalog(session)
+            logger.info("✅ Connector catalog seeding successful!")
+        except Exception as e:
+            logger.error(f"❌ Connector catalog seeding failed: {e}")
+            raise
+
 
 if __name__ == "__main__":
-    asyncio.run(seed_connector_data())
+    asyncio.run(main())

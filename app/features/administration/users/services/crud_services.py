@@ -6,12 +6,15 @@ This is the GOLD STANDARD implementation for all other slices.
 # Use centralized imports for consistency
 from app.features.core.sqlalchemy_imports import *
 from app.features.core.enhanced_base_service import BaseService
+from sqlalchemy.exc import IntegrityError
+from datetime import datetime
 
 from app.features.administration.users.models import (
     User, UserCreate, UserUpdate, UserResponse, UserSearchFilter, UserStatus, UserRole
 )
 from app.features.administration.tenants.db_models import Tenant
 from app.features.core.security import hash_password, validate_password_complexity
+from app.features.core.audit_mixin import AuditContext
 
 logger = get_logger(__name__)
 
@@ -31,12 +34,13 @@ class UserCrudService(BaseService[User]):
     def __init__(self, db_session: AsyncSession, tenant_id: Optional[str] = None):
         super().__init__(db_session, tenant_id)
 
-    async def create_user(self, user_data: UserCreate, target_tenant_id: Optional[str] = None) -> UserResponse:
+    async def create_user(self, user_data: UserCreate, created_by_user=None, target_tenant_id: Optional[str] = None) -> UserResponse:
         """
         Create new user with validation and proper error handling.
 
         Args:
             user_data: User creation data with validation
+            created_by_user: User object who created the user (for audit trail)
             target_tenant_id: Optional tenant ID for global admin cross-tenant creation
 
         Returns:
@@ -51,6 +55,9 @@ class UserCrudService(BaseService[User]):
             # Use separated validation method
             await self._validate_user_creation(user_data, effective_tenant_id)
 
+            # Create audit context
+            audit_ctx = AuditContext.from_user(created_by_user) if created_by_user else None
+
             # Create user using consistent patterns
             user = User(
                 name=user_data.name,
@@ -63,6 +70,12 @@ class UserCrudService(BaseService[User]):
                 tags=user_data.tags,
                 tenant_id=effective_tenant_id
             )
+
+            # Set audit information with explicit timestamps
+            if audit_ctx:
+                user.set_created_by(audit_ctx.user_email, audit_ctx.user_name)
+            user.created_at = datetime.now()
+            user.updated_at = datetime.now()
 
             self.db.add(user)
             await self.db.flush()
@@ -77,6 +90,18 @@ class UserCrudService(BaseService[User]):
 
             return self._to_response(user)
 
+        except IntegrityError as e:
+            await self.db.rollback()
+            error_str = str(e)
+            logger.error("Failed to create user - IntegrityError",
+                        error=error_str,
+                        email=user_data.email,
+                        target_tenant=target_tenant_id)
+
+            if "unique constraint" in error_str.lower():
+                raise ValueError(f"User with email '{user_data.email}' already exists in this tenant")
+            else:
+                raise ValueError(f"Database constraint violation: {error_str}")
         except Exception as e:
             await self.handle_error("create_user", e,
                                   email=user_data.email,
@@ -107,13 +132,14 @@ class UserCrudService(BaseService[User]):
                             email=email, error=str(e))
             return None
 
-    async def update_user(self, user_id: str, user_data: UserUpdate) -> Optional[UserResponse]:
+    async def update_user(self, user_id: str, user_data: UserUpdate, updated_by_user=None) -> Optional[UserResponse]:
         """
         Update user with enhanced error handling and logging.
 
         Args:
             user_id: User ID to update
             user_data: Updated user data
+            updated_by_user: User object who updated the user (for audit trail)
 
         Returns:
             Updated UserResponse or None if not found
@@ -123,10 +149,17 @@ class UserCrudService(BaseService[User]):
             if not user:
                 return None
 
+            # Create audit context
+            audit_ctx = AuditContext.from_user(updated_by_user) if updated_by_user else None
+
             # Apply updates using helper method
             self._apply_user_updates(user, user_data)
 
-            user.updated_at = func.now()
+            # Set audit information with explicit timestamp
+            if audit_ctx:
+                user.set_updated_by(audit_ctx.user_email, audit_ctx.user_name)
+            user.updated_at = datetime.now()
+
             await self.db.flush()
             await self.db.refresh(user)
 
@@ -137,10 +170,17 @@ class UserCrudService(BaseService[User]):
 
             return self._to_response(user)
 
+        except IntegrityError as e:
+            await self.db.rollback()
+            error_str = str(e)
+            logger.error("Failed to update user - IntegrityError",
+                        error=error_str,
+                        user_id=user_id)
+            raise ValueError(f"Database constraint violation: {error_str}")
         except Exception as e:
             await self.handle_error("update_user", e, user_id=user_id)
 
-    async def update_user_field(self, user_id: str, field: str, value) -> Optional[UserResponse]:
+    async def update_user_field(self, user_id: str, field: str, value, updated_by_user=None) -> Optional[UserResponse]:
         """
         Update a single field for user within tenant scope.
 
@@ -148,6 +188,7 @@ class UserCrudService(BaseService[User]):
             user_id: User ID to update
             field: Field name to update
             value: New value for the field
+            updated_by_user: User object who updated the user (for audit trail)
 
         Returns:
             Updated UserResponse or None if not found
@@ -157,10 +198,18 @@ class UserCrudService(BaseService[User]):
             if not user:
                 return None
 
+            # Create audit context
+            audit_ctx = AuditContext.from_user(updated_by_user) if updated_by_user else None
+
             # Validate and update the field
             if hasattr(user, field):
                 setattr(user, field, value)
-                user.updated_at = func.now()
+
+                # Set audit information with explicit timestamp
+                if audit_ctx:
+                    user.set_updated_by(audit_ctx.user_email, audit_ctx.user_name)
+                user.updated_at = datetime.now()
+
                 await self.db.flush()
                 await self.db.refresh(user)
 
@@ -240,7 +289,7 @@ class UserCrudService(BaseService[User]):
 
     # --- Global Admin Methods ---
 
-    async def update_user_field_global(self, user_id: str, field: str, value) -> Optional[UserResponse]:
+    async def update_user_field_global(self, user_id: str, field: str, value, updated_by_user=None) -> Optional[UserResponse]:
         """Update a single field for user across all tenants (global admin only)."""
         try:
             stmt = select(User).where(User.id == user_id)
@@ -250,9 +299,17 @@ class UserCrudService(BaseService[User]):
             if not user:
                 return None
 
+            # Create audit context
+            audit_ctx = AuditContext.from_user(updated_by_user) if updated_by_user else None
+
             if hasattr(user, field):
                 setattr(user, field, value)
-                user.updated_at = func.now()
+
+                # Set audit information with explicit timestamp
+                if audit_ctx:
+                    user.set_updated_by(audit_ctx.user_email, audit_ctx.user_name)
+                user.updated_at = datetime.now()
+
                 await self.db.flush()
                 await self.db.refresh(user)
 
@@ -268,7 +325,7 @@ class UserCrudService(BaseService[User]):
             logger.error("Failed to update user field globally", error=str(e), user_id=user_id, field=field)
             raise
 
-    async def update_user_global(self, user_id: str, user_data: UserUpdate) -> Optional[UserResponse]:
+    async def update_user_global(self, user_id: str, user_data: UserUpdate, updated_by_user=None) -> Optional[UserResponse]:
         """Update user across all tenants (global admin only)."""
         try:
             stmt = select(User).where(User.id == user_id)
@@ -277,6 +334,9 @@ class UserCrudService(BaseService[User]):
 
             if not user:
                 return None
+
+            # Create audit context
+            audit_ctx = AuditContext.from_user(updated_by_user) if updated_by_user else None
 
             # Update fields if provided (same logic as regular update)
             if user_data.name is not None:
@@ -294,7 +354,11 @@ class UserCrudService(BaseService[User]):
             if user_data.tags is not None:
                 user.tags = user_data.tags
 
-            user.updated_at = func.now()
+            # Set audit information with explicit timestamp
+            if audit_ctx:
+                user.set_updated_by(audit_ctx.user_email, audit_ctx.user_name)
+            user.updated_at = datetime.now()
+
             await self.db.flush()
             await self.db.refresh(user)
 

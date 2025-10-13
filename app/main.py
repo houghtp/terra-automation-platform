@@ -121,8 +121,9 @@ app.add_middleware(AuditLoggingMiddleware)
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(TenantMiddleware)
 
-# Add rate limiting middleware
-app.add_middleware(RateLimitMiddleware)
+# Add rate limiting middleware - TEMPORARILY DISABLED due to greenlet async context error
+# TODO: Fix rate limiting to work with async SQLAlchemy properly
+# app.add_middleware(RateLimitMiddleware)
 
 # Add metrics middleware
 app.add_middleware(MetricsMiddleware)
@@ -364,6 +365,11 @@ async def http_exception_handler(request, exc):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
+    logging.error(
+        "Request validation error on %s: %s",
+        request.url.path,
+        exc.errors()
+    )
     return templates.TemplateResponse("error/422.html", {"request": request, "detail": exc.errors()}, status_code=422)
 
 # Note: Database table creation moved to lifespan context manager

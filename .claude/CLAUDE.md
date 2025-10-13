@@ -592,8 +592,8 @@ task_id = task.id
 """Module docstring describing purpose."""
 
 # 1. Centralized imports (PREFERRED)
-from app.features.core.sqlalchemy_imports import *  # For services
-from app.features.core.route_imports import *       # For routes
+from app.features.core.sqlalchemy_imports import *  # For services - includes get_logger
+from app.features.core.route_imports import *       # For routes - includes get_logger
 
 # 2. Standard library
 import os
@@ -608,9 +608,39 @@ from sqlalchemy import select
 from app.features.auth.models import User
 from app.features.core.database import get_db
 
-# 5. Setup logger
+# 5. Setup logger (ALWAYS use centralized imports)
 logger = get_logger(__name__)
 ```
+
+**❌ WRONG - Logger Import Anti-Patterns:**
+```python
+# DON'T import from app.features.core.logging - it doesn't export get_logger
+from app.features.core.logging import get_logger  # ❌ ImportError
+
+# DON'T import structlog directly - bypasses centralization
+import structlog
+logger = structlog.get_logger(__name__)  # ❌ Not standardized
+
+# DON'T import from structured_logging directly
+from app.features.core.structured_logging import get_logger  # ❌ Not centralized
+```
+
+**✅ CORRECT - Use Centralized Imports:**
+```python
+# Services: Use sqlalchemy_imports (includes get_logger)
+from app.features.core.sqlalchemy_imports import *
+logger = get_logger(__name__)
+
+# Routes: Use route_imports (includes get_logger)
+from app.features.core.route_imports import *
+logger = get_logger(__name__)
+```
+
+**Why?**
+- `get_logger` is exported by both `sqlalchemy_imports.py` and `route_imports.py`
+- Ensures consistent logging configuration across all modules
+- Single source of truth for logger setup
+- Already configured with structlog and proper formatting
 
 ### Type Hints
 
@@ -847,8 +877,8 @@ class User(Base, AuditMixin):
     tags = Column(JSON, default=list)
 
     # AuditMixin provides:
-    # - created_at: DateTime(timezone=True)
-    # - updated_at: DateTime(timezone=True)
+    # - created_at: DateTime(timezone=False)  # IMPORTANT: Use timezone-naive!
+    # - updated_at: DateTime(timezone=False)
     # - created_by: String(36)
     # - updated_by: String(36)
     # - created_by_name: String(255)
@@ -858,6 +888,65 @@ class User(Base, AuditMixin):
     __table_args__ = (
         Index('idx_users_email_tenant', 'email', 'tenant_id', unique=True),
     )
+```
+
+### DateTime and Timezone Handling ⚠️ CRITICAL
+
+**PostgreSQL Standard**: This project uses `TIMESTAMP WITHOUT TIME ZONE` for all datetime columns.
+
+**❌ WRONG - Timezone-Aware Datetimes:**
+```python
+# DON'T use timezone-aware datetimes
+from datetime import datetime, timezone
+
+# ❌ This will cause errors with PostgreSQL
+content.updated_at = datetime.now(timezone.utc)
+job.run_at = datetime.now(timezone.utc) + timedelta(hours=1)
+
+# Column definition
+created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))  # ❌ ERROR
+```
+
+**✅ CORRECT - Timezone-Naive Datetimes:**
+```python
+# Always use timezone-naive datetimes
+from datetime import datetime, timedelta
+
+# ✅ Correct for PostgreSQL TIMESTAMP WITHOUT TIME ZONE
+content.updated_at = datetime.now()
+job.run_at = datetime.now() + timedelta(hours=1)
+
+# Column definition
+created_at = Column(DateTime, default=datetime.now, nullable=False)  # ✅ CORRECT
+updated_at = Column(DateTime, onupdate=datetime.now)  # ✅ CORRECT
+
+# In queries
+stmt = select(Job).where(Job.run_at > datetime.now())  # ✅ CORRECT
+```
+
+**Why?**
+- PostgreSQL `TIMESTAMP WITHOUT TIME ZONE` expects timezone-naive Python datetimes
+- Mixing timezone-aware and timezone-naive causes: `TypeError: can't subtract offset-naive and offset-aware datetimes`
+- All other slices in the project use timezone-naive datetimes
+- Server time is assumed to be UTC in production (Docker containers run in UTC)
+
+**Error Example:**
+```
+asyncpg.exceptions.DataError: invalid input for query argument $2:
+datetime.datetime(2025, 10, 11, 9, 33, 25, 572867, tzinfo=datetime.timezone.utc)
+(can't subtract offset-naive and offset-aware datetimes)
+```
+
+**Column Definition Standard:**
+```python
+from sqlalchemy import Column, DateTime
+from datetime import datetime
+
+# ✅ CORRECT
+created_at = Column(DateTime, nullable=False, default=datetime.now, index=True)
+updated_at = Column(DateTime, nullable=True, onupdate=datetime.now)
+scheduled_at = Column(DateTime, nullable=True)
+run_at = Column(DateTime, nullable=False, index=True)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON responses."""

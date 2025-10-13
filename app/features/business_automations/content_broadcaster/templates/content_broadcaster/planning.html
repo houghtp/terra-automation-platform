@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Content Planning - AI Content Generator{% endblock %}
+
+{% block head %}
+<script src="/features/core/static/js/table-base.js"></script>
+<link rel="stylesheet" href="/features/content-broadcaster/static/css/planning.css">
+{% endblock %}
+
+{% block content %}
+<!-- Navigation Tabs -->
+<ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link active" href="/features/content-broadcaster/planning" role="tab">
+            <i class="ti ti-bulb me-2"></i>
+            Content Ideas
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" href="/features/content-broadcaster" role="tab">
+            <i class="ti ti-file-text me-2"></i>
+            Content Library
+        </a>
+    </li>
+</ul>
+
+<div class="card">
+    <div class="card-header">
+        {% set title = "Content Ideas - AI Generator" %}
+        {% set description = "Add content ideas and let AI research, generate, and optimize SEO-perfect blog posts." %}
+        {% set icon = "ti ti-bulb" %}
+        {% set add_url = "/features/content-broadcaster/planning/partials/create_plan_modal" %}
+        {% set entity_name = "Content Plans" %}
+        {% set table_id = "content-plans-table" %}
+        {% include 'components/ui/table_actions.html' with context %}
+    </div>
+    <div class="card-body p-0">
+        <div id="content-plans-table"></div>
+    </div>
+</div>
+
+<div class="card bg-light mt-3">
+    <div class="card-body py-2">
+        <small class="text-muted me-3"><strong>Status Legend:</strong></small>
+        <span class="status-badge status-planned me-2">Planned</span>
+        <span class="status-badge status-researching me-2">Researching</span>
+        <span class="status-badge status-generating me-2">Generating</span>
+        <span class="status-badge status-refining me-2">Refining</span>
+        <span class="status-badge status-draft_ready me-2">Draft Ready</span>
+        <span class="status-badge status-approved me-2">Approved</span>
+    </div>
+</div>
+
+<div class="modal modal-blur fade" id="modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div id="modal-body"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/features/content-broadcaster/static/js/planning-table.js"></script>
+{% endblock %}

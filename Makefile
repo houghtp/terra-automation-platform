@@ -66,6 +66,10 @@ db-reset: ## Reset database (DESTRUCTIVE)
 	@echo "This will destroy all data. Are you sure? [y/N]" && read ans && [ $${ans:-N} = y ]
 	python manage_db.py reset
 
+seed-connectors: ## Seed connector catalog with predefined connectors
+	@echo "🌱 Seeding connector catalog..."
+	python app/seed_connectors.py
+
 # Server commands
 dev-server: ## Start development server
 	python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload

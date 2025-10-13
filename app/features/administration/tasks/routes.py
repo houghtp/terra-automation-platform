@@ -1,7 +1,6 @@
 """
 Task management API routes.
 """
-import structlog
 from typing import Dict, Any
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.responses import JSONResponse
@@ -10,8 +9,9 @@ from app.features.core.task_manager import TaskManager, task_manager
 from app.features.auth.dependencies import get_current_user
 from app.features.auth.models import User
 from app.deps.tenant import tenant_dependency
+from app.features.core.sqlalchemy_imports import get_logger
 
-logger = structlog.get_logger(__name__)
+logger = get_logger(__name__)
 router = APIRouter()
 
 
@@ -58,7 +58,7 @@ async def send_welcome_email(
             "message": f"Welcome email task started for {request.user_email}"
         }
     except Exception as e:
-        logger.error(f"Failed to start welcome email task: {e}")
+        logger.error("Failed to start welcome email task", error=str(e), user_email=request.user_email)
         raise HTTPException(status_code=500, detail="Failed to start email task")
 
 
@@ -83,7 +83,7 @@ async def send_bulk_email(
             "message": f"Bulk email task started for {len(request.recipient_emails)} recipients"
         }
     except Exception as e:
-        logger.error(f"Failed to start bulk email task: {e}")
+        logger.error("Failed to start bulk email task", error=str(e), recipient_count=len(request.recipient_emails))
         raise HTTPException(status_code=500, detail="Failed to start bulk email task")
 
 
@@ -107,7 +107,7 @@ async def export_user_data(
             "message": f"Data export task started for user {request.user_id}"
         }
     except Exception as e:
-        logger.error(f"Failed to start data export task: {e}")
+        logger.error("Failed to start data export task", error=str(e), user_id=request.user_id)
         raise HTTPException(status_code=500, detail="Failed to start data export task")
 
 
@@ -136,7 +136,7 @@ async def generate_audit_report(
             "message": f"Audit report generation started for tenant {request.tenant_id}"
         }
     except Exception as e:
-        logger.error(f"Failed to start audit report task: {e}")
+        logger.error("Failed to start audit report task", error=str(e), tenant_id=request.tenant_id)
         raise HTTPException(status_code=500, detail="Failed to start audit report task")
 
 
@@ -159,7 +159,7 @@ async def cleanup_audit_logs(
             "message": f"Audit log cleanup started (keeping {days_to_keep} days)"
         }
     except Exception as e:
-        logger.error(f"Failed to start cleanup task: {e}")
+        logger.error("Failed to start cleanup task", error=str(e), days_to_keep=days_to_keep)
         raise HTTPException(status_code=500, detail="Failed to start cleanup task")
 
 
@@ -174,7 +174,7 @@ async def get_task_status(
         status = TaskManager.get_task_status(task_id)
         return status
     except Exception as e:
-        logger.error(f"Failed to get task status: {e}")
+        logger.error("Failed to get task status", error=str(e), task_id=task_id)
         raise HTTPException(status_code=500, detail="Failed to get task status")
 
 
@@ -196,7 +196,7 @@ async def cancel_task(
         else:
             raise HTTPException(status_code=400, detail="Failed to cancel task")
     except Exception as e:
-        logger.error(f"Failed to cancel task: {e}")
+        logger.error("Failed to cancel task", error=str(e), task_id=task_id)
         raise HTTPException(status_code=500, detail="Failed to cancel task")
 
 
@@ -210,7 +210,7 @@ async def get_active_tasks(
         active_tasks = TaskManager.get_active_tasks()
         return active_tasks
     except Exception as e:
-        logger.error(f"Failed to get active tasks: {e}")
+        logger.error("Failed to get active tasks", error=str(e))
         raise HTTPException(status_code=500, detail="Failed to get active tasks")
 
 
@@ -224,5 +224,5 @@ async def get_worker_stats(
         worker_stats = TaskManager.get_worker_stats()
         return worker_stats
     except Exception as e:
-        logger.error(f"Failed to get worker stats: {e}")
+        logger.error("Failed to get worker stats", error=str(e))
         raise HTTPException(status_code=500, detail="Failed to get worker statistics")

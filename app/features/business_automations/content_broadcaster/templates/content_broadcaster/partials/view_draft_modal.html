@@ -1,0 +1,98 @@
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="ti ti-eye me-2"></i>
+        View Generated Draft
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<div class="modal-body">
+    <!-- Plan Information -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">Original Content Idea</h6>
+            <h5 class="card-title">{{ plan.title }}</h5>
+            {% if plan.description %}
+            <p class="text-muted mb-2">{{ plan.description }}</p>
+            {% endif %}
+
+            <div class="d-flex gap-3 flex-wrap mt-3">
+                {% if plan.tone %}
+                <span class="badge bg-info">
+                    <i class="ti ti-pencil me-1"></i>{{ plan.tone }}
+                </span>
+                {% endif %}
+
+                {% if plan.target_audience %}
+                <span class="badge bg-primary">
+                    <i class="ti ti-users me-1"></i>{{ plan.target_audience }}
+                </span>
+                {% endif %}
+
+                {% if plan.latest_seo_score %}
+                <span class="badge bg-success">
+                    <i class="ti ti-chart-line me-1"></i>SEO Score: {{ plan.latest_seo_score }}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Generated Content -->
+    <div class="card">
+        <div class="card-header">
+            <h6 class="mb-0">
+                <i class="ti ti-file-text me-2"></i>
+                Generated Content
+            </h6>
+        </div>
+        <div class="card-body">
+            <h4 class="mb-3">{{ content.title }}</h4>
+
+            <!-- Content Body (rendered as markdown/HTML) -->
+            <div class="content-preview" style="max-height: 500px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.375rem; padding: 1rem; background-color: #f8f9fa;">
+                <div class="markdown-content" style="line-height: 1.6; color: #333;">
+                    <pre style="white-space: pre-wrap; word-wrap: break-word; font-family: inherit; margin: 0;">{{ content.body }}</pre>
+                </div>
+            </div>
+
+            <!-- Metadata -->
+            {% if content.tags and content.tags|length > 0 %}
+            <div class="mt-3">
+                <strong>Tags:</strong>
+                {% for tag in content.tags %}
+                <span class="badge bg-secondary me-1">{{ tag }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Content State -->
+            <div class="mt-3">
+                <strong>Status:</strong>
+                {% if content.state == 'draft' %}
+                <span class="badge bg-warning">Draft</span>
+                {% elif content.state == 'scheduled' %}
+                <span class="badge bg-info">Scheduled</span>
+                {% elif content.state == 'published' %}
+                <span class="badge bg-success">Published</span>
+                {% else %}
+                <span class="badge bg-secondary">{{ content.state }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        Close
+    </button>
+    <button type="button" class="btn btn-success">
+        <i class="ti ti-check me-1"></i>
+        Approve Draft
+    </button>
+    <button type="button" class="btn btn-primary">
+        <i class="ti ti-edit me-1"></i>
+        Edit Content
+    </button>
+</div>

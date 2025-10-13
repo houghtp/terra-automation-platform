@@ -1,14 +1,5 @@
-# Gold Standard Route Imports - Secrets Forms
-"""
-Secrets form routes - UI forms, validation, and dashboard pages.
-"""
-from app.features.core.route_imports import (
-    APIRouter, Depends, Request, HTTPException, Form, Response,
-    HTMLResponse, AsyncSession, get_db, templates, FormHandler,
-    tenant_dependency, get_current_user, get_global_admin_user, User,
-    Optional, List, Dict, Any, structlog, get_logger
-)
-
+# Use centralized imports for consistency
+from app.features.core.route_imports import *
 from app.features.administration.secrets.models import (
     SecretCreate,
     SecretUpdate,
@@ -72,12 +63,12 @@ async def secret_form_partial(
             if not secret:
                 raise HTTPException(status_code=404, detail="Secret not found")
 
-        # Check if current user is global admin
-        is_global_admin = current_user.role == "global_admin" and current_user.tenant_id == "global"
+        # Use centralized global admin check
+        global_admin = is_global_admin(current_user)
 
         # Get available tenants for global admins
         available_tenants = []
-        if is_global_admin:
+        if global_admin:
             available_tenants = await secrets_service.get_available_tenants_for_secrets_forms()
 
         return templates.TemplateResponse(
@@ -86,7 +77,7 @@ async def secret_form_partial(
                 "request": request,
                 "secret": secret,
                 "secret_types": [t.value for t in SecretType],
-                "is_global_admin": is_global_admin,
+                "is_global_admin": global_admin,
                 "available_tenants": available_tenants
             }
         )
@@ -112,12 +103,12 @@ async def secret_edit_form(
         if not secret:
             raise HTTPException(status_code=404, detail="Secret not found")
 
-        # Check if current user is global admin
-        is_global_admin = current_user.role == "global_admin" and current_user.tenant_id == "global"
+        # Use centralized global admin check
+        global_admin = is_global_admin(current_user)
 
         # Get available tenants for global admins
         available_tenants = []
-        if is_global_admin:
+        if global_admin:
             available_tenants = await secrets_service.get_available_tenants_for_secrets_forms()
 
         return templates.TemplateResponse(
@@ -126,7 +117,7 @@ async def secret_edit_form(
                 "request": request,
                 "secret": secret,
                 "secret_types": [t.value for t in SecretType],
-                "is_global_admin": is_global_admin,
+                "is_global_admin": global_admin,
                 "available_tenants": available_tenants
             }
         )
@@ -214,9 +205,6 @@ async def secret_create(
         await db.commit()
         return Response(status_code=204)
 
-    except ValidationError as e:
-        logger.warning("Secret validation failed", error=str(e))
-        raise HTTPException(status_code=400, detail=str(e))
     except ValueError as e:
         logger.warning("Invalid secret data", error=str(e))
         raise HTTPException(status_code=400, detail=str(e))
@@ -279,9 +267,6 @@ async def secret_update(
         await db.commit()
         return Response(status_code=204)
 
-    except ValidationError as e:
-        logger.warning("Secret validation failed", error=str(e))
-        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except ValueError as e:

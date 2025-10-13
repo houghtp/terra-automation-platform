@@ -1,0 +1,181 @@
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="ti ti-bulb me-2"></i>
+        Add Content Idea
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<form hx-post="/features/content-broadcaster/planning/api/create"
+      hx-target="#modal-body"
+      hx-swap="innerHTML">
+
+    <div class="modal-body">
+        <div class="alert alert-info">
+            <i class="ti ti-info-circle me-2"></i>
+            <strong>How it works:</strong> Enter a content topic/idea, and AI will research competitors, generate an SEO-optimized blog post, and refine it until it scores 95+ on SEO criteria.
+        </div>
+
+        <!-- Title (Required) -->
+        <div class="mb-3">
+            <label class="form-label">
+                Content Title / Topic <span class="text-danger">*</span>
+            </label>
+            <input type="text"
+                   name="title"
+                   class="form-control"
+                   placeholder="e.g., 'The Future of AI in Software Development'"
+                   required
+                   minlength="3"
+                   maxlength="500">
+            <small class="text-muted">This will be the main topic for AI to research and write about</small>
+        </div>
+
+        <!-- Description -->
+        <div class="mb-3">
+            <label class="form-label">Description / Context</label>
+            <textarea name="description"
+                      class="form-control"
+                      rows="3"
+                      placeholder="Additional context, specific angles to cover, or requirements..."></textarea>
+            <small class="text-muted">Optional: Provide guidance for the AI writer</small>
+        </div>
+
+        <!-- Tone -->
+        <div class="mb-3">
+            <label class="form-label">Writing Tone</label>
+            <select name="tone" class="form-select">
+                <option value="professional">Professional</option>
+                <option value="casual">Casual & Friendly</option>
+                <option value="technical">Technical & In-Depth</option>
+                <option value="persuasive">Persuasive & Marketing</option>
+                <option value="educational">Educational</option>
+            </select>
+        </div>
+
+        <!-- Target Audience -->
+        <div class="mb-3">
+            <label class="form-label">Target Audience</label>
+            <input type="text"
+                   name="target_audience"
+                   class="form-control"
+                   placeholder="e.g., 'Software developers and tech leaders'">
+            <small class="text-muted">Who is this content for?</small>
+        </div>
+
+        <!-- Target Channels -->
+        <div class="mb-3">
+            <label class="form-label">Target Channels</label>
+            <div class="row">
+                <div class="col-md-6 mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="target_channels" value="wordpress" id="ch_wordpress">
+                        <label class="form-check-label" for="ch_wordpress">
+                            <i class="ti ti-brand-wordpress me-1"></i> WordPress
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="target_channels" value="linkedin" id="ch_linkedin">
+                        <label class="form-check-label" for="ch_linkedin">
+                            <i class="ti ti-brand-linkedin me-1"></i> LinkedIn
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="target_channels" value="medium" id="ch_medium">
+                        <label class="form-check-label" for="ch_medium">
+                            <i class="ti ti-brand-medium me-1"></i> Medium
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="target_channels" value="twitter" id="ch_twitter">
+                        <label class="form-check-label" for="ch_twitter">
+                            <i class="ti ti-brand-twitter me-1"></i> Twitter/X
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <small class="text-muted">Select platforms where this content will be published</small>
+        </div>
+
+        <!-- SEO Keywords -->
+        <div class="mb-3">
+            <label class="form-label">SEO Keywords (Optional)</label>
+            <input type="text"
+                   name="seo_keywords"
+                   class="form-control"
+                   placeholder="AI, software development, automation (comma-separated)">
+            <small class="text-muted">AI will discover additional keywords, but you can suggest some</small>
+        </div>
+
+        <!-- Competitor URLs -->
+        <div class="mb-3">
+            <label class="form-label">Competitor URLs (Optional)</label>
+            <textarea name="competitor_urls"
+                      class="form-control"
+                      rows="3"
+                      placeholder="https://example.com/article1&#10;https://example.com/article2"></textarea>
+            <small class="text-muted">One URL per line. AI will analyze these for SEO insights</small>
+        </div>
+
+        <!-- Skip Research Option -->
+        <div class="mb-3">
+            <div class="form-check form-switch">
+                <input class="form-check-input"
+                       type="checkbox"
+                       name="skip_research"
+                       id="skip_research_create"
+                       value="true">
+                <label class="form-check-label" for="skip_research_create">
+                    <strong>Skip competitor research and generate directly</strong>
+                </label>
+            </div>
+            <small class="text-muted d-block mt-1">
+                <i class="ti ti-info-circle me-1"></i>
+                <strong>Faster generation:</strong> Skip the research phase and generate content immediately using your topic, description, and keywords. Best for quick content creation when you already know what you want to write.
+            </small>
+        </div>
+
+        <div class="row">
+            <!-- Min SEO Score -->
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Minimum SEO Score</label>
+                <input type="number"
+                       name="min_seo_score"
+                       class="form-control"
+                       value="95"
+                       min="80"
+                       max="100">
+                <small class="text-muted">Target: 80-100 (recommended: 95+)</small>
+            </div>
+
+            <!-- Max Iterations -->
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Max Refinement Iterations</label>
+                <input type="number"
+                       name="max_iterations"
+                       class="form-control"
+                       value="3"
+                       min="1"
+                       max="5">
+                <small class="text-muted">How many times to refine (1-5)</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            Cancel
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="ti ti-plus me-1"></i>
+            Add Content Idea
+        </button>
+    </div>
+</form>
+

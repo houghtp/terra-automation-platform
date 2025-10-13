@@ -1,0 +1,170 @@
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="ti ti-edit me-2"></i>
+        Edit Content Idea
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<form hx-post="/features/content-broadcaster/planning/{{ plan.id }}/edit"
+      hx-target="#modal-body"
+      hx-swap="innerHTML">
+
+    <div class="modal-body">
+        <!-- Title (Required) -->
+        <div class="mb-3">
+            <label class="form-label">
+                Content Title / Topic <span class="text-danger">*</span>
+            </label>
+            <input type="text"
+                   name="title"
+                   class="form-control"
+                   value="{{ plan.title }}"
+                   required
+                   minlength="3"
+                   maxlength="500">
+        </div>
+
+        <!-- Description -->
+        <div class="mb-3">
+            <label class="form-label">Description / Context</label>
+            <textarea name="description"
+                      class="form-control"
+                      rows="3">{{ plan.description or '' }}</textarea>
+        </div>
+
+        <!-- Tone -->
+        <div class="mb-3">
+            <label class="form-label">Writing Tone</label>
+            <select name="tone" class="form-select">
+                <option value="professional" {% if plan.tone == 'professional' %}selected{% endif %}>Professional</option>
+                <option value="casual" {% if plan.tone == 'casual' %}selected{% endif %}>Casual & Friendly</option>
+                <option value="technical" {% if plan.tone == 'technical' %}selected{% endif %}>Technical & In-Depth</option>
+                <option value="persuasive" {% if plan.tone == 'persuasive' %}selected{% endif %}>Persuasive & Marketing</option>
+                <option value="educational" {% if plan.tone == 'educational' %}selected{% endif %}>Educational</option>
+            </select>
+        </div>
+
+        <!-- Target Audience -->
+        <div class="mb-3">
+            <label class="form-label">Target Audience</label>
+            <input type="text"
+                   name="target_audience"
+                   class="form-control"
+                   value="{{ plan.target_audience or '' }}">
+        </div>
+
+        <!-- Target Channels -->
+        <div class="mb-3">
+            <label class="form-label">Target Channels</label>
+            <div class="row">
+                <div class="col-md-6 mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="target_channels" value="wordpress" id="ch_wordpress"
+                               {% if 'wordpress' in plan.target_channels %}checked{% endif %}>
+                        <label class="form-check-label" for="ch_wordpress">
+                            <i class="ti ti-brand-wordpress me-1"></i> WordPress
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="target_channels" value="linkedin" id="ch_linkedin"
+                               {% if 'linkedin' in plan.target_channels %}checked{% endif %}>
+                        <label class="form-check-label" for="ch_linkedin">
+                            <i class="ti ti-brand-linkedin me-1"></i> LinkedIn
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="target_channels" value="medium" id="ch_medium"
+                               {% if 'medium' in plan.target_channels %}checked{% endif %}>
+                        <label class="form-check-label" for="ch_medium">
+                            <i class="ti ti-brand-medium me-1"></i> Medium
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="target_channels" value="twitter" id="ch_twitter"
+                               {% if 'twitter' in plan.target_channels %}checked{% endif %}>
+                        <label class="form-check-label" for="ch_twitter">
+                            <i class="ti ti-brand-twitter me-1"></i> Twitter/X
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEO Keywords -->
+        <div class="mb-3">
+            <label class="form-label">SEO Keywords (Optional)</label>
+            <input type="text"
+                   name="seo_keywords"
+                   class="form-control"
+                   value="{{ ', '.join(plan.seo_keywords) if plan.seo_keywords else '' }}">
+        </div>
+
+        <!-- Competitor URLs -->
+        <div class="mb-3">
+            <label class="form-label">Competitor URLs (Optional)</label>
+            <textarea name="competitor_urls"
+                      class="form-control"
+                      rows="3">{{ '\n'.join(plan.competitor_urls) if plan.competitor_urls else '' }}</textarea>
+        </div>
+
+        <!-- Skip Research Option -->
+        <div class="mb-3">
+            <div class="form-check form-switch">
+                <input class="form-check-input"
+                       type="checkbox"
+                       name="skip_research"
+                       id="skip_research_edit"
+                       value="true"
+                       {% if plan.skip_research %}checked{% endif %}>
+                <label class="form-check-label" for="skip_research_edit">
+                    <strong>Skip competitor research and generate directly</strong>
+                </label>
+            </div>
+            <small class="text-muted d-block mt-1">
+                <i class="ti ti-info-circle me-1"></i>
+                <strong>Faster generation:</strong> Skip the research phase and generate content immediately using your topic, description, and keywords.
+            </small>
+        </div>
+
+        <div class="row">
+            <!-- Min SEO Score -->
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Minimum SEO Score</label>
+                <input type="number"
+                       name="min_seo_score"
+                       class="form-control"
+                       value="{{ plan.min_seo_score }}"
+                       min="80"
+                       max="100">
+            </div>
+
+            <!-- Max Iterations -->
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Max Refinement Iterations</label>
+                <input type="number"
+                       name="max_iterations"
+                       class="form-control"
+                       value="{{ plan.max_iterations }}"
+                       min="1"
+                       max="5">
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            Cancel
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="ti ti-check me-1"></i>
+            Update Content Idea
+        </button>
+    </div>
+</form>

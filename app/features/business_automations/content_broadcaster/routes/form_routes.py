@@ -19,6 +19,41 @@ import structlog
 logger = structlog.get_logger(__name__)
 router = APIRouter(tags=["content-broadcaster-forms"])
 
+# --- PLANNING PAGE ROUTES ---
+
+@router.get("/planning", response_class=HTMLResponse)
+async def content_planning_page(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user = Depends(get_current_user)
+):
+    """Content planning page with AI generation."""
+    return templates.TemplateResponse(
+        "content_broadcaster/planning.html",
+        {
+            "request": request,
+            "title": "Content Planning - AI Generator",
+            "user": current_user,
+            "page_title": "Content Ideas",
+            "page_description": "AI-Powered Content Generation",
+            "page_icon": "bulb",
+            "add_url": "/features/content-broadcaster/planning/partials/create_plan_modal",
+            "entity_name": "content-plans"
+        }
+    )
+
+@router.get("/planning/partials/create_plan_modal", response_class=HTMLResponse)
+async def get_create_plan_modal(
+    request: Request,
+    current_user = Depends(get_current_user)
+):
+    """Get the create content plan modal."""
+    return templates.TemplateResponse(
+        "content_broadcaster/partials/create_plan_modal.html",
+        {"request": request, "user": current_user}
+    )
+
 # --- UI ROUTES (Jinja + HTMX) ---
 
 @router.get("/", response_class=HTMLResponse)

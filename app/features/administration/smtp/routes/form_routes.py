@@ -36,7 +36,7 @@ router = APIRouter(tags=["smtp-forms"])
 
 # List page
 @router.get("/", response_class=HTMLResponse)
-async def smtp_list(request: Request, db: AsyncSession = Depends(get_db), tenant: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
+async def smtp_list(request: Request, db: AsyncSession = Depends(get_db), tenant_id: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
     # Check if current user is global admin
     is_global_admin = current_user.role == "global_admin" and current_user.tenant_id == "global"
 
@@ -47,10 +47,10 @@ async def smtp_list(request: Request, db: AsyncSession = Depends(get_db), tenant
 
 # Modal form (add/edit)
 @router.get("/partials/form", response_class=HTMLResponse)
-async def smtp_form_partial(request: Request, config_id: str = None, db: AsyncSession = Depends(get_db), tenant: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
+async def smtp_form_partial(request: Request, config_id: str = None, db: AsyncSession = Depends(get_db), tenant_id: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
     config = None
     if config_id:
-        service = SMTPConfigurationService(db, tenant)
+        service = SMTPConfigurationService(db, tenant_id)
         config = await service.get_configuration_by_id(config_id)
 
     # Check if current user is global admin
@@ -59,7 +59,7 @@ async def smtp_form_partial(request: Request, config_id: str = None, db: AsyncSe
     # Get available tenants for global admins
     available_tenants = []
     if is_global_admin:
-        service = SMTPConfigurationService(db, tenant)
+        service = SMTPConfigurationService(db, tenant_id)
         available_tenants = await service.get_available_tenants_for_smtp_forms()
 
     return templates.TemplateResponse("administration/smtp/partials/form.html", {
@@ -71,8 +71,8 @@ async def smtp_form_partial(request: Request, config_id: str = None, db: AsyncSe
 
 # Modal edit endpoint
 @router.get("/{config_id}/edit", response_class=HTMLResponse)
-async def smtp_edit_form(request: Request, config_id: str, db: AsyncSession = Depends(get_db), tenant: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
-    service = SMTPConfigurationService(db, tenant)
+async def smtp_edit_form(request: Request, config_id: str, db: AsyncSession = Depends(get_db), tenant_id: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
+    service = SMTPConfigurationService(db, tenant_id)
     config = await service.get_configuration_by_id(config_id)
     if not config:
         raise HTTPException(status_code=404, detail="SMTP configuration not found")
@@ -97,7 +97,7 @@ async def smtp_edit_form(request: Request, config_id: str, db: AsyncSession = De
 # --- HTMX VALIDATION ENDPOINTS ---
 
 @router.post("/validate/name", response_class=HTMLResponse)
-async def validate_smtp_name(request: Request, name: str = Form(...), config_id: Optional[str] = Form(None), db: AsyncSession = Depends(get_db), tenant: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
+async def validate_smtp_name(request: Request, name: str = Form(...), config_id: Optional[str] = Form(None), db: AsyncSession = Depends(get_db), tenant_id: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
     """Validate SMTP configuration name."""
     try:
         if not name or not name.strip():
@@ -112,7 +112,7 @@ async def validate_smtp_name(request: Request, name: str = Form(...), config_id:
             return HTMLResponse('<span class="invalid-feedback d-block">Configuration name must be less than 255 characters</span>')
 
         # Check for duplicate names within tenant (excluding current config if editing)
-        smtp_service = SMTPConfigurationService(db, tenant)
+        smtp_service = SMTPConfigurationService(db, tenant_id)
         existing = await smtp_service.get_configuration_by_name(name)
 
         if existing and (not config_id or existing.id != config_id):
@@ -124,7 +124,7 @@ async def validate_smtp_name(request: Request, name: str = Form(...), config_id:
         return HTMLResponse('<span class="invalid-feedback d-block">Error validating configuration name</span>')
 
 @router.post("/validate/host", response_class=HTMLResponse)
-async def validate_smtp_host(request: Request, db: AsyncSession = Depends(get_db), tenant: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
+async def validate_smtp_host(request: Request, db: AsyncSession = Depends(get_db), tenant_id: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
     """Validate SMTP host."""
     try:
         form_handler = FormHandler(request)
@@ -144,7 +144,7 @@ async def validate_smtp_host(request: Request, db: AsyncSession = Depends(get_db
         return HTMLResponse("")
 
 @router.post("/validate/password", response_class=HTMLResponse)
-async def validate_smtp_password(request: Request, db: AsyncSession = Depends(get_db), tenant: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
+async def validate_smtp_password(request: Request, db: AsyncSession = Depends(get_db), tenant_id: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
     """Validate SMTP password."""
     try:
         form_handler = FormHandler(request)
@@ -167,7 +167,7 @@ async def validate_smtp_password(request: Request, db: AsyncSession = Depends(ge
         return HTMLResponse("")
 
 @router.post("/validate/from_email", response_class=HTMLResponse)
-async def validate_smtp_from_email(request: Request, db: AsyncSession = Depends(get_db), tenant: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
+async def validate_smtp_from_email(request: Request, db: AsyncSession = Depends(get_db), tenant_id: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):
     """Validate from email address."""
     try:
         form_handler = FormHandler(request)
