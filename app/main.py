@@ -61,9 +61,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Log secrets backend being used (without exposing values)
     logging.info(f"Using secrets backend: {secrets_manager.backend.value}")
 
-    # Create database tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Database tables are managed by Alembic migrations
+    # Run: alembic upgrade head
+    # Note: Base.metadata.create_all() is disabled to avoid conflicts with Alembic
 
     # Bootstrap global admin system
     async for db_session in get_db():
@@ -95,6 +95,12 @@ setup_logging()
 # Note: Startup events have been moved to lifespan context manager
 # This validation is now handled during application startup
 
+# Add session middleware first (required for tenant switching)
+from starlette.middleware.sessions import SessionMiddleware
+import secrets
+SESSION_SECRET_KEY = os.getenv("SESSION_SECRET_KEY", secrets.token_urlsafe(32))
+app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET_KEY)
+
 # Add request id and tenant middleware early
 from .middleware.request_id import RequestIDMiddleware
 from .middleware.tenant import TenantMiddleware
@@ -105,21 +111,22 @@ from .middleware.metrics import MetricsMiddleware
 from .features.core.versioning import VersioningMiddleware, api_version_manager, setup_version_docs
 app.add_middleware(VersioningMiddleware, version_manager=api_version_manager)
 
-# Add API security middleware (after versioning)
+# Tenant middleware must run before auth/audit so context vars are populated
+app.add_middleware(TenantMiddleware)
+
+# Add API security middleware (must run first after tenant context resolves)
 from .features.core.api_security import APISecurityMiddleware
 app.add_middleware(APISecurityMiddleware)
 
-# Add authentication context middleware (must run before audit middleware)
+# Add authentication context middleware (sets request.state.user_id, tenant_id, etc.)
 from .middleware.auth_context import AuthContextMiddleware
 app.add_middleware(AuthContextMiddleware)
 
-# Add audit logging middleware (after auth context to capture user info)
-# PERFORMANCE FIXED - now runs in background tasks
+# Add audit logging middleware (reads request.state set by auth context)
 from .features.administration.audit.middleware import AuditLoggingMiddleware
 app.add_middleware(AuditLoggingMiddleware)
 
 app.add_middleware(RequestIDMiddleware)
-app.add_middleware(TenantMiddleware)
 
 # Add rate limiting middleware - TEMPORARILY DISABLED due to greenlet async context error
 # TODO: Fix rate limiting to work with async SQLAlchemy properly
@@ -191,9 +198,16 @@ app.mount("/features/administration/secrets/static", StaticFiles(directory="app/
 # Mount SMTP static files
 app.mount("/features/administration/smtp/static", StaticFiles(directory="app/features/administration/smtp/static"), name="smtp_static")
 
+# Mount AI prompts static files
+app.mount("/features/administration/ai_prompts/static", StaticFiles(directory="app/features/administration/ai_prompts/static"), name="ai_prompts_static")
+
 # Mount content broadcaster static files
 app.mount("/features/content-broadcaster/static", StaticFiles(directory="app/features/business_automations/content_broadcaster/static"), name="content_broadcaster_static")
+app.mount("/features/community/static", StaticFiles(directory="app/features/community/static"), name="community_static")
 app.mount("/features/connectors/static", StaticFiles(directory="app/features/connectors/connectors/static"), name="connectors_static")
+
+# Mount MSP CSPM static files
+app.mount("/features/msp/cspm/static", StaticFiles(directory="app/features/msp/cspm/static"), name="cspm_static")
 
 
 # Setup versioned API documentation
@@ -227,10 +241,15 @@ from .features.administration.users.routes import router as administration_users
 from .features.administration.tasks.routes import router as administration_tasks_router
 from .features.administration.api_keys.routes import router as administration_api_keys_router
 from .features.administration.smtp.routes import router as administration_smtp_router
+from .features.administration.ai_prompts.routes import router as administration_ai_prompts_router
 
 # Include business automation routes
 from .features.business_automations.content_broadcaster.routes import router as content_broadcaster_router
+from .features.community.routes import router as community_router
 from .features.connectors.connectors.routes import router as connectors_router
+
+# Include MSP routes
+from .features.msp.cspm.routes import cspm_router
 
 app.include_router(administration_secrets_crud_router, prefix="/features/administration/secrets", tags=["administration"])
 app.include_router(administration_secrets_form_router, prefix="/features/administration/secrets", tags=["administration"])
@@ -240,13 +259,20 @@ app.include_router(administration_users_router, prefix="/features/administration
 app.include_router(administration_tasks_router, prefix="/features/administration/tasks", tags=["tasks"])
 app.include_router(administration_api_keys_router, prefix="/features/administration/api-keys", tags=["administration"])
 app.include_router(administration_smtp_router, prefix="/features/administration/smtp", tags=["administration"])
+app.include_router(administration_ai_prompts_router, prefix="/features/administration/ai-prompts", tags=["administration"])
 app.include_router(admin_logs_router, prefix="/features/administration/logs", tags=["administration"])
 
 # Business automation routes
 app.include_router(content_broadcaster_router, prefix="/features/content-broadcaster", tags=["business-automations"])
 
+# Community routes
+app.include_router(community_router, prefix="/features/community", tags=["community"])
+
 # Connectors routes
 app.include_router(connectors_router, prefix="/features/connectors", tags=["connectors"])
+
+# MSP CSPM routes
+app.include_router(cspm_router, tags=["msp"])
 
 # Old users routes moved to administration
 

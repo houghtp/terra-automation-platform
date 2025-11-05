@@ -127,12 +127,28 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
         # Get tenant ID from request state (set by auth context middleware)
         tenant_id = getattr(request.state, 'tenant_id', None)
 
-        # Fallback if not set by auth middleware
         if not tenant_id:
             try:
-                tenant_id = get_current_tenant() or "default"
+                tenant_id = get_current_tenant() or None
             except Exception:
-                tenant_id = "default"  # Fallback for non-tenant requests
+                tenant_id = None
+
+        # Strict enforcement: never allow 'unknown' or None for regular users
+        if not tenant_id or tenant_id in {"unknown", "default", ""}:
+            if user_role == "global_admin":
+                tenant_id = "global"
+            elif not user_id and not user_email:
+                tenant_id = "global"
+                logger.debug(
+                    "Audit log: tenant_id not available for anonymous/system request on %s",
+                    request.url.path
+                )
+            else:
+                logger.warning(
+                    "Audit log: tenant_id missing for user %s (role: %s), defaulting to 'global'",
+                    user_email, user_role
+                )
+                tenant_id = "global"
 
         # Extract client info
         client_ip = self._get_client_ip(request)

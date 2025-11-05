@@ -69,14 +69,27 @@ class AsyncDatabaseLogHandler(logging.Handler):
         return True
 
     async def _async_emit(self, record):
-        """Actually write the log to database."""
+        """Actually write the log to database.
+
+        Uses tenant_ctx_var which is set by TenantMiddleware (for anonymous requests)
+        and overridden by AuthContextMiddleware (for authenticated users).
+        This ensures logs use the authenticated user's tenant_id when available.
+        """
         from ..administration.logs.models import ApplicationLog
         from .database import get_db
 
         try:
             async for session in get_db():
-                # Extract context from record
-                tenant_id = getattr(record, 'tenant_id', 'global')
+                # Extract tenant_id from tenant context variable
+                # TenantMiddleware sets this from headers/subdomain
+                # AuthContextMiddleware overrides it with authenticated user's tenant_id
+                try:
+                    from app.middleware.tenant import tenant_ctx_var
+                    tenant_id = tenant_ctx_var.get('global')
+                except Exception:
+                    tenant_id = 'global'
+
+                # Extract other context from record
                 request_id = getattr(record, 'request_id', None)
                 user_id = getattr(record, 'user_id', None)
                 endpoint = getattr(record, 'endpoint', None)
@@ -300,7 +313,12 @@ def add_request_id(logger, method_name, event_dict):
 
 
 def add_tenant_context(logger, method_name, event_dict):
-    """Processor to add tenant context to log records."""
+    """Processor to add tenant context to log records.
+
+    Uses tenant_ctx_var which is set by TenantMiddleware (for anonymous requests)
+    and overridden by AuthContextMiddleware (for authenticated users).
+    This ensures logs use the authenticated user's tenant_id when available.
+    """
     try:
         from app.middleware.tenant import tenant_ctx_var
         tenant_id = tenant_ctx_var.get(None)

@@ -34,13 +34,8 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
     }
 
     async def dispatch(self, request: Request, call_next):
-        """Extract auth context and set on request state."""
-
-        # Skip excluded paths for performance
-        if self._should_exclude_path(request.url.path):
-            return await call_next(request)
-
-        # Initialize state with defaults
+        """Process the request and set auth context."""
+        # Initialize request state attributes
         request.state.user_id = None
         request.state.user_email = None
         request.state.user_role = None
@@ -53,33 +48,67 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
                 # Validate token and get user data
                 token_data = JWTUtils.verify_token(token)
                 if token_data:
-                    # Get user details from database
-                    user = await self._get_user_from_token(token_data)
-                    if user:
-                        # Set user context on request state
-                        request.state.user_id = str(user.id)
-                        request.state.user_email = user.email
-                        request.state.user_role = user.role
-                        request.state.tenant_id = user.tenant_id
+                    # Set basic info from token immediately (fallback)
+                    request.state.user_id = str(token_data.user_id)
+                    request.state.user_email = token_data.email
+                    request.state.user_role = token_data.role
+                    request.state.tenant_id = token_data.tenant_id
 
-                        logger.debug(
-                            f"Auth context set for user {user.email} "
-                            f"(role: {user.role}, tenant: {user.tenant_id})"
-                        )
+                    # Try to get full user details from database
+                    try:
+                        user = await self._get_user_from_token(token_data)
+                        if user:
+                            # Update with fresh user data from DB
+                            request.state.user_id = str(user.id)
+                            request.state.user_email = user.email
+                            request.state.user_role = user.role
+                            request.state.tenant_id = user.tenant_id
+
+                            # Check if global admin has switched tenants
+                            if user.role == "global_admin":
+                                try:
+                                    from app.features.auth.tenant_switching.tenant_switch_service import TenantSwitchService
+                                    switched_tenant = TenantSwitchService.get_switched_tenant(request)
+                                    if switched_tenant:
+                                        request.state.tenant_id = switched_tenant
+                                        logger.debug(
+                                            f"Global admin {user.email} using switched tenant: {switched_tenant}"
+                                        )
+                                except Exception as session_error:
+                                    # Session access might fail if SessionMiddleware hasn't run yet
+                                    # This is expected and can be safely ignored - tenant switching only works
+                                    # when SessionMiddleware is properly initialized
+                                    logger.debug(f"Tenant switching unavailable (session not initialized): {session_error}")
+
+                            logger.debug(
+                                f"Auth context set for user {user.email} "
+                                f"(role: {user.role}, tenant: {user.tenant_id})"
+                            )
+                    except Exception as db_error:
+                        # Database lookup failed, but we have token data as fallback
+                        logger.warning(f"Database lookup failed for user {token_data.email}, using token data: {db_error}")
 
             # Set tenant ID even if no user (for anonymous requests)
             if not request.state.tenant_id:
                 try:
-                    tenant_id = get_current_tenant() or "default"
+                    tenant_id = get_current_tenant() or "global"
                     request.state.tenant_id = tenant_id
                 except:
-                    request.state.tenant_id = "default"
+                    request.state.tenant_id = "global"
 
         except Exception as e:
             # Never break the request due to auth context issues
             logger.warning(f"Failed to extract auth context: {e}")
             # Ensure defaults are set
             request.state.tenant_id = request.state.tenant_id or "default"
+
+        # Override tenant_ctx_var with authenticated user's tenant_id
+        # This ensures logging uses the correct tenant for authenticated users
+        try:
+            from app.middleware.tenant import tenant_ctx_var
+            tenant_ctx_var.set(request.state.tenant_id)
+        except Exception:
+            pass  # Fail silently if tenant middleware not available
 
         # Continue with request
         return await call_next(request)
