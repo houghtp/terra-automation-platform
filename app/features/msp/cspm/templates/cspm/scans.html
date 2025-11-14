@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Compliance Scans{% endblock %}
+{% block head %}
+<script src="/features/core/static/js/table-base.js"></script>
+<script src="/dashboard/static/js/chart-widget.js"></script>
+{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <div id="scan-area" data-global-admin="{{ 'true' if is_global_admin|default(False) else 'false' }}">
+      {% include "cspm/partials/scan_list_content.html" %}
+    </div>
+  </div>
+</div>
+
+<div class="modal modal-blur fade" id="modal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div id="modal-body"></div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/features/msp/cspm/static/js/cspm-scans-table.js?v=20251113-sse"></script>
+<script>
+// Load overview stats
+async function loadOverviewStats() {
+    try {
+        const response = await fetch('/msp/cspm/analytics/overview', {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+
+        // Update stats
+        document.getElementById('total-scans-stat').textContent = data.total_scans || 0;
+        document.getElementById('completed-scans-stat').textContent = data.completed_scans || 0;
+        document.getElementById('failed-scans-stat').textContent = data.failed_scans || 0;
+        document.getElementById('running-scans-stat').textContent = data.running_scans || 0;
+        document.getElementById('avg-pass-rate-stat').textContent = data.avg_pass_rate || '0%';
+    } catch (error) {
+        console.error('Failed to load overview stats:', error);
+    }
+}
+
+// Load stats on page load
+document.addEventListener('DOMContentLoaded', loadOverviewStats);
+</script>
+{% endblock %}

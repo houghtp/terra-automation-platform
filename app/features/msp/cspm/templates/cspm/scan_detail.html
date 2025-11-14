@@ -1,0 +1,619 @@
+{% extends "base.html" %}
+{% block title %}Scan Details - {{ scan.scan_id[:8] }}{% endblock %}
+{% block content %}
+{% set target_config = target_config or {} %}
+<!-- Page header -->
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <div class="page-pretitle">
+        <a href="/msp/cspm/scans" class="text-muted">
+          <i class="ti ti-arrow-left icon"></i> Back to Scans
+        </a>
+      </div>
+      <h2 class="page-title">
+        <i class="ti ti-shield-check me-2"></i>Scan Details
+      </h2>
+      <div class="text-muted mt-1">
+        <code>{{ scan.scan_id }}</code>
+      </div>
+    </div>
+    <div class="col-auto">
+      {% if scan.status == 'running' %}
+      <span class="badge bg-primary badge-lg">
+        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+        Running
+      </span>
+      {% elif scan.status == 'completed' %}
+      <span class="badge bg-success badge-lg">
+        <i class="ti ti-check icon"></i> Completed
+      </span>
+      {% elif scan.status == 'failed' %}
+      <span class="badge bg-danger badge-lg">
+        <i class="ti ti-x icon"></i> Failed
+      </span>
+      {% elif scan.status == 'cancelled' %}
+      <span class="badge bg-secondary badge-lg">Cancelled</span>
+      {% else %}
+      <span class="badge bg-secondary badge-lg">Pending</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Main content -->
+<div class="row">
+  <div class="col-12">
+    <!-- Scan Info Card -->
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4">
+            <div class="mb-3">
+              <label class="form-label text-muted">Scan Target</label>
+              <div class="font-weight-medium">
+                <i class="ti ti-cloud icon me-2"></i>
+                {{ scan.target_display_name or scan.assignment_display_name or 'Unknown target' }}
+              </div>
+              {% if scan.target_identifier %}
+              <div class="text-muted small">{{ scan.target_identifier }}</div>
+              {% elif target_config.get('m365_tenant_id') %}
+              <div class="text-muted small">{{ target_config.get('m365_tenant_id') }}</div>
+              {% endif %}
+              {% if target_config.get('m365_domain') %}
+              <div class="text-muted small">{{ target_config.get('m365_domain') }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="mb-3">
+              <label class="form-label text-muted">Started</label>
+              <div>
+                {% if scan.started_at %}
+                {{ scan.started_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                {% else %}
+                Not started
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="mb-3">
+              <label class="form-label text-muted">Duration</label>
+              <div>
+                {% if scan.completed_at and scan.started_at %}
+                {{ ((scan.completed_at - scan.started_at).total_seconds() / 60) | round(1) }} minutes
+                {% elif scan.started_at %}
+                <span class="text-muted">In progress...</span>
+                {% else %}
+                <span class="text-muted">-</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-4">
+            <div class="mb-3">
+              <label class="form-label text-muted">Assignment</label>
+              <div>{{ scan.assignment_display_name or 'Default Benchmark Configuration' }}</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="mb-3">
+              <label class="form-label text-muted">Technology</label>
+              <div>
+                <span class="badge bg-blue-lt">
+                  {{ scan.tech_type or 'M365' }}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-5">
+            <div class="mb-3">
+              <label class="form-label text-muted">Benchmark</label>
+              <div class="d-flex flex-column">
+                {% if scan.benchmark_display_name %}
+                <strong>{{ scan.benchmark_display_name }}</strong>
+                {% endif %}
+                <small class="text-muted">{{ scan.benchmark_key or 'Unknown benchmark' }}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress Card (shown for running scans) -->
+    {% if scan.status in ['pending', 'running'] %}
+    <div class="card mb-3" id="progress-card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="ti ti-loader icon me-2"></i>
+          Scan Progress
+        </h3>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <div class="d-flex justify-content-between mb-2">
+            <span>Progress</span>
+            <span id="progress-percentage" class="font-weight-bold">{{ scan.progress_percentage }}%</span>
+          </div>
+          <div class="progress progress-lg">
+            <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: {{ scan.progress_percentage }}%" role="progressbar"></div>
+          </div>
+        </div>
+
+        <div class="row text-center">
+          <div class="col">
+            <div class="h2 mb-0" id="total-checks">{{ scan.total_checks }}</div>
+            <div class="text-muted">Total Checks</div>
+          </div>
+          <div class="col">
+            <div class="h2 mb-0 text-success" id="passed-count">{{ scan.passed }}</div>
+            <div class="text-muted">Passed</div>
+          </div>
+          <div class="col">
+            <div class="h2 mb-0 text-danger" id="failed-count">{{ scan.failed }}</div>
+            <div class="text-muted">Failed</div>
+          </div>
+          <div class="col">
+            <div class="h2 mb-0 text-warning" id="error-count">{{ scan.errors }}</div>
+            <div class="text-muted">Errors</div>
+          </div>
+        </div>
+
+        {% if scan.current_check %}
+        <div class="mt-3">
+          <div class="text-muted small">Currently checking:</div>
+          <div id="current-check" class="font-monospace small">{{ scan.current_check }}</div>
+        </div>
+        {% else %}
+        <div class="mt-3">
+          <div class="text-muted small">Currently checking:</div>
+          <div id="current-check" class="font-monospace small text-muted">Initializing...</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Error Message (if failed) -->
+    {% if scan.status == 'failed' and scan.error_message %}
+    <div class="alert alert-danger">
+      <h4 class="alert-title">
+        <i class="ti ti-alert-circle icon me-2"></i>
+        Scan Failed
+      </h4>
+      <div class="text-muted">{{ scan.error_message }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Analytics Row (shown for completed scans) -->
+    {% if scan.status == 'completed' %}
+    <div class="row mb-3">
+      <!-- Results Breakdown -->
+      <div class="col-md-4">
+        <chart-widget
+          id="results-breakdown-chart"
+          title="Results Distribution"
+          type="donut"
+          data-url="/msp/cspm/analytics/scan/{{ scan.scan_id }}/results-breakdown"
+          height="220px"
+          loading-text="Loading results..."
+          label-field="label"
+          value-field="value"
+          colors='{"Passed": "#28a745", "Failed": "#dc3545", "Errors": "#ffc107"}'>
+        </chart-widget>
+      </div>
+
+      <!-- Compliance by Section -->
+      <div class="col-md-5">
+        <chart-widget
+          id="section-compliance-chart"
+          title="Compliance by Section"
+          type="bar"
+          data-url="/msp/cspm/analytics/scan/{{ scan.scan_id }}/by-section"
+          height="220px"
+          loading-text="Loading section data..."
+          x-field="section"
+          y-field="pass_rate"
+          y-label="Pass Rate (%)"
+          orientation="horizontal">
+        </chart-widget>
+      </div>
+
+      <!-- Level Distribution -->
+      <div class="col-md-3">
+        <chart-widget
+          id="level-distribution-chart"
+          title="Level Distribution"
+          type="donut"
+          data-url="/msp/cspm/analytics/scan/{{ scan.scan_id }}/by-level"
+          height="220px"
+          loading-text="Loading level data..."
+          colors='{"L1": "#007bff", "L2": "#6f42c1"}'>
+        </chart-widget>
+      </div>
+    </div>
+
+    <!-- Results Card -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <div class="row align-items-center">
+          <div class="col">
+            <h3 class="card-title">
+              <i class="ti ti-report icon me-2"></i>
+              Compliance Results
+            </h3>
+          </div>
+          <div class="col-auto">
+            <div class="btn-list">
+              <!-- Status filters -->
+              <button class="btn btn-sm btn-outline-secondary active" id="filter-all">All</button>
+              <button class="btn btn-sm btn-outline-success" id="filter-pass">Pass</button>
+              <button class="btn btn-sm btn-outline-danger" id="filter-fail">Fail</button>
+              <button class="btn btn-sm btn-outline-warning" id="filter-error">Error</button>
+
+              <!-- Level filters -->
+              <div class="btn-group">
+                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                  <i class="ti ti-filter icon"></i> Level
+                </button>
+                <ul class="dropdown-menu">
+                  <li><a class="dropdown-item filter-level" href="#" data-level="all">All Levels</a></li>
+                  <li><a class="dropdown-item filter-level" href="#" data-level="L1">L1 (Base Security)</a></li>
+                  <li><a class="dropdown-item filter-level" href="#" data-level="L2">L2 (Advanced)</a></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-body p-0">
+        {% if results %}
+        <div class="table-responsive">
+          <table class="table table-vcenter card-table" id="results-table">
+            <thead>
+              <tr>
+                <th style="width: 50%">Check Title</th>
+                <th>Section</th>
+                <th>Level</th>
+                <th>Status</th>
+                <th class="w-1">Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for result in results %}
+              <tr data-status="{{ result.status }}" data-level="{{ result.level or '' }}" data-section="{{ result.section or '' }}">
+                <td>
+                  <!-- Title with recommendation ID -->
+                  <div class="d-flex flex-column">
+                    <strong>{{ result.title or result.check_id }}</strong>
+                    <div class="text-muted small">
+                      {% if result.recommendation_id %}
+                      <span class="badge bg-secondary-lt">{{ result.recommendation_id }}</span>
+                      {% else %}
+                      <code>{{ result.check_id }}</code>
+                      {% endif %}
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <!-- Section and Subsection -->
+                  {% if result.section %}
+                  <div class="d-flex flex-column">
+                    <span class="text-muted small">{{ result.section }}</span>
+                    {% if result.subsection %}
+                    <strong class="small">{{ result.subsection }}</strong>
+                    {% endif %}
+                  </div>
+                  {% else %}
+                  <span class="text-muted">-</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <!-- Level badge -->
+                  {% if result.level == 'L1' %}
+                  <span class="badge bg-blue-lt">L1</span>
+                  {% elif result.level == 'L2' %}
+                  <span class="badge bg-purple-lt">L2</span>
+                  {% elif result.category %}
+                  <span class="badge bg-secondary-lt">{{ result.category }}</span>
+                  {% else %}
+                  <span class="text-muted">-</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if result.status == 'Pass' %}
+                  <span class="badge bg-success">
+                    <i class="ti ti-check icon"></i> Pass
+                  </span>
+                  {% elif result.status == 'Fail' %}
+                  <span class="badge bg-danger">
+                    <i class="ti ti-x icon"></i> Fail
+                  </span>
+                  {% else %}
+                  <span class="badge bg-warning">
+                    <i class="ti ti-alert-triangle icon"></i> Error
+                  </span>
+                  {% endif %}
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#details-{{ loop.index }}" aria-expanded="false">
+                    <i class="ti ti-chevron-down icon"></i>
+                  </button>
+                </td>
+              </tr>
+              <!-- Expandable details row with CIS metadata -->
+              <tr class="collapse" id="details-{{ loop.index }}">
+                <td colspan="5">
+                  <div class="card mb-0 border-0">
+                    <div class="card-body">
+                      <div class="row">
+                        <!-- Left column: Description and Rationale -->
+                        <div class="col-md-6">
+                          {% if result.description %}
+                          <div class="mb-3">
+                            <h4 class="text-muted mb-2">Description</h4>
+                            <p>{{ result.description }}</p>
+                          </div>
+                          {% endif %}
+
+                          {% if result.rationale %}
+                          <div class="mb-3">
+                            <h4 class="text-muted mb-2">Rationale</h4>
+                            <p>{{ result.rationale }}</p>
+                          </div>
+                          {% endif %}
+
+                          {% if result.impact %}
+                          <div class="mb-3">
+                            <h4 class="text-muted mb-2">Impact</h4>
+                            <p>{{ result.impact }}</p>
+                          </div>
+                          {% endif %}
+
+                          {% if result.profile_applicability %}
+                          <div class="mb-3">
+                            <h4 class="text-muted mb-2">Profile Applicability</h4>
+                            <p class="small">{{ result.profile_applicability }}</p>
+                          </div>
+                          {% endif %}
+
+                          {% if result.default_value %}
+                          <div class="mb-3">
+                            <h4 class="text-muted mb-2">Default Value</h4>
+                            <code>{{ result.default_value }}</code>
+                          </div>
+                          {% endif %}
+                        </div>
+
+                        <!-- Right column: Remediation and Audit -->
+                        <div class="col-md-6">
+                          {% if result.remediation %}
+                          <div class="mb-3">
+                            <h4 class="text-success mb-2">
+                              <i class="ti ti-tool icon me-2"></i>Remediation
+                            </h4>
+                            <div class="alert alert-success mb-0">
+                              {{ result.remediation }}
+                            </div>
+                          </div>
+                          {% endif %}
+
+                          {% if result.audit_procedure %}
+                          <div class="mb-3">
+                            <h4 class="text-muted mb-2">Audit Procedure</h4>
+                            <p class="small">{{ result.audit_procedure }}</p>
+                          </div>
+                          {% endif %}
+
+                          {% if result.references %}
+                          <div class="mb-3">
+                            <h4 class="text-muted mb-2">References</h4>
+                            <p class="small">{{ result.references }}</p>
+                          </div>
+                          {% endif %}
+
+                          {% if result.cis_controls %}
+                          <div class="mb-3">
+                            <h4 class="text-muted mb-2">CIS Controls</h4>
+                            <code class="small">{{ result.cis_controls }}</code>
+                          </div>
+                          {% endif %}
+                        </div>
+                      </div>
+
+                      <!-- Technical details -->
+                      {% if result.details %}
+                      <div class="mt-3">
+                        <h4 class="text-muted mb-2">Technical Details</h4>
+                        <pre class="bg-light p-3 rounded small" style="max-height: 400px; overflow-y: auto;">{{ result.details | tojson(indent=2) }}</pre>
+                      </div>
+                      {% endif %}
+
+                      {% if result.error %}
+                      <div class="mt-3">
+                        <div class="alert alert-danger mb-0">
+                          <h4 class="alert-title">Error</h4>
+                          <p class="mb-0">{{ result.error }}</p>
+                        </div>
+                      </div>
+                      {% endif %}
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty">
+          <div class="empty-icon">
+            <i class="ti ti-file-off icon"></i>
+          </div>
+          <p class="empty-title">No results available</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/dashboard/static/js/chart-widget.js"></script>
+{% if scan.status in ['pending', 'running'] %}
+<script>
+  // Connect to SSE stream for real-time updates
+  const scanId = '{{ scan.scan_id }}';
+  const eventSource = new EventSource('/msp/cspm/stream/' + scanId);
+
+  eventSource.addEventListener('progress', function(event) {
+    const data = JSON.parse(event.data);
+
+    // Update progress bar
+    document.getElementById('progress-percentage').textContent = data.progress_percentage + '%';
+    document.getElementById('progress-bar').style.width = data.progress_percentage + '%';
+
+    // Update counts
+    if (data.total_checks !== null) {
+      document.getElementById('total-checks').textContent = data.total_checks;
+    }
+    if (data.passed !== null) {
+      document.getElementById('passed-count').textContent = data.passed;
+    }
+    if (data.failed !== null) {
+      document.getElementById('failed-count').textContent = data.failed;
+    }
+    if (data.errors !== null) {
+      document.getElementById('error-count').textContent = data.errors;
+    }
+
+    // Update current check
+    if (data.current_check) {
+      document.getElementById('current-check').textContent = data.current_check;
+      document.getElementById('current-check').classList.remove('text-muted');
+    }
+  });
+
+  eventSource.addEventListener('complete', function(event) {
+    const data = JSON.parse(event.data);
+    console.log('Scan completed:', data.status);
+
+    // Close event source
+    eventSource.close();
+
+    // Reload page to show results
+    setTimeout(function() {
+      window.location.reload();
+    }, 1000);
+  });
+
+  eventSource.addEventListener('error', function(event) {
+    console.error('SSE error:', event);
+    eventSource.close();
+
+    // Show error message
+    const progressCard = document.getElementById('progress-card');
+    if (progressCard) {
+      progressCard.innerHTML = `
+        <div class="card-body">
+          <div class="alert alert-warning mb-0">
+            <i class="ti ti-alert-triangle icon me-2"></i>
+            Lost connection to progress stream. <a href="#" onclick="window.location.reload()">Refresh page</a> to reconnect.
+          </div>
+        </div>
+      `;
+    }
+  });
+
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', function() {
+    eventSource.close();
+  });
+</script>
+{% endif %}
+
+{% if scan.status == 'completed' %}
+<script>
+  // Filter state
+  let currentStatusFilter = 'all';
+  let currentLevelFilter = 'all';
+
+  // Status filter buttons
+  document.getElementById('filter-all').addEventListener('click', function() {
+    setStatusFilter('all', this);
+  });
+  document.getElementById('filter-pass').addEventListener('click', function() {
+    setStatusFilter('Pass', this);
+  });
+  document.getElementById('filter-fail').addEventListener('click', function() {
+    setStatusFilter('Fail', this);
+  });
+  document.getElementById('filter-error').addEventListener('click', function() {
+    setStatusFilter('Error', this);
+  });
+
+  // Level filter dropdown
+  document.querySelectorAll('.filter-level').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      const level = this.dataset.level;
+      setLevelFilter(level);
+    });
+  });
+
+  function setStatusFilter(status, button) {
+    currentStatusFilter = status;
+
+    // Update active button
+    document.querySelectorAll('#filter-all, #filter-pass, #filter-fail, #filter-error').forEach(function(btn) {
+      btn.classList.remove('active');
+    });
+    if (button) {
+      button.classList.add('active');
+    }
+
+    applyFilters();
+  }
+
+  function setLevelFilter(level) {
+    currentLevelFilter = level;
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const rows = document.querySelectorAll('#results-table tbody tr[data-status]');
+
+    rows.forEach(function(row) {
+      const nextRow = row.nextElementSibling; // Collapse row
+
+      // Check status filter
+      const statusMatch = currentStatusFilter === 'all' || row.dataset.status === currentStatusFilter;
+
+      // Check level filter
+      const levelMatch = currentLevelFilter === 'all' || row.dataset.level === currentLevelFilter;
+
+      // Show/hide based on both filters
+      if (statusMatch && levelMatch) {
+        row.style.display = '';
+        if (nextRow && nextRow.querySelector('.collapse')) {
+          nextRow.style.display = '';
+        }
+      } else {
+        row.style.display = 'none';
+        if (nextRow && nextRow.querySelector('.collapse')) {
+          nextRow.style.display = 'none';
+        }
+      }
+    });
+  }
+</script>
+{% endif %}
+{% endblock %}
