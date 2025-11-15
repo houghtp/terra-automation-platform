@@ -2,9 +2,7 @@
 
 {% block title %}{{ plan.title }} - Content Plan{% endblock %}
 
-{% block head %}
-<link rel="stylesheet" href="/features/content-broadcaster/static/css/planning.css">
-{% endblock %}
+{% block head %}{% endblock %}
 
 {% block content %}
 <div class="page-header d-print-none mb-4">
@@ -56,16 +54,16 @@
             'approved': 'success',
             'failed': 'danger'
         } %}
-        <span class="badge bg-{{ status_colors.get(plan.status, 'secondary') }} badge-lg">
+        <span class="status-badge status-{{ status_colors.get(plan.status, 'neutral') }}">
             {{ plan.status.replace('_', ' ').title() }}
         </span>
 
         {% if plan.skip_research %}
-        <span class="badge bg-info badge-lg ms-2">
+        <span class="status-badge status-info ms-2">
             <i class="ti ti-bolt me-1"></i>Direct Generation (No Research)
         </span>
         {% else %}
-        <span class="badge bg-primary badge-lg ms-2">
+        <span class="status-badge status-info ms-2">
             <i class="ti ti-search me-1"></i>With Competitor Research
         </span>
         {% endif %}

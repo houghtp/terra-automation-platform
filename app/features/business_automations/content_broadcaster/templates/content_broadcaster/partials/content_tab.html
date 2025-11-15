@@ -66,7 +66,7 @@
                 <div class="col-md-3">
                     <div class="text-muted small">Status</div>
                     <div class="h3 mb-0">
-                        <span class="badge bg-{{ 'success' if plan.status == 'draft_ready' else 'info' }}">
+                        <span class="status-badge status-{{ 'success' if plan.status == 'draft_ready' else 'info' }}">
                             {{ plan.status.replace('_', ' ').title() }}
                         </span>
                     </div>
@@ -86,9 +86,9 @@
         <div class="card-body">
             <!-- Content State & Priority -->
             <div class="mb-3">
-                <span class="badge bg-primary me-2">{{ content.state.replace('_', ' ').title() if content.state else 'Draft' }}</span>
+                <span class="status-badge status-info text-normal me-2">{{ content.state.replace('_', ' ').title() if content.state else 'Draft' }}</span>
                 {% if content.content_metadata and content.content_metadata.get('priority') %}
-                <span class="badge bg-{{ 'danger' if content.content_metadata.get('priority') == 'urgent' else 'warning' if content.content_metadata.get('priority') == 'high' else 'info' }}">
+                <span class="status-badge status-{{ 'danger' if content.content_metadata.get('priority') == 'urgent' else 'warning' if content.content_metadata.get('priority') == 'high' else 'info' }}">
                     {{ content.content_metadata.get('priority').title() }} Priority
                 </span>
                 {% endif %}
@@ -149,7 +149,7 @@
                 <h4 class="mb-2">Target Channels:</h4>
                 <div class="d-flex flex-wrap gap-2">
                     {% for channel in plan.target_channels %}
-                    <span class="badge bg-light text-dark">
+                    <span class="status-badge status-neutral text-normal">
                         <i class="ti ti-brand-{{ channel.lower() }} me-1"></i>{{ channel }}
                     </span>
                     {% endfor %}
@@ -163,7 +163,7 @@
                 <h4 class="mb-2">SEO Keywords:</h4>
                 <div class="d-flex flex-wrap gap-2">
                     {% for keyword in plan.seo_keywords %}
-                    <span class="badge bg-light text-primary">{{ keyword }}</span>
+                    <span class="status-badge status-info text-normal">{{ keyword }}</span>
                     {% endfor %}
                 </div>
             </div>
@@ -184,13 +184,13 @@
             <div class="timeline">
                 {% for iteration in plan.refinement_history %}
                 <div class="timeline-item">
-                    <div class="timeline-badge bg-{{ 'success' if iteration.get('score', 0) >= 95 else 'warning' if iteration.get('score', 0) >= 80 else 'danger' }}">
+                    <div class="timeline-badge status-{{ 'success' if iteration.get('score', 0) >= 95 else 'warning' if iteration.get('score', 0) >= 80 else 'danger' }}">
                         {{ iteration.get('iteration', loop.index) }}
                     </div>
                     <div class="timeline-content">
                         <div class="d-flex align-items-center mb-2">
                             <h4 class="mb-0">Iteration {{ iteration.get('iteration', loop.index) }}</h4>
-                            <span class="badge bg-{{ 'success' if iteration.get('score', 0) >= 95 else 'warning' if iteration.get('score', 0) >= 80 else 'danger' }} ms-auto">
+                            <span class="status-badge status-{{ 'success' if iteration.get('score', 0) >= 95 else 'warning' if iteration.get('score', 0) >= 80 else 'danger' }} ms-auto">
                                 Score: {{ iteration.get('score', 0) }}
                             </span>
                         </div>

@@ -22,13 +22,13 @@
                     <div class="mb-3">
                         <label class="form-label text-muted">Action</label>
                         <div>
-                            <span class="badge bg-primary">{{ log.action.replace('_', ' ').title() }}</span>
+                            <span class="status-badge status-info text-normal">{{ log.action.replace('_', ' ').title() }}</span>
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label text-muted">Category</label>
                         <div>
-                            <span class="badge bg-{{ 'primary' if log.category == 'AUTH' else 'info' if log.category == 'DATA' else 'warning' if log.category == 'ADMIN' else 'secondary' }}">
+                            <span class="status-badge status-{{ 'info' if log.category == 'AUTH' else 'info' if log.category == 'DATA' else 'warning' if log.category == 'ADMIN' else 'neutral' }}">
                                 <i class="ti ti-{{ 'lock' if log.category == 'AUTH' else 'database' if log.category == 'DATA' else 'settings' if log.category == 'ADMIN' else 'api' if log.category == 'API' else 'server' }} me-1"></i>
                                 {{ log.category }}
                             </span>
@@ -37,7 +37,7 @@
                     <div class="mb-3">
                         <label class="form-label text-muted">Severity</label>
                         <div>
-                            <span class="badge bg-{{ 'danger' if log.severity == 'CRITICAL' else 'warning' if log.severity == 'ERROR' else 'info' if log.severity == 'WARNING' else 'success' }}">
+                            <span class="status-badge status-{{ 'danger' if log.severity == 'CRITICAL' else 'warning' if log.severity == 'ERROR' else 'info' if log.severity == 'WARNING' else 'success' }}">
                                 <i class="ti ti-{{ 'alert-triangle' if log.severity in ['CRITICAL', 'ERROR'] else 'info-circle' if log.severity == 'WARNING' else 'check-circle' }} me-1"></i>
                                 {{ log.severity }}
                             </span>
@@ -98,7 +98,7 @@
                         <label class="form-label text-muted">User Role</label>
                         <div>
                             {% if log.user_role %}
-                                <span class="badge bg-outline-secondary">{{ log.user_role }}</span>
+                                <span class="status-badge status-neutral text-normal">{{ log.user_role }}</span>
                             {% else %}
                                 <span class="text-muted">N/A</span>
                             {% endif %}
@@ -143,7 +143,7 @@
                         <label class="form-label text-muted">HTTP Method</label>
                         <div>
                             {% if log.method %}
-                                <span class="badge bg-{{ 'success' if log.method == 'GET' else 'primary' if log.method == 'POST' else 'warning' if log.method in ['PUT', 'PATCH'] else 'danger' if log.method == 'DELETE' else 'secondary' }}">
+                                <span class="status-badge status-{{ 'success' if log.method == 'GET' else 'info' if log.method == 'POST' else 'warning' if log.method in ['PUT', 'PATCH'] else 'danger' if log.method == 'DELETE' else 'neutral' }}">
                                     {{ log.method }}
                                 </span>
                             {% else %}
@@ -167,7 +167,7 @@
                         <label class="form-label text-muted">Source Module</label>
                         <div>
                             {% if log.source_module %}
-                                <span class="badge bg-outline-secondary">{{ log.source_module }}</span>
+                                <span class="status-badge status-neutral text-normal">{{ log.source_module }}</span>
                             {% else %}
                                 <span class="text-muted">N/A</span>
                             {% endif %}
@@ -204,7 +204,7 @@
                         <label class="form-label text-muted">Resource Type</label>
                         <div>
                             {% if log.resource_type %}
-                                <span class="badge bg-outline-primary">{{ log.resource_type }}</span>
+                                <span class="status-badge status-info text-normal">{{ log.resource_type }}</span>
                             {% else %}
                                 <span class="text-muted">N/A</span>
                             {% endif %}

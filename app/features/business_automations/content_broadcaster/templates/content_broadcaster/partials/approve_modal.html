@@ -31,7 +31,7 @@
                         <div class="mt-3">
                             <small class="text-muted">Tags:</small>
                             {% for tag in content.tags %}
-                                <span class="badge bg-secondary ms-1">{{ tag }}</span>
+                <span class="status-badge status-neutral text-normal ms-1">{{ tag }}</span>
                             {% endfor %}
                         </div>
                         {% endif %}
@@ -53,11 +53,11 @@
             <div class="col-md-6">
                 <div class="mb-2">
                     <strong>Current State:</strong>
-                    <span class="badge bg-warning">{{ content.state.replace('_', ' ').title() }}</span>
+                <span class="status-badge status-warning text-normal">{{ content.state.replace('_', ' ').title() }}</span>
                 </div>
                 <div class="mb-2">
                     <strong>Approval Status:</strong>
-                    <span class="badge bg-warning">{{ content.approval_status.title() }}</span>
+                <span class="status-badge status-warning text-normal">{{ content.approval_status.title() }}</span>
                 </div>
             </div>
         </div>

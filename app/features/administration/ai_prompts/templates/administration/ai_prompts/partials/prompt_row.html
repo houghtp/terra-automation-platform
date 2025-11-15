@@ -16,7 +16,7 @@
     <td class="fw-semibold">
         {{ prompt.name }}
         {% if not prompt.is_active %}
-        <span class="badge bg-secondary ms-2">Inactive</span>
+        <span class="status-badge status-neutral text-normal ms-2">Inactive</span>
         {% endif %}
     </td>
     <td><code>{{ prompt.prompt_key }}</code></td>

@@ -10,7 +10,7 @@
         The AI used the provided topic, description, and keywords to create the content.
     </p>
     <div class="empty-action">
-        <span class="badge bg-info">
+                <span class="status-badge status-info">
             <i class="ti ti-bolt me-1"></i>Direct Generation Mode
         </span>
     </div>
@@ -60,7 +60,7 @@
                     <div class="card">
                         <div class="card-header">
                             <div class="d-flex align-items-center">
-                                <span class="badge bg-primary me-2">#{{ loop.index }}</span>
+                        <span class="status-badge status-info text-normal me-2">#{{ loop.index }}</span>
                                 <h4 class="card-title mb-0">{{ result.get('title', 'Untitled') }}</h4>
                             </div>
                         </div>
@@ -121,7 +121,7 @@
             {% for item in plan.research_data.get('scraped_content', []) %}
             <div class="mb-4">
                 <div class="d-flex align-items-center mb-2">
-                    <span class="badge bg-primary me-2">#{{ item.get('index', loop.index) }}</span>
+                        <span class="status-badge status-info text-normal me-2">#{{ item.get('index', loop.index) }}</span>
                     <h4 class="mb-0">{{ item.get('title', 'Untitled') }}</h4>
                 </div>
                 <p class="text-muted small mb-2">
@@ -165,7 +165,7 @@
         <div class="card-body">
             <div class="d-flex flex-wrap gap-2">
                 {% for keyword in plan.research_data.get('keywords_found', []) %}
-                <span class="badge bg-light text-dark">{{ keyword }}</span>
+                        <span class="status-badge status-neutral text-normal">{{ keyword }}</span>
                 {% endfor %}
             </div>
         </div>

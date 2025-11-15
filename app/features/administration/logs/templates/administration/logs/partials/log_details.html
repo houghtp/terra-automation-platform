@@ -90,7 +90,7 @@
                     <div class="mb-3">
                         <label class="form-label text-muted">HTTP Method</label>
                         <div>
-                            <span class="badge bg-{{ 'success' if log.method == 'GET' else 'primary' if log.method == 'POST' else 'warning' if log.method in ['PUT', 'PATCH'] else 'danger' if log.method == 'DELETE' else 'secondary' }}">
+                            <span class="status-badge status-{{ 'success' if log.method == 'GET' else 'info' if log.method == 'POST' else 'warning' if log.method in ['PUT', 'PATCH'] else 'danger' if log.method == 'DELETE' else 'neutral' }}">
                                 {{ log.method }}
                             </span>
                         </div>
@@ -150,7 +150,7 @@
             <div class="mb-3">
                 <label class="form-label text-muted">Exception Type</label>
                 <div>
-                    <span class="badge bg-danger">{{ log.exception_type }}</span>
+                    <span class="status-badge status-danger text-normal">{{ log.exception_type }}</span>
                 </div>
             </div>
             {% endif %}

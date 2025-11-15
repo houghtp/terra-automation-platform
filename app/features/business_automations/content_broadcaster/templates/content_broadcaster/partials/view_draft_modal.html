@@ -18,19 +18,19 @@
 
             <div class="d-flex gap-3 flex-wrap mt-3">
                 {% if plan.tone %}
-                <span class="badge bg-info">
+                <span class="status-badge status-info">
                     <i class="ti ti-pencil me-1"></i>{{ plan.tone }}
                 </span>
                 {% endif %}
 
                 {% if plan.target_audience %}
-                <span class="badge bg-primary">
+                <span class="status-badge status-info">
                     <i class="ti ti-users me-1"></i>{{ plan.target_audience }}
                 </span>
                 {% endif %}
 
                 {% if plan.latest_seo_score %}
-                <span class="badge bg-success">
+                <span class="status-badge status-success">
                     <i class="ti ti-chart-line me-1"></i>SEO Score: {{ plan.latest_seo_score }}
                 </span>
                 {% endif %}
@@ -61,7 +61,7 @@
             <div class="mt-3">
                 <strong>Tags:</strong>
                 {% for tag in content.tags %}
-                <span class="badge bg-secondary me-1">{{ tag }}</span>
+                <span class="status-badge status-neutral text-normal me-1">{{ tag }}</span>
                 {% endfor %}
             </div>
             {% endif %}
@@ -70,13 +70,13 @@
             <div class="mt-3">
                 <strong>Status:</strong>
                 {% if content.state == 'draft' %}
-                <span class="badge bg-warning">Draft</span>
+                <span class="status-badge status-warning text-normal">Draft</span>
                 {% elif content.state == 'scheduled' %}
-                <span class="badge bg-info">Scheduled</span>
+                <span class="status-badge status-info text-normal">Scheduled</span>
                 {% elif content.state == 'published' %}
-                <span class="badge bg-success">Published</span>
+                <span class="status-badge status-success text-normal">Published</span>
                 {% else %}
-                <span class="badge bg-secondary">{{ content.state }}</span>
+                <span class="status-badge status-neutral text-normal">{{ content.state }}</span>
                 {% endif %}
             </div>
         </div>

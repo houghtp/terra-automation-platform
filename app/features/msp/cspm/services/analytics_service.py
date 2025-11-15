@@ -59,6 +59,7 @@ class CSPMAnalyticsService(BaseService[CSPMComplianceScan]):
                 'total_scans': total_scans,
                 'completed_scans': completed_scans,
                 'failed_scans': len([s for s in scans if s.status == 'failed']),
+                'cancelled_scans': len([s for s in scans if s.status == 'cancelled']),
                 'running_scans': len([s for s in scans if s.status in ['running', 'pending']]),
                 'avg_pass_rate': f"{round(avg_pass_rate, 1)}%"
             }

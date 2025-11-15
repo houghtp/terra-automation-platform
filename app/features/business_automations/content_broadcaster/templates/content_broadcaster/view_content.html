@@ -51,18 +51,18 @@
             'published': 'primary',
             'archived': 'dark'
         } %}
-        <span class="badge bg-{{ state_colors.get(content.state, 'secondary') }} badge-lg">
+        <span class="status-badge status-{{ state_colors.get(content.state, 'neutral') }}">
             {{ content.state.replace('_', ' ').title() if content.state else 'Draft' }}
         </span>
 
         {% if content.approval_status %}
-        <span class="badge bg-info badge-lg ms-2">
+        <span class="status-badge status-info ms-2">
             Approval: {{ content.approval_status.replace('_', ' ').title() }}
         </span>
         {% endif %}
 
         {% if content.content_metadata and content.content_metadata.get('priority') %}
-        <span class="badge bg-{{ 'danger' if content.content_metadata.get('priority') == 'urgent' else 'warning' if content.content_metadata.get('priority') == 'high' else 'info' }} badge-lg ms-2">
+        <span class="status-badge status-{{ 'danger' if content.content_metadata.get('priority') == 'urgent' else 'warning' if content.content_metadata.get('priority') == 'high' else 'info' }} ms-2">
             {{ content.content_metadata.get('priority').title() }} Priority
         </span>
         {% endif %}
@@ -165,7 +165,7 @@
                                     </h4>
                                     <div class="d-flex flex-wrap gap-2">
                                         {% for channel in content.content_metadata.get('target_channels', []) %}
-                                        <span class="badge bg-light text-dark">{{ channel }}</span>
+                                        <span class="status-badge status-neutral text-normal">{{ channel }}</span>
                                         {% endfor %}
                                     </div>
                                 </div>
@@ -179,7 +179,7 @@
                                     </h4>
                                     <div class="d-flex flex-wrap gap-2">
                                         {% for tag in content.tags %}
-                                        <span class="badge bg-light text-primary">{{ tag }}</span>
+                                        <span class="status-badge status-info text-normal">{{ tag }}</span>
                                         {% endfor %}
                                     </div>
                                 </div>

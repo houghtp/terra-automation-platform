@@ -853,6 +853,7 @@ body.chart-fullscreen-active {
 .status-badge.status-warning,
 .status-badge.status-pending,
 .status-badge.status-researching,
+.status-badge.status-planned,
 .status-badge.status-scheduled {
     background-color: #fef3c7;
     color: #92400e;
@@ -879,6 +880,16 @@ body.chart-fullscreen-active {
     color: #374151;
 }
 
+.status-badge.status-refining {
+    background-color: #fce7f3;
+    color: #9d174d;
+}
+
+.status-badge.status-draft_ready {
+    background-color: #ecfdf5;
+    color: #065f46;
+}
+
 .status-badge.text-normal {
     text-transform: none;
     letter-spacing: normal;
@@ -896,6 +907,182 @@ body.chart-fullscreen-active {
 .icon-xl {
     font-size: 3rem;
     line-height: 1;
+}
+
+/* -------------------------------------------------------------
+   7. Content Broadcaster Enhancements (SEO badges, timeline)
+-------------------------------------------------------------- */
+
+.seo-score {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.9rem;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #fff;
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background-image: linear-gradient(135deg, #0f172a, #475569);
+}
+
+.seo-score i {
+    font-size: 0.95rem;
+}
+
+.seo-score:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 15px 30px rgba(15, 23, 42, 0.18);
+}
+
+.seo-score.seo-excellent {
+    background-image: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.seo-score.seo-good {
+    background-image: linear-gradient(135deg, #4ade80, #22c55e);
+}
+
+.seo-score.seo-fair {
+    background-image: linear-gradient(135deg, #facc15, #eab308);
+    color: #1c1917;
+}
+
+.seo-score.seo-poor {
+    background-image: linear-gradient(135deg, #fb923c, #f97316);
+}
+
+.seo-score.seo-fail {
+    background-image: linear-gradient(135deg, #f87171, #ef4444);
+}
+
+.refinement-timeline {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding-left: 1.25rem;
+}
+
+.refinement-timeline::before {
+    content: "";
+    position: absolute;
+    top: 0.35rem;
+    bottom: 0.35rem;
+    left: 18px;
+    width: 2px;
+    background: linear-gradient(180deg, rgba(226, 232, 240, 0), #cbd5f5, rgba(226, 232, 240, 0));
+}
+
+.refinement-step {
+    position: relative;
+    background: #fff;
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem 1.25rem 3.5rem;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+    border-left: 4px solid #e2e8f0;
+}
+
+.refinement-step.success {
+    border-color: #22c55e;
+}
+
+.refinement-step.warning {
+    border-color: #fbbf24;
+}
+
+.refinement-step.danger {
+    border-color: #f87171;
+}
+
+.refinement-badge {
+    position: absolute;
+    top: 1.15rem;
+    left: 0;
+    transform: translate(-50%, 0);
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    background: #1f2937;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.25);
+}
+
+.refinement-step.success .refinement-badge {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.refinement-step.warning .refinement-badge {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.refinement-step.danger .refinement-badge {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.refinement-badge .iteration-number {
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.refinement-content ul {
+    padding-left: 1.25rem;
+    margin-bottom: 0;
+}
+
+.refinement-content ul li {
+    margin-bottom: 0.15rem;
+}
+
+.refinement-content ul li:last-child {
+    margin-bottom: 0;
+}
+
+.ai-prompts-overview {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.ai-prompts-overview .row {
+    margin-left: 0;
+    margin-right: 0;
+    gap: 0.75rem;
+}
+
+.timeline-badge {
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #fff;
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
+}
+
+.timeline-badge.status-success {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.timeline-badge.status-info {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.timeline-badge.status-warning {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+}
+
+.timeline-badge.status-neutral {
+    background: linear-gradient(135deg, #94a3b8, #475569);
 }
 
 .icon-lg {

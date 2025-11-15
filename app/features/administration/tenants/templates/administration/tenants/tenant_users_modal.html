@@ -42,7 +42,7 @@
           </td>
           <td>{{ user.email }}</td>
           <td>
-            <span class="badge bg-primary">{{ user.role|title }}</span>
+            <span class="status-badge status-info text-normal">{{ user.role|title }}</span>
           </td>
           <td>
             <span class="badge {% if user.enabled %}bg-success{% else %}bg-danger{% endif %}">

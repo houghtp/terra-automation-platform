@@ -7,7 +7,7 @@
             <i class="ti ti-shield-check"></i>
             Audit Logs
             {% if filters %}
-              <span class="badge bg-primary ms-2">Filtered</span>
+              <span class="status-badge status-info ms-2">Filtered</span>
             {% endif %}
           </h3>
           <p class="table-description">
@@ -64,7 +64,7 @@
                 </div>
               </td>
               <td>
-                <span class="badge bg-{{ 'primary' if log.category == 'AUTH' else 'info' if log.category == 'DATA' else 'warning' if log.category == 'ADMIN' else 'secondary' }}">
+                <span class="status-badge status-{{ 'info' if log.category == 'AUTH' else 'info' if log.category == 'DATA' else 'warning' if log.category == 'ADMIN' else 'neutral' }}">
                   {{ log.category }}
                 </span>
               </td>
@@ -91,7 +91,7 @@
                 </div>
               </td>
               <td>
-                <span class="badge bg-{{ 'danger' if log.severity == 'CRITICAL' else 'warning' if log.severity == 'ERROR' else 'info' if log.severity == 'WARNING' else 'success' }}">
+                <span class="status-badge status-{{ 'danger' if log.severity == 'CRITICAL' else 'warning' if log.severity == 'ERROR' else 'info' if log.severity == 'WARNING' else 'success' }}">
                   {{ log.severity }}
                 </span>
               </td>

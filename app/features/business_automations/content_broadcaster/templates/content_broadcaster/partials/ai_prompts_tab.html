@@ -50,11 +50,11 @@
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 {% if override %}
-                                <span class="badge bg-indigo">Tenant Override</span>
+                                <span class="status-badge status-info text-normal">Tenant Override</span>
                                 {% elif active %}
-                                <span class="badge bg-green">System Prompt</span>
+                                <span class="status-badge status-success text-normal">System Prompt</span>
                                 {% else %}
-                                <span class="badge bg-secondary">Not Configured</span>
+                                <span class="status-badge status-neutral text-normal">Not Configured</span>
                                 {% endif %}
                             </div>
                         </div>

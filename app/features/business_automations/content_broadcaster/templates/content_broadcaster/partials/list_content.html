@@ -24,16 +24,16 @@
                                 <div class="d-flex align-items-center gap-2">
                                     {% if item.tags %}
                                         {% for tag in item.tags[:3] %}
-                                        <span class="badge bg-light text-dark small">{{ tag }}</span>
+                                        <span class="status-badge status-neutral text-normal small">{{ tag }}</span>
                                         {% endfor %}
                                         {% if item.tags|length > 3 %}
-                                        <span class="badge bg-light text-muted small">+{{ item.tags|length - 3 }} more</span>
+                                        <span class="status-badge status-neutral text-normal small">+{{ item.tags|length - 3 }} more</span>
                                         {% endif %}
                                     {% endif %}
 
                                     <!-- AI Generated Indicator -->
                                     {% if item.content_metadata and item.content_metadata.get('generation_type') == 'seo_optimized' %}
-                                    <span class="badge bg-info text-white small" title="AI-Generated SEO Content">
+                                    <span class="status-badge status-info text-normal small" title="AI-Generated SEO Content">
                                         <i class="ti ti-robot"></i> AI
                                     </span>
                                     {% endif %}
@@ -53,7 +53,7 @@
                             'failed': 'danger',
                             'rejected': 'danger'
                         } %}
-                        <span class="badge bg-{{ state_colors.get(item.state, 'secondary') }}">
+                        <span class="status-badge status-{{ state_colors.get(item.state, 'neutral') }}">
                             {% if item.state == 'in_review' %}In Review
                             {% elif item.state == 'approved' %}Approved
                             {% elif item.state == 'scheduled' %}Scheduled
@@ -72,7 +72,7 @@
                             'approved': 'success',
                             'rejected': 'danger'
                         } %}
-                        <span class="badge bg-{{ approval_colors.get(item.approval_status, 'secondary') }}">
+                        <span class="status-badge status-{{ approval_colors.get(item.approval_status, 'neutral') }}">
                             {{ item.approval_status|title }}
                         </span>
 
@@ -87,13 +87,13 @@
                         {% if item.content_metadata and item.content_metadata.get('seo_score') %}
                             {% set seo_score = item.content_metadata.get('seo_score', 0) %}
                             {% if seo_score >= 95 %}
-                                <span class="badge bg-success">{{ seo_score }}/100</span>
+                                <span class="status-badge status-success text-normal">{{ seo_score }}/100</span>
                             {% elif seo_score >= 85 %}
-                                <span class="badge bg-warning">{{ seo_score }}/100</span>
+                                <span class="status-badge status-warning text-normal">{{ seo_score }}/100</span>
                             {% elif seo_score >= 70 %}
-                                <span class="badge bg-orange">{{ seo_score }}/100</span>
+                                <span class="status-badge status-warning text-normal">{{ seo_score }}/100</span>
                             {% else %}
-                                <span class="badge bg-danger">{{ seo_score }}/100</span>
+                                <span class="status-badge status-danger text-normal">{{ seo_score }}/100</span>
                             {% endif %}
 
                             <!-- AI Provider Info -->

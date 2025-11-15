@@ -2,7 +2,7 @@
 Content Broadcaster form routes for UI and HTMX endpoints.
 """
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Request, Form
+from fastapi import APIRouter, Depends, HTTPException, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
@@ -12,7 +12,7 @@ from app.deps.tenant import tenant_dependency
 from app.features.auth.dependencies import get_current_user
 from app.features.auth.models import User
 from .api_routes import get_content_service
-from ..models import ContentState
+from ..models import ContentState, ApprovalStatus
 from ..services import ContentBroadcasterService
 import structlog
 
@@ -99,6 +99,53 @@ async def content_broadcaster_library_page(
     except Exception:
         logger.exception("Failed to load content broadcaster library page")
         raise HTTPException(status_code=500, detail="Failed to load page")
+
+@router.get("/library/api/list")
+async def content_broadcaster_library_api_list(
+    limit: int = 100,
+    offset: int = 0,
+    search: Optional[str] = Query(default=None),
+    state: Optional[str] = Query(default=None),
+    created_by: Optional[str] = Query(default=None),
+    approval_status: Optional[str] = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user: User = Depends(get_current_user),
+    service: ContentBroadcasterService = Depends(get_content_service)
+):
+    """
+    Lightweight JSON list for the Tabulator table rendered on the library page.
+    Keeps the UI routes self-contained so the page works even if API routers
+    aren't mounted in a given environment.
+    """
+    try:
+        # Parse enum filters (ignore invalid values to keep UX forgiving)
+        state_enum = None
+        if state:
+            try:
+                state_enum = ContentState(state)
+            except ValueError:
+                state_enum = None
+
+        approval_enum = None
+        if approval_status:
+            try:
+                approval_enum = ApprovalStatus(approval_status)
+            except ValueError:
+                approval_enum = None
+
+        result = await service.get_content_list(
+            limit=limit,
+            offset=offset,
+            search=search,
+            state=state_enum,
+            created_by=created_by,
+            approval_status=approval_enum
+        )
+        return result.get("data", [])
+    except Exception:
+        logger.exception("Failed to load content list for library page")
+        raise HTTPException(status_code=500, detail="Failed to load content")
 
 @router.get("/content", response_class=HTMLResponse)
 async def content_table(

@@ -9,7 +9,7 @@
         <p class="text-muted small mb-2">Detected variables:</p>
         <div class="d-flex flex-wrap gap-1">
             {% for variable in validation.variables %}
-            <span class="badge bg-blue-lt text-blue">{{ variable }}</span>
+            <span class="status-badge status-info text-normal">{{ variable }}</span>
             {% endfor %}
         </div>
         {% else %}

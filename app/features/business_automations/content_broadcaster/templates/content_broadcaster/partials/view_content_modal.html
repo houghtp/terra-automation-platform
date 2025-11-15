@@ -13,11 +13,11 @@
             <h5 class="card-title">{{ content.title }}</h5>
 
             <div class="d-flex gap-3 flex-wrap mt-3 mb-3">
-                <span class="badge {% if content.state == 'draft' %}bg-secondary{% elif content.state == 'published' %}bg-success{% elif content.state == 'scheduled' %}bg-info{% else %}bg-warning{% endif %}">
+                <span class="status-badge status-{% if content.state == 'draft' %}neutral{% elif content.state == 'published' %}success{% elif content.state == 'scheduled' %}info{% else %}warning{% endif %}">
                     <i class="ti ti-circle-dot me-1"></i>{{ content.state|capitalize }}
                 </span>
 
-                <span class="badge {% if content.approval_status == 'approved' %}bg-success{% elif content.approval_status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+                <span class="status-badge status-{% if content.approval_status == 'approved' %}success{% elif content.approval_status == 'rejected' %}danger{% else %}warning{% endif %}">
                     <i class="ti ti-check me-1"></i>{{ content.approval_status|capitalize }}
                 </span>
             </div>
@@ -53,7 +53,7 @@
             <div class="mt-3">
                 <strong>Tags:</strong>
                 {% for tag in content.tags %}
-                <span class="badge bg-secondary me-1">{{ tag }}</span>
+                <span class="status-badge status-neutral text-normal me-1">{{ tag }}</span>
                 {% endfor %}
             </div>
             {% endif %}

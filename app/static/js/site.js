@@ -658,6 +658,16 @@ document.addEventListener("DOMContentLoaded", function () {
   }, true);
 
   document.body.addEventListener('htmx:beforeRequest', (event) => {
+    const swapTarget = event.detail && event.detail.target;
+    if (swapTarget && swapTarget.id === 'modal-body') {
+      swapTarget.innerHTML = `
+        <div class="modal-loading-state text-center py-5">
+          <div class="spinner-border text-primary mb-3" role="status"></div>
+          <p class="text-muted mb-0">Loading content…</p>
+        </div>
+      `;
+    }
+
     if (!window.lastFocusedElement) {
       const active = document.activeElement;
       if (active && active !== document.body) {

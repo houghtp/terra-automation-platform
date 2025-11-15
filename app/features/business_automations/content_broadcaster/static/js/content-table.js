@@ -292,7 +292,7 @@ window.initializeContentTable = function () {
 
     const table = new Tabulator("#content-broadcaster-table", {
         ...advancedTableConfig,
-        ajaxURL: "/features/content-broadcaster/api/list",
+        ajaxURL: "/features/content-broadcaster/library/api/list",
         columns: [
             {
                 title: "Title",

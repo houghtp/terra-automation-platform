@@ -26,14 +26,14 @@
                     <td class="text-muted text-capitalize">{{ article.category or '—' }}</td>
                     <td>
                         {% for tag in article.tags or [] %}
-                        <span class="badge bg-blue-lt text-blue me-1">{{ tag }}</span>
+                        <span class="status-badge status-info text-normal me-1">{{ tag }}</span>
                         {% endfor %}
                     </td>
                     <td class="text-muted">
                         {% if article.published_at %}
                             {{ article.published_at.strftime("%b %d, %Y") }}
                         {% else %}
-                            <span class="badge bg-secondary-lt text-secondary">Draft</span>
+                            <span class="status-badge status-neutral text-normal">Draft</span>
                         {% endif %}
                     </td>
                     <td class="text-end">
