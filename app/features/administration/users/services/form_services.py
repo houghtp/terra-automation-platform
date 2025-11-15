@@ -8,7 +8,7 @@ from app.features.core.sqlalchemy_imports import *
 from app.features.core.enhanced_base_service import BaseService
 
 from app.features.administration.tenants.db_models import Tenant
-from app.features.administration.users.models import User, UserStatus, UserRole
+from app.features.administration.users.schemas import User, UserStatus, UserRole
 
 logger = structlog.get_logger(__name__)
 

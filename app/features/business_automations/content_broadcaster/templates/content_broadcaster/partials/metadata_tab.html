@@ -79,13 +79,40 @@
                     <div class="text-muted small mb-1">Latest SEO Score</div>
                     <div>
                         {% if plan.latest_seo_score %}
-                        <span class="badge bg-{{ 'success' if plan.latest_seo_score >= 95 else 'warning' if plan.latest_seo_score >= 80 else 'danger' }}">
+                        <span
+                            class="badge bg-{{ 'success' if plan.latest_seo_score >= 95 else 'warning' if plan.latest_seo_score >= 80 else 'danger' }}">
                             {{ plan.latest_seo_score }}/100
                         </span>
                         {% else %}
                         <span class="text-muted">Not scored yet</span>
                         {% endif %}
                     </div>
+                </div>
+            </div>
+
+            {% set settings = plan.prompt_settings or {} %}
+            <hr class="my-3">
+            <h4 class="mb-3">Prompt Controls</h4>
+            <div class="row">
+                <div class="col-md-3 mb-2">
+                    <div class="text-muted small">Professionalism</div>
+                    <div><span class="badge bg-primary">{{ settings.get('professionalism_level', 4) }}/5</span></div>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <div class="text-muted small">Creativity</div>
+                    <div><span class="badge bg-primary">{{ settings.get('creativity_level', 3) }}/5</span></div>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <div class="text-muted small">Humour</div>
+                    <div><span class="badge bg-primary">{{ settings.get('humor_level', 1) }}/5</span></div>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <div class="text-muted small">SEO Strictness</div>
+                    <div><span class="badge bg-primary">{{ settings.get('strictness_level', 4) }}/5</span></div>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <div class="text-muted small">Analysis Depth</div>
+                    <div><span class="badge bg-primary">{{ settings.get('analysis_depth', 4) }}/5</span></div>
                 </div>
             </div>
 
@@ -229,7 +256,8 @@
                         <div><strong>Content Generated</strong></div>
                         <div class="text-muted small">
                             <i class="ti ti-clock me-1"></i>
-                            {{ content.created_at.strftime('%B %d, %Y at %I:%M %p') if content.created_at else 'Unknown' }}
+                            {{ content.created_at.strftime('%B %d, %Y at %I:%M %p') if content.created_at else 'Unknown'
+                            }}
                         </div>
                     </div>
                 </div>
@@ -252,6 +280,108 @@
             </div>
         </div>
     </div>
+
+    <!-- SEO Refinement Timeline -->
+    {% if plan.refinement_history and plan.refinement_history|length > 0 %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="ti ti-chart-line me-2"></i>
+                SEO Refinement Timeline
+            </h3>
+            <div class="card-subtitle text-muted mt-1">
+                AI iteratively improved content quality from {{ plan.refinement_history[0].score }} to {{
+                plan.latest_seo_score }} across {{ plan.refinement_history|length }} iteration{% if
+                plan.refinement_history|length > 1 %}s{% endif %}
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="refinement-timeline">
+                {% for iteration in plan.refinement_history %}
+                <div
+                    class="refinement-step {% if iteration.score >= 95 %}success{% elif iteration.score >= 80 %}warning{% else %}danger{% endif %}">
+                    <div class="refinement-badge">
+                        <div class="iteration-number">{{ iteration.iteration }}</div>
+                        {% if iteration.score >= 95 %}
+                        <i class="ti ti-circle-check"></i>
+                        {% elif iteration.score >= 80 %}
+                        <i class="ti ti-alert-triangle"></i>
+                        {% else %}
+                        <i class="ti ti-alert-circle"></i>
+                        {% endif %}
+                    </div>
+                    <div class="refinement-content">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h5 class="mb-1">Iteration {{ iteration.iteration }}</h5>
+                                <div class="text-muted small">
+                                    <i class="ti ti-clock me-1"></i>
+                                    {{ iteration.timestamp[:19] if iteration.timestamp else 'Unknown time' }}
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div
+                                    class="seo-score {% if iteration.score >= 95 %}seo-excellent{% elif iteration.score >= 90 %}seo-good{% elif iteration.score >= 80 %}seo-fair{% elif iteration.score >= 70 %}seo-poor{% else %}seo-fail{% endif %}">
+                                    <i
+                                        class="ti {% if iteration.score >= 95 %}ti-circle-check{% else %}ti-alert-triangle{% endif %}"></i>
+                                    {{ iteration.score }}
+                                </div>
+                                <div class="text-muted small mt-1">
+                                    {{ iteration.status }}
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if iteration.issues and iteration.issues|length > 0 %}
+                        <div class="mt-2">
+                            <strong class="text-danger">
+                                <i class="ti ti-alert-circle me-1"></i>Issues Found:
+                            </strong>
+                            <ul class="small mb-2">
+                                {% for issue in iteration.issues %}
+                                <li>{{ issue }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        {% if iteration.recommendations and iteration.recommendations|length > 0 %}
+                        <div class="mt-2">
+                            <strong class="text-info">
+                                <i class="ti ti-bulb me-1"></i>Recommendations:
+                            </strong>
+                            <ul class="small mb-0">
+                                {% for rec in iteration.recommendations[:3] %}
+                                <li>{{ rec }}</li>
+                                {% endfor %}
+                                {% if iteration.recommendations|length > 3 %}
+                                <li class="text-muted">... and {{ iteration.recommendations|length - 3 }} more</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if plan.latest_seo_score >= plan.min_seo_score %}
+            <div class="alert alert-success mt-3 mb-0">
+                <i class="ti ti-circle-check me-2"></i>
+                <strong>Target Achieved!</strong> Content reached the target SEO score of {{ plan.min_seo_score }}/100
+                after {{ plan.refinement_history|length }} iteration{% if plan.refinement_history|length > 1 %}s{% endif
+                %}.
+            </div>
+            {% else %}
+            <div class="alert alert-warning mt-3 mb-0">
+                <i class="ti ti-alert-triangle me-2"></i>
+                <strong>Maximum Iterations Reached</strong> - Content achieved {{ plan.latest_seo_score }}/100 (target:
+                {{ plan.min_seo_score }}/100)
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Technical Details -->
     <div class="card">
@@ -283,46 +413,46 @@
 </div>
 
 <style>
-.timeline {
-    position: relative;
-    padding-left: 3rem;
-}
+    .timeline {
+        position: relative;
+        padding-left: 3rem;
+    }
 
-.timeline-item {
-    position: relative;
-    padding-bottom: 2rem;
-}
+    .timeline-item {
+        position: relative;
+        padding-bottom: 2rem;
+    }
 
-.timeline-item:last-child {
-    padding-bottom: 0;
-}
+    .timeline-item:last-child {
+        padding-bottom: 0;
+    }
 
-.timeline-badge {
-    position: absolute;
-    left: -3rem;
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.2rem;
-}
+    .timeline-badge {
+        position: absolute;
+        left: -3rem;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+    }
 
-.timeline-item:not(:last-child)::before {
-    content: '';
-    position: absolute;
-    left: -2.25rem;
-    top: 2.5rem;
-    width: 2px;
-    height: calc(100% - 2.5rem);
-    background: #e9ecef;
-}
+    .timeline-item:not(:last-child)::before {
+        content: '';
+        position: absolute;
+        left: -2.25rem;
+        top: 2.5rem;
+        width: 2px;
+        height: calc(100% - 2.5rem);
+        background: #e9ecef;
+    }
 
-.timeline-content {
-    background: #f8f9fa;
-    padding: 1rem;
-    border-radius: 4px;
-}
+    .timeline-content {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 4px;
+    }
 </style>

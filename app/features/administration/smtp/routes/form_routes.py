@@ -23,8 +23,10 @@ from app.features.core.route_imports import (
 )
 
 from app.features.administration.smtp.services import SMTPConfigurationService
-from app.features.administration.smtp.models import (
-    SMTPConfigurationCreate, SMTPConfigurationUpdate, SMTPStatus
+from app.features.administration.smtp.models import SMTPStatus
+from app.features.administration.smtp.schemas import (
+    SMTPConfigurationCreate,
+    SMTPConfigurationUpdate,
 )
 import re
 

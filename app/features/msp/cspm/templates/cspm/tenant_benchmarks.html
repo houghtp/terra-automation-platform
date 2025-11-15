@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Tenant Benchmarks{% endblock %}
+{% block head %}
+<script src="/features/core/static/js/table-base.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <div id="tenant-benchmarks-area" data-global-admin="{{ 'true' if is_global_admin|default(False) else 'false' }}">
+      {% include "cspm/partials/tenant_benchmark_list_content.html" %}
+    </div>
+  </div>
+</div>
+
+<div class="modal modal-blur fade" id="modal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div id="modal-body"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/features/msp/cspm/static/js/tenant-benchmarks-table.js"></script>
+{% endblock %}

@@ -449,10 +449,10 @@ curl -X POST http://localhost:8000/features/connectors/api/connectors \
 ## Known Issues
 
 ### Non-Blocking Issues
-1. **Circular Import Warning**: content_broadcaster.routes.models has circular import
-   - **Impact**: Warning only, doesn't affect functionality
+1. **Circular Import Warning**: `content_broadcaster.schemas` (previously `routes.models`) now resolved by extracting schemas to feature root.
+   - **Impact**: None; documentation retained for historical context
    - **Owner**: content_broadcaster slice (not connectors)
-   - **Action**: Document for future fix
+   - **Action**: No further action required
 
 ### No Critical Issues
 - ✅ No blocker issues

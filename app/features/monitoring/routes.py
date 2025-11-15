@@ -8,34 +8,17 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import BaseModel
 import asyncio
 
 from app.features.core.metrics import metrics
 from app.features.core.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from .schemas import HealthStatus, MetricsInfo
 
 logger = structlog.get_logger(__name__)
 
 router = APIRouter()
-
-
-class HealthStatus(BaseModel):
-    """Health check response model."""
-    status: str  # "healthy", "degraded", "unhealthy"
-    timestamp: datetime
-    version: str
-    environment: str
-    checks: Dict[str, Any]
-
-
-class MetricsInfo(BaseModel):
-    """Metrics endpoint information."""
-    endpoint: str
-    format: str
-    description: str
-    content_type: str
 
 
 @router.get("/metrics")

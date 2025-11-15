@@ -8,13 +8,12 @@ from app.features.core.sqlalchemy_imports import *
 from app.features.core.enhanced_base_service import BaseService
 from sqlalchemy.exc import IntegrityError
 
-from app.features.administration.secrets.models import (
-    TenantSecret,
-    SecretType,
+from app.features.administration.secrets.models import TenantSecret, SecretType
+from app.features.administration.secrets.schemas import (
     SecretCreate,
-    SecretUpdate,
     SecretResponse,
-    SecretValue
+    SecretUpdate,
+    SecretValue,
 )
 from app.features.core.audit_mixin import AuditContext
 from app.features.core.encryption import encrypt_secret, decrypt_secret, verify_secret_encryption

@@ -7,9 +7,8 @@ SMTP dashboard services implementing FastAPI/SQLAlchemy best practices.
 from app.features.core.sqlalchemy_imports import *
 from app.features.core.enhanced_base_service import BaseService
 
-from app.features.administration.smtp.models import (
-    SMTPConfiguration, SMTPConfigurationResponse, SMTPDashboardStats
-)
+from app.features.administration.smtp.models import SMTPConfiguration
+from app.features.administration.smtp.schemas import SMTPConfigurationResponse, SMTPDashboardStats
 
 logger = get_logger(__name__)
 

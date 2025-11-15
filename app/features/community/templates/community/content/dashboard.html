@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block title %}Content & Learning Hub{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="page-title mb-1">Content & Learning Hub</h2>
+        <p class="text-muted mb-0">
+            Publish articles, share podcasts and videos, and curate industry news for your advisor community.
+        </p>
+    </div>
+    <div class="btn-list">
+        <button
+            class="btn btn-primary"
+            data-bs-toggle="modal"
+            data-bs-target="#content-form-modal"
+            hx-get="/features/community/content/partials/article_form"
+            hx-target="#content-form-modal-body"
+            hx-swap="innerHTML">
+            <i class="ti ti-plus me-1"></i> New Article
+        </button>
+    </div>
+</div>
+
+<div class="row row-cards mb-4">
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <span class="avatar avatar-sm bg-blue-lt text-blue me-3">
+                        <i class="ti ti-file-description"></i>
+                    </span>
+                    <div>
+                        <div class="fw-semibold text-muted text-uppercase ls-wide small">Published Articles</div>
+                        <div class="h2 mb-0">{{ article_total }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <span class="avatar avatar-sm bg-cyan-lt text-cyan me-3">
+                        <i class="ti ti-microphone"></i>
+                    </span>
+                    <div>
+                        <div class="fw-semibold text-muted text-uppercase ls-wide small">Podcasts</div>
+                        <div class="h2 mb-0">{{ podcast_total }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <span class="avatar avatar-sm bg-indigo-lt text-indigo me-3">
+                        <i class="ti ti-video"></i>
+                    </span>
+                    <div>
+                        <div class="fw-semibold text-muted text-uppercase ls-wide small">Video Lessons</div>
+                        <div class="h2 mb-0">{{ video_total }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <span class="avatar avatar-sm bg-orange-lt text-orange me-3">
+                        <i class="ti ti-news"></i>
+                    </span>
+                    <div>
+                        <div class="fw-semibold text-muted text-uppercase ls-wide small">News Highlights</div>
+                        <div class="h2 mb-0">{{ news_total }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% set engagement = engagement_summary or {} %}
+{% set action_counts = engagement.actions or {} %}
+<div class="row row-cards mb-4">
+    <div class="col-sm-6 col-lg-4">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <span class="avatar avatar-sm bg-green-lt text-green me-3">
+                        <i class="ti ti-activity"></i>
+                    </span>
+                    <div>
+                        <div class="fw-semibold text-muted text-uppercase ls-wide small">Engagements (All Time)</div>
+                        <div class="h2 mb-0">{{ engagement.total_actions | default(0) }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-4">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <span class="avatar avatar-sm bg-purple-lt text-purple me-3">
+                        <i class="ti ti-users"></i>
+                    </span>
+                    <div>
+                        <div class="fw-semibold text-muted text-uppercase ls-wide small">Unique Members</div>
+                        <div class="h2 mb-0">{{ engagement.unique_members | default(0) }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-12 col-lg-4">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="fw-semibold text-muted text-uppercase ls-wide small mb-1">Interaction Breakdown</div>
+                {% if action_counts %}
+                <ul class="list-unstyled mb-0 small text-muted">
+                    {% for action, count in action_counts.items() %}
+                    <li class="d-flex justify-content-between"><span class="text-capitalize">{{ action }}</span><span>{{ count }}</span></li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-muted small">No engagement captured yet.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-7">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="card-title">Articles Library</h3>
+                    <p class="card-subtitle text-muted mb-0">Markdown-based guides and insights for advisors.</p>
+                </div>
+                <div class="btn-list">
+                    <button
+                        class="btn btn-outline-primary btn-sm"
+                        data-bs-toggle="modal"
+                        data-bs-target="#content-form-modal"
+                        hx-get="/features/community/content/partials/article_form"
+                        hx-target="#content-form-modal-body"
+                        hx-swap="innerHTML">
+                        <i class="ti ti-plus me-1"></i> Write Article
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div
+                    id="content-articles-wrapper"
+                    hx-get="/features/community/content/partials/articles"
+                    hx-trigger="load, refreshContentTables from:body"
+                    hx-target="#content-articles-wrapper"
+                    hx-swap="outerHTML">
+                    <div class="p-4 text-center text-muted">
+                        <div class="spinner-border text-primary mb-2" role="status"></div>
+                        <div>Loading articles...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-5">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="card-title">Podcast Episodes</h3>
+                    <p class="card-subtitle text-muted mb-0">Audio leadership and coaching conversations.</p>
+                </div>
+                <button
+                    class="btn btn-outline-secondary btn-sm"
+                    data-bs-toggle="modal"
+                    data-bs-target="#content-form-modal"
+                    hx-get="/features/community/content/partials/podcast_form"
+                    hx-target="#content-form-modal-body"
+                    hx-swap="innerHTML">
+                    <i class="ti ti-microphone-plus me-1"></i> Add Episode
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div
+                    id="content-podcasts-wrapper"
+                    hx-get="/features/community/content/partials/podcasts"
+                    hx-trigger="load, refreshContentTables from:body"
+                    hx-target="#content-podcasts-wrapper"
+                    hx-swap="outerHTML">
+                    <div class="p-4 text-center text-muted">
+                        <div class="spinner-border text-primary mb-2" role="status"></div>
+                        <div>Loading podcasts...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="card-title">Video Library</h3>
+                    <p class="card-subtitle text-muted mb-0">Training clips and recorded workshops.</p>
+                </div>
+                <button
+                    class="btn btn-outline-secondary btn-sm"
+                    data-bs-toggle="modal"
+                    data-bs-target="#content-form-modal"
+                    hx-get="/features/community/content/partials/video_form"
+                    hx-target="#content-form-modal-body"
+                    hx-swap="innerHTML">
+                    <i class="ti ti-video-plus me-1"></i> Add Video
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div
+                    id="content-videos-wrapper"
+                    hx-get="/features/community/content/partials/videos"
+                    hx-trigger="load, refreshContentTables from:body"
+                    hx-target="#content-videos-wrapper"
+                    hx-swap="outerHTML">
+                    <div class="p-4 text-center text-muted">
+                        <div class="spinner-border text-primary mb-2" role="status"></div>
+                        <div>Loading videos...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <h3 class="card-title">Industry News Feed</h3>
+            <p class="card-subtitle text-muted mb-0">Curated headlines and announcements.</p>
+        </div>
+        <button
+            class="btn btn-outline-secondary btn-sm"
+            data-bs-toggle="modal"
+            data-bs-target="#content-form-modal"
+            hx-get="/features/community/content/partials/news_form"
+            hx-target="#content-form-modal-body"
+            hx-swap="innerHTML">
+            <i class="ti ti-news me-1"></i> Add News
+        </button>
+    </div>
+    <div class="card-body p-0">
+        <div
+            id="content-news-wrapper"
+            hx-get="/features/community/content/partials/news"
+            hx-trigger="load, refreshContentTables from:body"
+            hx-target="#content-news-wrapper"
+            hx-swap="outerHTML">
+            <div class="p-4 text-center text-muted">
+                <div class="spinner-border text-primary mb-2" role="status"></div>
+                <div>Loading news items...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Shared content form modal -->
+<div class="modal modal-blur fade" id="content-form-modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div id="content-form-modal-body" class="modal-body py-5 text-center text-muted">
+                <div class="spinner-border text-primary mb-2" role="status"></div>
+                <div>Loading form...</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/features/community/static/js/content-hub.js"></script>
+{% endblock %}

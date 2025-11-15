@@ -108,8 +108,8 @@ window.initializeSMTPManagementTable = function () {
             width: 120,
             formatter: function (cell) {
                 const value = cell.getValue();
-                const color = value === 'TLS' ? 'success' : value === 'SSL' ? 'primary' : 'secondary';
-                return `<span class="badge bg-${color}">${value || 'None'}</span>`;
+                const color = value === 'TLS' ? 'success' : value === 'SSL' ? 'info' : 'neutral';
+                return `<span class="app-badge app-badge-${color}">${value || 'None'}</span>`;
             }
         },
         {

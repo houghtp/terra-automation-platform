@@ -1,17 +1,22 @@
 # Content Broadcaster - Current Implementation Status
 
-**Generated:** 2025-10-10
-**Overall Completion:** ~65% (Phases 0-3 complete, Phases 4-8 incomplete)
+**Generated:** 2025-10-10 &nbsp;&nbsp;|&nbsp;&nbsp; **Last Updated:** 2025-11-04  
+**Overall Completion:** ~70% (Phases 0-3 effectively complete, Phase 4 in progress, Phase 5+ pending)
 
 ## Executive Summary
 
 The Content Broadcaster slice has **core functionality implemented** including models, services, and API routes. The workflow supports content creation → approval → scheduling → publishing with full multi-tenant isolation.
 
-**Key Missing Components:**
-- Celery worker for background publishing
-- Role-based access control for approvals
-- Complete HTML templates
-- Comprehensive testing
+**Recent Progress (Nov-04):**
+- ✅ AI prompt sliders (professionalism, creativity, humour, analysis depth, strictness) are now wired end-to-end and honoured by reseeded prompt templates.
+- ✅ Content plans can be updated with “Skip competitor research” without hard validation blocks; contextual warnings are logged instead.
+- ✅ Generated content enters the library in `in_review` state with `pending` approval, surfacing immediately in the “Ready to Approve” workflow.
+- ✅ Global HTMX mods for secrets management now follow standard CRUD patterns (single refresh, modal close, consistent 204 responses).
+
+**Key Remaining Gaps:**
+- Celery worker/background publishing pipeline.
+- Expanded front-end templates (list/edit/review/schedule/jobs/deliveries).
+- Role-based access control & comprehensive test coverage.
 
 ---
 
@@ -61,8 +66,7 @@ The Content Broadcaster slice has **core functionality implemented** including m
 - Tables already exist in database
 - Migration chain fixed (1cbd7e3460cb now correctly references 60385470e430)
 
-**Fixes Applied:**
-- ✅ Added missing `timezone` import ([models.py:9](../models.py#L9))
+- **Nov-04 Update:** Generated content items now start in `state="in_review"` with `approval_status="pending"` so they surface in the approval queue automatically.
 - ✅ All datetime fields use `timezone.utc` correctly
 
 ---
@@ -104,8 +108,10 @@ Inherits from BaseService with full tenant isolation.
 **Dashboard:**
 - `get_dashboard_stats()` - Counts by state, recent content, pending approvals (lines 587-643)
 
-**Fixes Applied:**
-- ✅ Added missing `timezone` import ([services.py:10](../services.py#L10))
+- **Nov-04 Update Highlights:**
+  - `_commit_and_refresh_plan()` introduced to persist status transitions mid-orchestrator run.
+  - Validation stage now handles OpenAI response-format differences gracefully and still parses JSON feedback.
+  - When skip-research is enabled the orchestrator logs guidance warnings rather than rejecting the plan outright.
 
 ---
 
@@ -142,10 +148,15 @@ AI Integration:
 - ✅ Fixed `approve_content` to use `current_user.id` instead of User object ([api_routes.py:92](../routes/api_routes.py#L92))
 - ✅ Fixed `reject_content` to use `current_user.id` instead of User object ([api_routes.py:121](../routes/api_routes.py#L121))
 - ✅ All routes use proper tenant dependency: `tenant_id: str = Depends(tenant_dependency)` ✅
+- **Nov-04 Updates:**
+  - Edit-plan HTMX route now gracefully handles skip-research toggles while preserving existing descriptions/keywords.
+  - Response handlers emit consistent `HX-Trigger` headers so modals close once and tables refresh only once (standard CRUD pattern).
+  - Secrets management (shared slice dependency) migrated to the same pattern and no longer double-refreshes.
 
-**Pydantic Models** ([routes/models.py](../routes/models.py)):
+**Pydantic Models** ([schemas.py](../schemas.py)):
 - ContentCreateRequest, ContentUpdateRequest, ContentScheduleRequest
 - ApprovalRequest, RejectRequest, SEOContentGenerationRequest
+- ContentPlanCreate, ProcessPlanRequest
 
 ---
 
@@ -167,7 +178,12 @@ templates/content_broadcaster/
 - ❌ deliveries.html - Published results
 - ❌ HTMX swaps and forms
 
-**Status:** Basic structure exists but needs expansion per PRP specifications.
+**Status:** Basic structure exists and now includes:
+- Updated plan creation/edit modals with slider controls and skip-research guidance.
+- AI prompt management tab integrated into plan view (tenant overrides + CRUD actions).
+- Content library renders approval badges and state transitions correctly after recent fixes.
+
+Still needs dedicated templates per PRP (review queue, schedule wizard, jobs/deliveries).
 
 ---
 
@@ -259,10 +275,10 @@ The PRP specifies ([docs/PRP_Content_Broadcaster_Slice.md:120-135](docs/PRP_Cont
 **Problem:** Connector migration referenced deleted content_broadcaster migration
 **Fix:** Updated [migrations/versions/1cbd7e3460cb](../../../migrations/versions/1cbd7e3460cb_add_connector_tables_for_connector_.py#L16) to reference correct parent
 
-### 4. Circular Import Warning ⚠️ KNOWN ISSUE
-**Problem:** `routes/models.py` import warning during migration
-**Impact:** Cosmetic only - doesn't affect functionality
-**Status:** Can be ignored (Pydantic models don't need to be in migration detection)
+### 4. Circular Import Warning ✅ RESOLVED
+**Problem:** Legacy `routes/models.py` triggered import warnings during migration detection
+**Fix:** Schemas relocated to `content_broadcaster/schemas.py`, eliminating the warning
+**Impact:** None (cosmetic issue removed)
 
 ---
 

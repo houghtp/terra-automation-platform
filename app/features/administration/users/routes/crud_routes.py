@@ -1,7 +1,7 @@
 # Use centralized imports for consistency
 from app.features.core.route_imports import *
 from app.features.administration.users.services import UserManagementService
-from app.features.administration.users.models import (
+from app.features.administration.users.schemas import (
     UserSearchFilter, UserCreate, UserUpdate, UserStatus, UserRole
 )
 
@@ -223,7 +223,11 @@ async def user_create(
 
         # Create user with optional cross-tenant assignment
         service = UserManagementService(db, tenant_id)
-        user = await service.create_user(user_data, target_tenant_id)
+        user = await service.create_user(
+            user_data,
+            target_tenant_id=target_tenant_id,
+            created_by_user=current_user
+        )
         await commit_transaction(db, "create_user")
         logger.info(f"User created successfully: {user.id}")
         return create_success_response()

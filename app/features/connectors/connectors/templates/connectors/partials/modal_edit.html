@@ -43,11 +43,11 @@
                             <div class="mt-2">
                                 <span class="badge badge-outline text-blue">{{ connector.catalog_category }}</span>
                                 {% if connector.status == 'active' %}
-                                <span class="badge bg-success ms-1">Active</span>
+                                <span class="app-badge app-badge-success ms-1">Active</span>
                                 {% elif connector.status == 'error' %}
-                                <span class="badge bg-danger ms-1">Error</span>
+                                <span class="app-badge app-badge-danger ms-1">Error</span>
                                 {% else %}
-                                <span class="badge bg-secondary ms-1">Inactive</span>
+                                <span class="app-badge app-badge-neutral ms-1">Inactive</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -148,11 +148,11 @@
                     <h5 class="mb-3">
                         Authentication
                         {% if connector.auth_configured %}
-                        <span class="badge bg-success ms-2">
+                        <span class="app-badge app-badge-success ms-2">
                             <i class="ti ti-lock-check me-1"></i>Configured
                         </span>
                         {% else %}
-                        <span class="badge bg-warning ms-2">
+                        <span class="app-badge app-badge-warning ms-2">
                             <i class="ti ti-lock-open me-1"></i>Not Configured
                         </span>
                         {% endif %}

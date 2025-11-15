@@ -1,0 +1,12 @@
+{
+  "EndTime": "2025-10-28T18:49:50.6934869Z",
+  "Details": [],
+  "Category": "L1",
+  "TechType": "M365",
+  "CheckId": "1.2.2_ensure_sign-in_to_shared_mailboxes_is_blocked",
+  "Error": "Script execution failed: [Request_UnsupportedQuery] : Filter operator 'NotEqualsMatch' is not supported.",
+  "StartTime": "2025-10-28T18:49:46.0007574Z",
+  "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+  "Status": "Error",
+  "Duration": 4.6927295
+}

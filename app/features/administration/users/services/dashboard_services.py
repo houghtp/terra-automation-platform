@@ -7,7 +7,7 @@ User dashboard services implementing FastAPI/SQLAlchemy best practices.
 from app.features.core.sqlalchemy_imports import *
 from app.features.core.enhanced_base_service import BaseService
 
-from app.features.administration.users.models import User, UserDashboardStats
+from app.features.administration.users.schemas import User, UserDashboardStats
 
 logger = structlog.get_logger(__name__)
 

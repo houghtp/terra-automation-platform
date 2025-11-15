@@ -35,7 +35,9 @@ window.initializeUserManagementTable = function () {
             width: 150,
             formatter: function(cell) {
                 const value = cell.getValue();
-                return `<span class="badge bg-secondary">${value || 'Unknown'}</span>`;
+                const hasValue = !!value;
+                const variant = hasValue ? 'info' : 'neutral';
+                return `<span class="app-badge app-badge-${variant}">${value || 'Unknown'}</span>`;
             }
         });
     }
@@ -197,4 +199,3 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 100);
     }
 });
-

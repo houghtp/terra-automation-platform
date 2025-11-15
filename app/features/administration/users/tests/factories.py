@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from typing import List
 
 from app.features.auth.models import User
-from app.features.administration.users.models import (
+from app.features.administration.users.schemas import (
     UserCreate, UserUpdate, UserResponse, UserStatus, UserRole
 )
 

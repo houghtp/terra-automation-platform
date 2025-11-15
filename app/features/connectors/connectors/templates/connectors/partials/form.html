@@ -9,7 +9,7 @@
   {% else %}
   hx-put="/features/connectors/api/{{ connector.id }}"
   {% endif %}
-  hx-disabled-elt="this"
+  hx-disabled-elt="button[type='submit']"
   hx-indicator="#submit-spinner"
   autocomplete="off"
 >
@@ -47,7 +47,7 @@
               <div class="flex-grow-1">
                 <h6 class="mb-1 fw-semibold">{{ available.display_name }}</h6>
                 <p class="mb-0 text-muted small">{{ available.description or 'Connect to ' + available.display_name }}</p>
-                <span class="badge bg-light text-dark mt-1">{{ available.category.replace('_', ' ').title() }}</span>
+                <span class="app-badge app-badge-neutral mt-1">{{ available.category.replace('_', ' ').title() }}</span>
               </div>
             </div>
           </div>

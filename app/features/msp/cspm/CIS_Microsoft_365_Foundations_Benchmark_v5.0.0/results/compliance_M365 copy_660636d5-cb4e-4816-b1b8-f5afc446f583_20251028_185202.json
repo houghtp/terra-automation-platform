@@ -1,0 +1,19 @@
+{
+  "Category": "L1",
+  "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+  "CheckId": "1.2.2_ensure_sign-in_to_shared_mailboxes_is_blocked",
+  "Status": "Fail",
+  "StartTime": "2025-10-28T18:52:05.844893Z",
+  "Details": [
+    {
+      "AccountEnabled": true,
+      "UserPrincipalName": "support@terrait.co.uk",
+      "IsCompliant": false,
+      "DisplayName": "support"
+    }
+  ],
+  "Error": null,
+  "TechType": "M365",
+  "EndTime": "2025-10-28T18:52:11.8084326Z",
+  "Duration": 5.9635396
+}

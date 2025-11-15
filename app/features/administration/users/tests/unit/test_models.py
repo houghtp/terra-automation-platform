@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 from pydantic import ValidationError
 
-from app.features.administration.users.models import (
+from app.features.administration.users.schemas import (
     UserStatus, UserRole, UserCreate, UserUpdate, UserResponse,
     UserStats, UserSearchFilter, UserDashboardStats
 )

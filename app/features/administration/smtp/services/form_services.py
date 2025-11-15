@@ -12,7 +12,8 @@ import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-from app.features.administration.smtp.models import SMTPConfiguration, SMTPTestResult
+from app.features.administration.smtp.models import SMTPConfiguration
+from app.features.administration.smtp.schemas import SMTPTestResult
 from app.features.core.security import security_manager
 
 logger = get_logger(__name__)

@@ -4,38 +4,20 @@ Task management API routes.
 from typing import Dict, Any
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 from app.features.core.task_manager import TaskManager, task_manager
 from app.features.auth.dependencies import get_current_user
 from app.features.auth.models import User
 from app.deps.tenant import tenant_dependency
 from app.features.core.sqlalchemy_imports import get_logger
+from .schemas import (
+    AuditReportRequest,
+    BulkEmailRequest,
+    DataExportRequest,
+    EmailTaskRequest,
+)
 
 logger = get_logger(__name__)
 router = APIRouter()
-
-
-# Request models
-class EmailTaskRequest(BaseModel):
-    user_email: str
-    user_name: str
-
-
-class BulkEmailRequest(BaseModel):
-    recipient_emails: list[str]
-    subject: str
-    message: str
-
-
-class DataExportRequest(BaseModel):
-    user_id: int
-    export_format: str = "csv"
-
-
-class AuditReportRequest(BaseModel):
-    tenant_id: str
-    start_date: str
-    end_date: str
 
 
 @router.post("/email/welcome", response_model=Dict[str, str])

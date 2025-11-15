@@ -1,0 +1,87 @@
+{% set category_icon = prompt.get_category_icon(prompt.category) if prompt.category else "ti ti-message-code" %}
+{% set category_color = prompt.get_category_color(prompt.category) if prompt.category else "secondary" %}
+{% set scope_badge_class = "bg-primary" if prompt.is_system else "bg-cyan" %}
+{% set scope_label = "System" if prompt.is_system else "Tenant Override" if prompt.tenant_id else "Custom" %}
+{% set usage_count = prompt.usage_count or 0 %}
+{% set success_rate = "%.0f" | format(prompt.get_success_rate()) %}
+{% set can_edit = is_global_admin or (prompt.tenant_id and prompt.tenant_id == current_tenant and not prompt.is_system) %}
+{% set can_override = not prompt.tenant_id or prompt.is_system %}
+
+<tr>
+    <td>
+        <span class="avatar bg-{{ category_color }}-lt text-{{ category_color }}">
+            <i class="ti {{ category_icon }}"></i>
+        </span>
+    </td>
+    <td class="fw-semibold">
+        {{ prompt.name }}
+        {% if not prompt.is_active %}
+        <span class="badge bg-secondary ms-2">Inactive</span>
+        {% endif %}
+    </td>
+    <td><code>{{ prompt.prompt_key }}</code></td>
+    <td class="text-nowrap text-capitalize">{{ prompt.category|replace('_', ' ') }}</td>
+    <td>
+        <span class="badge {{ scope_badge_class }}">{{ scope_label }}</span>
+    </td>
+    <td>
+        <span class="status-indicator status-indicator-{{ 'green' if prompt.is_active else 'red' }}"></span>
+        {{ "Active" if prompt.is_active else "Disabled" }}
+    </td>
+    <td class="text-end">
+        <div class="fw-semibold">{{ usage_count }}</div>
+        <div class="text-muted text-sm">{{ success_rate }}% success</div>
+    </td>
+    <td class="text-end">
+        <div class="btn-list justify-content-end">
+            <button
+                class="btn btn-outline-secondary btn-sm"
+                data-bs-toggle="modal"
+                data-bs-target="#prompt-details-modal"
+                hx-get="/features/administration/ai-prompts/partials/details?prompt_id={{ prompt.id }}"
+                hx-target="#prompt-details-modal-content"
+                hx-swap="innerHTML">
+                <i class="ti ti-eye me-1"></i> View
+            </button>
+            {% if can_edit %}
+            <button
+                class="btn btn-outline-primary btn-sm"
+                data-bs-toggle="modal"
+                data-bs-target="#prompt-form-modal"
+                hx-get="/features/administration/ai-prompts/forms/{{ prompt.id }}/edit"
+                hx-target="#prompt-form-modal-content"
+                hx-swap="innerHTML">
+                <i class="ti ti-pencil me-1"></i> Edit
+            </button>
+            {% endif %}
+            {% if can_override %}
+            <button
+                class="btn btn-outline-info btn-sm"
+                data-bs-toggle="modal"
+                data-bs-target="#prompt-form-modal"
+                hx-get="/features/administration/ai-prompts/forms/create?base_prompt_id={{ prompt.id }}"
+                hx-target="#prompt-form-modal-content"
+                hx-swap="innerHTML">
+                <i class="ti ti-copy me-1"></i> Override
+            </button>
+            {% endif %}
+            {% if prompt.is_active %}
+            <button
+                class="btn btn-outline-danger btn-sm"
+                hx-post="/features/administration/ai-prompts/forms/{{ prompt.id }}/deactivate"
+                hx-target="closest tr"
+                hx-swap="none">
+                <i class="ti ti-circle-off me-1"></i> Disable
+            </button>
+            {% else %}
+            <button
+                class="btn btn-outline-success btn-sm"
+                hx-post="/features/administration/ai-prompts/forms/{{ prompt.id }}/restore"
+                hx-target="closest tr"
+                hx-swap="none">
+                <i class="ti ti-rotate-clockwise me-1"></i> Restore
+            </button>
+            {% endif %}
+        </div>
+    </td>
+</tr>

@@ -2,6 +2,10 @@
 
 {% block title %}{{ plan.title }} - Content Plan{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="/features/content-broadcaster/static/css/planning.css">
+{% endblock %}
+
 {% block content %}
 <div class="page-header d-print-none mb-4">
     <div class="row g-2 align-items-center">
@@ -71,49 +75,67 @@
 <!-- Tab Navigation -->
 <div class="row">
     <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs" role="tablist">
-                                <li class="nav-item" role="presentation">
-                                    <a href="#tab-research" class="nav-link active" data-bs-toggle="tab" aria-selected="true" role="tab">
-                                        <i class="ti ti-search me-2"></i>
-                                        Research
-                                    </a>
-                                </li>
-                                <li class="nav-item" role="presentation">
-                                    <a href="#tab-content" class="nav-link" data-bs-toggle="tab" aria-selected="false" role="tab" tabindex="-1">
-                                        <i class="ti ti-file-text me-2"></i>
-                                        Generated Content
-                                    </a>
-                                </li>
-                                <li class="nav-item" role="presentation">
-                                    <a href="#tab-metadata" class="nav-link" data-bs-toggle="tab" aria-selected="false" role="tab" tabindex="-1">
-                                        <i class="ti ti-info-circle me-2"></i>
-                                        Metadata
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                        <div class="card-body">
-                            <div class="tab-content">
-                                <!-- Research Tab -->
-                                <div class="tab-pane active show" id="tab-research" role="tabpanel">
-                                    {% include 'content_broadcaster/partials/research_tab.html' %}
-                                </div>
-
-                                <!-- Content Tab -->
-                                <div class="tab-pane" id="tab-content" role="tabpanel">
-                                    {% include 'content_broadcaster/partials/content_tab.html' %}
-                                </div>
-
-                                <!-- Metadata Tab -->
-                                <div class="tab-pane" id="tab-metadata" role="tabpanel">
-                                    {% include 'content_broadcaster/partials/metadata_tab.html' %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <a href="#tab-research" class="nav-link active" data-bs-toggle="tab" aria-selected="true" role="tab">
+                            <span class="nav-icon"><i class="ti ti-search"></i></span>
+                            <span class="nav-text">Research</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a href="#tab-content" class="nav-link" data-bs-toggle="tab" aria-selected="false" role="tab" tabindex="-1">
+                            <span class="nav-icon"><i class="ti ti-file-text"></i></span>
+                            <span class="nav-text">Generated Content</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a href="#tab-metadata" class="nav-link" data-bs-toggle="tab" aria-selected="false" role="tab" tabindex="-1">
+                            <span class="nav-icon"><i class="ti ti-info-circle"></i></span>
+                            <span class="nav-text">Metadata</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a href="#tab-prompts" class="nav-link" data-bs-toggle="tab" aria-selected="false" role="tab" tabindex="-1">
+                            <span class="nav-icon"><i class="ti ti-robot"></i></span>
+                            <span class="nav-text">AI Prompts</span>
+                        </a>
+                    </li>
+                </ul>
             </div>
+            <div class="card-body">
+                <div class="tab-content">
+                    <!-- Research Tab -->
+                    <div class="tab-pane active show" id="tab-research" role="tabpanel">
+                        {% include 'content_broadcaster/partials/research_tab.html' %}
+                    </div>
+
+                    <!-- Content Tab -->
+                    <div class="tab-pane" id="tab-content" role="tabpanel">
+                        {% include 'content_broadcaster/partials/content_tab.html' %}
+                    </div>
+
+                    <!-- Metadata Tab -->
+                    <div class="tab-pane" id="tab-metadata" role="tabpanel">
+                        {% include 'content_broadcaster/partials/metadata_tab.html' %}
+                    </div>
+
+                    <!-- AI Prompts Tab -->
+                    <div class="tab-pane" id="tab-prompts" role="tabpanel">
+                        {% include 'content_broadcaster/partials/ai_prompts_tab.html' %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Shared Modal Container -->
+<div class="modal modal-blur fade" id="modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div id="modal-body"></div>
         </div>
     </div>
 </div>

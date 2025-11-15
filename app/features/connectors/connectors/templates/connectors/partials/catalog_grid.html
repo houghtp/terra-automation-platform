@@ -2,21 +2,21 @@
 <div class="row row-cards">
     {% for item in catalog_items %}
     <div class="col-md-6 col-lg-4">
-        <div class="card connector-card">
+        <div class="card card-hover-lift h-100">
             <div class="card-body text-center">
                 <!-- Icon -->
-                <div class="connector-icon">
+                <div class="mb-3">
                     {% if item.icon %}
-                    <i class="ti ti-{{ item.icon }} text-primary"></i>
+                    <i class="ti ti-{{ item.icon }} text-primary icon-xl"></i>
                     {% else %}
-                    <i class="ti ti-plug text-muted"></i>
+                    <i class="ti ti-plug text-muted icon-xl"></i>
                     {% endif %}
                 </div>
 
                 <!-- Name and Category -->
                 <h3 class="card-title mb-1">{{ item.name }}</h3>
                 <div class="text-muted small mb-3">
-                    <span class="badge badge-outline text-blue">{{ item.category }}</span>
+                    <span class="app-badge app-badge-info">{{ item.category }}</span>
                 </div>
 
                 <!-- Description -->
@@ -26,7 +26,7 @@
 
                 <!-- Auth Type -->
                 <div class="mb-3">
-                    <span class="badge bg-azure-lt">
+                    <span class="app-badge app-badge-info">
                         <i class="ti ti-lock me-1"></i>
                         {{ item.auth_type|upper }}
                     </span>
@@ -37,22 +37,22 @@
                 <div class="mb-3">
                     <div class="d-flex flex-wrap justify-content-center gap-1">
                         {% if item.capabilities.get('post_text') %}
-                        <span class="badge bg-green-lt" title="Text posts">
+                        <span class="app-badge app-badge-success" title="Text posts">
                             <i class="ti ti-text"></i>
                         </span>
                         {% endif %}
                         {% if item.capabilities.get('post_media') %}
-                        <span class="badge bg-blue-lt" title="Media uploads">
+                        <span class="app-badge app-badge-info" title="Media uploads">
                             <i class="ti ti-photo"></i>
                         </span>
                         {% endif %}
                         {% if item.capabilities.get('supports_html') %}
-                        <span class="badge bg-purple-lt" title="HTML support">
+                        <span class="app-badge app-badge-purple" title="HTML support">
                             <i class="ti ti-code"></i>
                         </span>
                         {% endif %}
                         {% if item.capabilities.get('supports_scheduling') %}
-                        <span class="badge bg-yellow-lt" title="Scheduling">
+                        <span class="app-badge app-badge-warning" title="Scheduling">
                             <i class="ti ti-clock"></i>
                         </span>
                         {% endif %}

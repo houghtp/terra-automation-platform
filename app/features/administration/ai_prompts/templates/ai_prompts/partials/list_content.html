@@ -1,0 +1,15 @@
+<div class="card">
+    <div class="card-header">
+        {% set title = "AI Prompts" %}
+        {% set description = "Manage AI prompt templates with variable placeholders for content generation. System
+        prompts can be overridden per-tenant." %}
+        {% set icon = "ti ti-message-code" %}
+        {% set add_url = "/features/administration/ai-prompts/partials/prompt_form" %}
+        {% set entity_name = "AI Prompt" %}
+        {% set table_id = "ai-prompts-table" %}
+        {% include 'components/ui/table_actions.html' with context %}
+    </div>
+    <div class="card-body p-0">
+        <div id="ai-prompts-table"></div>
+    </div>
+</div>

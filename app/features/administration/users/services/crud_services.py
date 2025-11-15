@@ -9,7 +9,7 @@ from app.features.core.enhanced_base_service import BaseService
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
 
-from app.features.administration.users.models import (
+from app.features.administration.users.schemas import (
     User, UserCreate, UserUpdate, UserResponse, UserSearchFilter, UserStatus, UserRole
 )
 from app.features.administration.tenants.db_models import Tenant

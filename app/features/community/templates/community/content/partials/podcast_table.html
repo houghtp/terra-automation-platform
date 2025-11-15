@@ -1,0 +1,68 @@
+<div
+    id="content-podcasts-wrapper"
+    hx-get="/features/community/content/partials/podcasts"
+    hx-trigger="refreshContentTables from:body"
+    hx-target="#content-podcasts-wrapper"
+    hx-swap="outerHTML">
+    {% if podcasts %}
+    <div class="list-group list-group-flush">
+        {% for podcast in podcasts %}
+        <div class="list-group-item">
+            <div class="d-flex align-items-start justify-content-between">
+                <div>
+                    <div class="fw-semibold">{{ podcast.title }}</div>
+                    <div class="text-muted small">
+                        <i class="ti ti-microphone me-1"></i>{{ podcast.host or "Host TBD" }}
+                        {% if podcast.published_at %}
+                        <span class="ms-2"><i class="ti ti-calendar me-1"></i>{{ podcast.published_at.strftime("%b %d, %Y") }}</span>
+                        {% endif %}
+                    </div>
+                    {% if podcast.categories %}
+                    <div class="mt-2">
+                        {% for category in podcast.categories %}
+                        <span class="badge bg-cyan-lt text-cyan me-1">{{ category }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="btn-list">
+                    <a href="{{ podcast.link }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+                        <i class="ti ti-external-link"></i>
+                    </a>
+                    <button
+                        class="btn btn-outline-primary btn-sm"
+                        data-bs-toggle="modal"
+                        data-bs-target="#content-form-modal"
+                        hx-get="/features/community/content/partials/podcast_form?episode_id={{ podcast.id }}"
+                        hx-target="#content-form-modal-body"
+                        hx-swap="innerHTML">
+                        <i class="ti ti-pencil"></i>
+                    </button>
+                    <button
+                        class="btn btn-outline-danger btn-sm"
+                        hx-post="/features/community/content/podcasts/{{ podcast.id }}/delete"
+                        hx-target="closest .list-group-item"
+                        hx-swap="none"
+                        hx-confirm="Delete this podcast episode?">
+                        <i class="ti ti-trash"></i>
+                    </button>
+                </div>
+            </div>
+            {% if podcast.description %}
+            <div class="text-muted small mt-2">
+                {{ podcast.description[:160] }}{% if podcast.description|length > 160 %}…{% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="p-4 text-center text-muted">
+        <div class="mb-2">
+            <i class="ti ti-microphone-off icon-lg"></i>
+        </div>
+        <p class="mb-1 fw-semibold">No podcast episodes yet.</p>
+        <p class="mb-0">Share your first conversation or partner interview.</p>
+    </div>
+    {% endif %}
+</div>

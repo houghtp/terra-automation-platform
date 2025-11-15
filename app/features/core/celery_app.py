@@ -19,6 +19,8 @@ celery_app = Celery(
         "app.features.tasks.email_tasks",
         "app.features.tasks.data_processing_tasks",
         "app.features.tasks.cleanup_tasks",
+        "app.features.msp.cspm.tasks",  # CSPM compliance scan tasks
+        "app.features.business_automations.content_broadcaster.tasks",
     ]
 )
 
@@ -29,6 +31,7 @@ celery_app.conf.update(
         "app.features.tasks.email_tasks.*": {"queue": "email"},
         "app.features.tasks.data_processing_tasks.*": {"queue": "data_processing"},
         "app.features.tasks.cleanup_tasks.*": {"queue": "cleanup"},
+        "app.features.business_automations.content_broadcaster.tasks.*": {"queue": "content_broadcaster"},
     },
 
     # Queue definitions
@@ -38,6 +41,7 @@ celery_app.conf.update(
         Queue("email"),
         Queue("data_processing"),
         Queue("cleanup"),
+        Queue("content_broadcaster"),
     ),
 
     # Task execution settings

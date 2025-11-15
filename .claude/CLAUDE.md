@@ -485,6 +485,101 @@ async def list_items(
     return items
 ```
 
+**Tenant Filter Validation (Security Best Practice)**:
+
+For enhanced security, use `self.execute()` instead of `self.db.execute()` to get **automatic tenant filter validation**:
+
+```python
+from app.features.core.enhanced_base_service import BaseService, TenantFilterError
+
+class MyService(BaseService[MyModel]):
+    async def list_items_with_validation(self) -> List[MyModel]:
+        """List items with automatic tenant filter validation."""
+        # ✅ RECOMMENDED: Use self.execute() for validation
+        stmt = self.create_base_query(MyModel)
+        result = await self.execute(stmt, MyModel)  # Validates tenant filter!
+        return result.scalars().all()
+
+    async def custom_query_with_validation(self, status: str) -> List[MyModel]:
+        """Custom query with manual filter and validation."""
+        # Build query with manual tenant filter
+        stmt = select(MyModel).where(
+            MyModel.status == status,
+            MyModel.tenant_id == self.tenant_id  # Manual filter
+        )
+
+        # ✅ execute() validates the filter is present
+        result = await self.execute(stmt, MyModel)
+        return result.scalars().all()
+```
+
+**Cross-Tenant Query Pattern** (with audit trail):
+
+For legitimate cross-tenant operations (admin dashboards, aggregations, etc.):
+
+```python
+async def get_tenant_statistics(self) -> Dict[str, Any]:
+    """Admin dashboard - aggregate stats across all tenants."""
+    # Cross-tenant aggregation with explicit reason
+    stmt = select(
+        MyModel.tenant_id,
+        func.count(MyModel.id).label('count')
+    ).group_by(MyModel.tenant_id)
+
+    # ✅ allow_cross_tenant=True with reason (logged for audit)
+    result = await self.execute(
+        stmt,
+        MyModel,
+        allow_cross_tenant=True,
+        reason="Admin dashboard - tenant statistics report"
+    )
+
+    return dict(result.all())
+```
+
+**How Tenant Filter Validation Works**:
+
+1. **Regular Users** (tenant_id set):
+   - `execute()` checks if query contains `WHERE tenant_id = ?`
+   - Raises `TenantFilterError` if missing
+   - Prevents accidental data leaks
+
+2. **Global Admins** (tenant_id is None):
+   - Validation automatically **SKIPPED**
+   - Can query across all tenants without restrictions
+   - No `reason` parameter needed
+
+3. **Explicit Cross-Tenant Queries**:
+   - Set `allow_cross_tenant=True` to bypass validation
+   - **MUST** provide `reason` parameter (for audit trail)
+   - All bypasses logged with reason
+
+**Error Handling**:
+
+```python
+from app.features.core.enhanced_base_service import TenantFilterError
+
+try:
+    stmt = select(MyModel)  # Missing tenant filter!
+    result = await self.execute(stmt, MyModel)
+except TenantFilterError as e:
+    # Clear error message with solutions:
+    # "Query for MyModel is missing tenant filter! Current tenant: tenant-123.
+    #  Solutions: 1) Use create_base_query(), 2) Add .where(tenant_id == ...),
+    #  3) Set allow_cross_tenant=True with reason"
+    pass
+```
+
+**Legacy Pattern** (still works, but discouraged):
+
+```python
+# ⚠️ DEPRECATED but still functional
+stmt = self.create_base_query(MyModel)
+result = await self.db.execute(stmt)  # Logs deprecation warning
+# Warning: "DEPRECATED: Direct self.db.execute() usage detected.
+#           Consider using self.execute() for tenant filter validation."
+```
+
 ### 6. Centralized Import Pattern
 
 **Problem**: Import inconsistency across files
@@ -558,6 +653,196 @@ task_id = task.id
 - Tasks defined in `app/features/{feature}/tasks.py`
 - Celery app configured in `app/features/core/celery_app.py`
 - Redis as broker and result backend
+
+### 10. Modal Close & Focus Restoration Pattern
+
+**CRITICAL**: All modal close operations are handled **globally**. Never add custom modal close handlers in table JavaScript files.
+
+#### Global Handler Architecture
+
+**Location**: `app/features/core/static/js/table-base.js` (lines 1269-1348)
+
+**How It Works**:
+```javascript
+// Global HTMX form submission handler
+document.body.addEventListener("htmx:afterRequest", (e) => {
+    if (e.target.id && e.target.id.endsWith('-form')) {
+        if (e.detail.xhr.status >= 200 && e.detail.xhr.status < 300) {
+            // 1. Show success toast
+            // 2. Close modal with window.closeModal()
+            // 3. Wait 1200ms for focus restoration to complete
+            // 4. Refresh table automatically
+        }
+    }
+});
+```
+
+#### Focus Restoration
+
+**Location**: `app/static/js/site.js` (lines 217-260, 538-626)
+
+**Features**:
+- Automatic focus restoration to trigger button (Edit/Create button)
+- Works with both Bootstrap Modal and fallback modal system
+- Retry logic: 10 attempts with 100ms delays (max ~1150ms)
+- Complete backdrop cleanup (prevents locked page)
+- Table refresh delayed to 1200ms (after focus restoration completes)
+
+**Flow**:
+```
+User submits form
+  ↓
+Global handler detects `-form` ID
+  ↓
+Calls window.closeModal()
+  ↓
+Modal closes (Bootstrap or fallback)
+  ↓
+Removes ALL backdrop elements
+  ↓
+Restores focus (up to 10 retries)
+  ↓
+Waits 1200ms
+  ↓
+Table refreshes automatically
+  ↓
+User can continue working ✅
+```
+
+#### Standard Pattern (DO THIS)
+
+✅ **DO**: Let the global handler manage modal lifecycle automatically
+
+```javascript
+// In your table JavaScript file - NO MODAL CODE NEEDED!
+
+// Your table initialization
+window.myTable = new Tabulator("#my-table", {
+    // ... table config
+});
+
+// Edit function
+window.editItem = function(id) {
+    editTabulatorRow(`/features/my-slice/${id}/edit`);
+};
+
+// ✅ That's it! Modal close is automatic
+```
+
+✅ **DO**: Use form IDs ending with `-form`
+
+```html
+<form id="user-form" hx-post="/features/administration/users/">
+    <!-- Global handler detects this automatically -->
+</form>
+```
+
+✅ **DO**: Add `data-default-focus` to Create/Add buttons
+
+```html
+<a id="add-record-btn"
+   data-default-focus
+   hx-get="/features/my-slice/partials/form"
+   hx-target="#modal-body">
+    Add Item
+</a>
+```
+
+#### Anti-Patterns (DON'T DO THIS)
+
+❌ **DON'T**: Add custom `closeModal` event listeners
+
+```javascript
+// ❌ WRONG - Redundant and creates race conditions
+document.body.addEventListener('closeModal', function () {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modal'));
+    if (modal) {
+        modal.hide();  // ❌ Don't do this!
+    }
+});
+```
+
+❌ **DON'T**: Call `modal.hide()` directly in table JavaScript
+
+```javascript
+// ❌ WRONG - Bypasses global handler and breaks focus restoration
+function customCloseModal() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modal'));
+    modal.hide();  // ❌ Don't do this!
+}
+```
+
+❌ **DON'T**: Add `location.reload()` after form submission
+
+```javascript
+// ❌ WRONG - Heavy-handed, breaks UX
+document.getElementById('my-form').addEventListener('htmx:afterRequest', function(evt) {
+    if (evt.detail.xhr.status === 204) {
+        closeModal();
+        setTimeout(() => location.reload(), 300);  // ❌ Don't do this!
+    }
+});
+```
+
+❌ **DON'T**: Implement custom HX-Trigger closeModal logic
+
+```javascript
+// ❌ WRONG - Global handler already does this
+document.body.addEventListener("htmx:afterRequest", function (event) {
+    const triggerHeader = xhr.getResponseHeader("HX-Trigger") || "";
+    if (triggerHeader.includes("closeModal")) {
+        window.closeModal();  // ❌ Redundant!
+    }
+});
+```
+
+#### Why This Matters
+
+**Before (Custom Handlers)**:
+- Modal backdrop stayed on page (locked UI)
+- Focus didn't return to trigger button
+- Race conditions between modal close and table refresh
+- Inconsistent behavior across tables
+- 50+ lines of redundant code
+
+**After (Global Handler)**:
+- Backdrop removed completely ✅
+- Focus restored automatically ✅
+- Proper timing (focus → then table refresh) ✅
+- Consistent across all 20+ tables ✅
+- Zero custom modal code needed ✅
+
+#### Debugging Modal Issues
+
+If modal doesn't close or page is locked:
+
+```javascript
+// Add temporary debug logging
+console.log('Modal debug:', {
+    hasBootstrap: !!window.bootstrap,
+    hasModal: !!bootstrap?.Modal,
+    instance: bootstrap?.Modal?.getInstance(document.getElementById('modal')),
+    backdrops: document.querySelectorAll('.modal-backdrop').length
+});
+```
+
+**Common issues**:
+1. Form ID doesn't end with `-form` → handler won't trigger
+2. Bootstrap not loaded → using fallback mode
+3. Backdrop elements not cleaned up → check `cleanupFallbackModal()`
+4. Focus not returning → check `data-default-focus` attribute
+
+#### Files Modified (2025-11-05)
+
+**Cleaned up custom handlers in**:
+- `app/features/business_automations/content_broadcaster/static/js/content-table.js`
+- `app/features/business_automations/content_broadcaster/static/js/planning-table.js`
+- `app/features/community/static/js/members-table.js`
+- `app/features/community/static/js/partners-table.js`
+- `app/features/msp/cspm/static/js/m365-tenants-table.js`
+- `app/features/msp/cspm/static/js/tenant-benchmarks-table.js`
+
+**Key commits**: Modal focus restoration fix (2025-11-05)
 
 ---
 
@@ -1876,6 +2161,34 @@ pytest -l
 **Alternative considered**: No versioning
 **Rejected because**: Breaking changes would affect all users
 
+### 11. Why Hybrid Tenant Filter Validation?
+
+**Decision**: Optional `execute()` method with mandatory validation + deprecation warnings for direct `db.execute()`
+
+**Rationale**:
+- **Catches 99% of mistakes**: Validation prevents accidental cross-tenant queries
+- **Maintains compatibility**: Existing code continues to work (no breaking changes)
+- **Explicit bypasses**: `allow_cross_tenant=True` with required `reason` for audit trail
+- **Global admin support**: Auto-bypasses validation when `tenant_id is None`
+- **Developer choice**: Use `execute()` for new code, migrate old code gradually
+- **Audit trail**: All cross-tenant queries logged with justification
+
+**Alternatives considered**:
+1. **Soft enforcement (linting only)**: Can still be bypassed by developers
+2. **Hard enforcement (no bypass)**: Blocks legitimate cross-tenant queries (aggregations, admin dashboards)
+
+**Why hybrid won**:
+- Balances security with flexibility
+- Encourages best practices without forcing migration
+- Provides clear error messages with actionable solutions
+- Logs all bypasses for security audits
+
+**Implementation**:
+- `self.execute()`: Validates tenant filters, raises `TenantFilterError` if missing
+- `self.db`: Returns session with deprecation warning (once per instance)
+- `allow_cross_tenant=True`: Requires `reason` parameter, logs to audit trail
+- Global admins: Validation automatically skipped
+
 ---
 
 ## 📝 Quick Reference
@@ -1952,6 +2265,47 @@ class MyService(BaseService[MyModel]):
         if not self.tenant_id:  # ❌ This breaks global admin access!
             raise ValueError("Tenant ID required")
         # Don't do this!
+```
+
+**Implement tenant isolation with validation (Enhanced Security)**:
+```python
+from app.features.core.enhanced_base_service import BaseService, TenantFilterError
+
+# ✅ RECOMMENDED: Use self.execute() for automatic validation
+class MyService(BaseService[MyModel]):
+    def __init__(self, db_session: AsyncSession, tenant_id: Optional[str] = None):
+        super().__init__(db_session, tenant_id)
+
+    async def list_items_safe(self) -> List[MyModel]:
+        """List items with tenant filter validation."""
+        stmt = self.create_base_query(MyModel)
+        result = await self.execute(stmt, MyModel)  # Validates filter!
+        return result.scalars().all()
+
+    async def custom_query_safe(self, status: str) -> List[MyModel]:
+        """Custom query with manual filter and validation."""
+        stmt = select(MyModel).where(
+            MyModel.status == status,
+            MyModel.tenant_id == self.tenant_id
+        )
+        result = await self.execute(stmt, MyModel)  # Validates filter!
+        return result.scalars().all()
+
+    async def cross_tenant_stats(self) -> Dict[str, int]:
+        """Admin method - cross-tenant aggregation with audit trail."""
+        stmt = select(
+            MyModel.tenant_id,
+            func.count(MyModel.id)
+        ).group_by(MyModel.tenant_id)
+
+        # Explicit bypass with reason (logged)
+        result = await self.execute(
+            stmt,
+            MyModel,
+            allow_cross_tenant=True,
+            reason="Admin dashboard - tenant statistics"
+        )
+        return dict(result.all())
 ```
 
 **Page Layout Pattern (Standard)**:
@@ -2099,5 +2453,10 @@ LOG_FILE=app.log
 
 ---
 
-**Last Updated**: 2025-10-09
-**Codebase Version**: Based on commit bd115db
+**Last Updated**: 2025-10-27
+**Codebase Version**: Based on commit bd115db + tenant filter validation enhancement
+**Recent Changes**:
+- Added hybrid tenant filter validation (Option 3) with `BaseService.execute()` method
+- Documented `allow_cross_tenant` pattern with required `reason` parameter
+- Added comprehensive tenant filter validation tests
+- Updated security best practices for multi-tenant queries

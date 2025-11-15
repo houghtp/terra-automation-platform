@@ -3,12 +3,14 @@ SEO Content Generation Automation Service.
 
 This service replicates the functionality of your original content creation script
 but integrates with our connector infrastructure and Content Broadcaster system.
+
+Now uses dynamic AI prompts from database with Jinja2 templates.
 """
 
 import asyncio
 import json
 import structlog
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 from uuid import uuid4
 
@@ -17,6 +19,7 @@ from ..database import get_async_session
 from ...business_automations.content_broadcaster.models import ContentItem, ContentState, ApprovalStatus
 from ...business_automations.content_broadcaster.services import ContentBroadcasterService
 from ...connectors.connectors.services import ConnectorService
+from ...administration.ai_prompts.services import AIPromptService
 from .web_scraping import SearchScraper, WebScraper
 
 logger = structlog.get_logger(__name__)
@@ -48,8 +51,9 @@ class SEOContentGenerator:
             tenant_id: Tenant ID for multi-tenant isolation
         """
         self.tenant_id = tenant_id
-        # Note: connector_service will be initialized with db session when needed
+        # Note: connector_service and prompt_service will be initialized with db session when needed
         self.connector_service = None
+        self.prompt_service = None
         self.content_service = ContentBroadcasterService()
         self.search_scraper = SearchScraper(tenant_id)
         self.web_scraper = WebScraper(tenant_id)
@@ -130,8 +134,9 @@ class SEOContentGenerator:
             logger.info(f"Starting SEO content generation for: '{title}'")
             await emit("start", f"Starting SEO content generation for '{title}'.")
 
-            # Initialize connector service with database session and tenant
+            # Initialize connector service and prompt service with database session
             self.connector_service = ConnectorService(db_session, self.tenant_id)
+            self.prompt_service = AIPromptService(db_session)
 
             # Step 1: Research competitor content
             await emit("research.start", "Researching competitor content...")
@@ -399,9 +404,7 @@ Provide an **actionable improvement plan** covering all six SEO areas above.
         validation_feedback: Optional[str] = None
     ) -> str:
         """
-        Generate blog content using AI.
-
-        This replicates your generate_blog_post function.
+        Generate blog content using AI with dynamic prompts from database.
 
         Args:
             title: Content title
@@ -415,84 +418,40 @@ Provide an **actionable improvement plan** covering all six SEO areas above.
             Generated blog content
         """
         try:
-            # Your original blog generation prompt
-            blog_prompt = f"""
-Title: {title}
+            # Prepare variables for Jinja2 template rendering
+            variables = {
+                "title": title,
+                "seo_analysis": seo_analysis or "",
+                "previous_content": previous_content or "No previous version, this is the first draft.",
+                "validation_feedback": validation_feedback or "No feedback yet. Optimize based on SEO best practices.",
+                "has_seo_analysis": bool(seo_analysis),
+                "tone": "friendly and approachable"
+            }
 
-You are an **expert SEO blog writer**. Your task is to produce a complete, ready-to-publish blog post that is 100% SEO optimized for the topic provided by the title above, using the latest SEO analysis and the provided validation feedback.
+            # Fetch and render prompt from database
+            blog_prompt = await self.prompt_service.render_prompt(
+                prompt_key="seo_blog_generation",
+                variables=variables,
+                tenant_id=self.tenant_id,
+                track_usage=True
+            )
 
-Please ensure that:
-- The content is entirely on-topic and directly relevant to the title: "{title}".
-- You generate detailed, actionable content with real-world advice, concrete steps, and measurable recommendations that a reader can immediately apply.
-- The output is a fully written blog post, not just a list of suggestions or improvement tips.
-- If there is any previous blog post content provided, retain and enhance its good elements while fixing only the identified SEO issues.
-- Follow the mandatory SEO enhancements strictly to improve keyword optimization, content structure, schema markup, linking, engagement elements, and on-page/mobile SEO without removing any previous improvements.
+            if not blog_prompt:
+                logger.error("Failed to load prompt 'seo_blog_generation' from database")
+                raise ValueError("AI prompt 'seo_blog_generation' not found in database")
 
----
-### **SEO Analysis:**
-{seo_analysis}
+            logger.info(
+                "Generating content with dynamic prompt",
+                title=title,
+                has_previous=bool(previous_content),
+                has_feedback=bool(validation_feedback),
+                prompt_length=len(blog_prompt)
+            )
 
----
-### **Previous Blog Post (Use this as the base and improve it)**
-{previous_content if previous_content else "No previous version, this is the first draft."}
-
----
-### **Validation Feedback (Fix these SEO issues only)**
-{validation_feedback if validation_feedback else "No feedback yet. Optimize based on SEO best practices."}
-
----
-## **Mandatory SEO Enhancements**
-To **outperform competitors**, improve the blog using these advanced SEO tactics:
-
-✅ **1. Keyword Optimization**
-   - Ensure **primary and secondary keywords** are in **title, intro, headings, and alt text**.
-   - Use **long-tail keyword variations** for **Google Featured Snippets**.
-   - Maintain **proper keyword density** (avoid stuffing).
-   - Integrate **LSI keywords** naturally.
-
-✅ **2. Content Structure & Readability**
-   - Follow an **H1 → H2 → H3 hierarchy**.
-   - Add a **Table of Contents with jump links**.
-   - Use **short paragraphs (2-3 sentences max) for scannability**.
-   - Improve readability using **bulleted lists, numbered steps, key takeaways**.
-
-✅ **3. Schema Markup & Metadata**
-   - Implement **FAQ Schema, Recipe Schema, and HowTo Schema**.
-   - Ensure **Google Discover best practices** for mobile-first ranking.
-   - Add **Pinterest & Facebook metadata** for better social sharing.
-   - Optimize **meta title and description (160 chars max, keyword-rich)**.
-
-✅ **4. Internal & External Linking**
-   - Add **3+ internal links** to related content.
-   - Include **2+ external links** to authoritative sources (BBC Good Food, etc.).
-   - Use **keyword-rich anchor text**.
-
-✅ **5. Engagement & Interactive Elements**
-   - Include **star ratings, polls, or interactive content**.
-   - Add an **FAQ section** to capture **voice search & People Also Ask queries**.
-   - Encourage user interaction (comments, sharing).
-   - Embed **images, videos, or step-by-step visuals**.
-
-✅ **6. On-Page SEO & Mobile Friendliness**
-   - Ensure **title tag is compelling and keyword-rich**.
-   - Optimize **image alt text** with **SEO-friendly filenames**.
-   - Ensure the blog is **fast-loading & mobile-friendly (Core Web Vitals)**.
-   - Implement **canonical tags to prevent duplicate content issues**.
-
----
-- **Now, using the title "{title}" improve this blog post for maximum SEO performance.**
-- **Produce a complete and cohesive blog post that is fully optimized for SEO and ready for immediate publication.**
-- **Do not generate generic suggestions—deliver a finished blog post with all required content.**
-- **Fix ONLY the missing SEO elements.**
-- **Retain good elements from the previous version.**
-- **Do not remove previous improvements.**
-- **Make it engaging, informative, and actionable.**
-- **Use a friendly and approachable tone.**
-- **Avoid jargon and complex terms.**
-- **Make it easy to read and understand.**
-- **Use a conversational style.**
-- **Use emojis to enhance engagement.**
-"""
+            # === COMMENTED OUT: Original hardcoded prompt (preserved for reference) ===
+            # (This 100+ line prompt has been replaced with dynamic database-backed prompt)
+            # Original prompt included: SEO analysis, previous content, validation feedback,
+            # mandatory SEO enhancements (6 categories), metadata optimization, etc.
 
             # Get AI content generation
             ai_connector = await self.connector_service.create_sdk_connector_instance_by_type(
@@ -507,12 +466,33 @@ To **outperform competitors**, improve the blog using these advanced SEO tactics
                         temperature=0.7
                     )
 
+                    # Track successful usage
+                    try:
+                        await self.prompt_service.track_usage(
+                            prompt_key="seo_blog_generation",
+                            tenant_id=self.tenant_id,
+                            success=True
+                        )
+                    except Exception as track_error:
+                        logger.warning(f"Failed to track prompt usage: {str(track_error)}")
+
                     if isinstance(response, dict) and 'content' in response:
                         return response['content']
                     return str(response)
 
             except Exception as e:
                 logger.warning(f"Primary AI provider {ai_provider} failed: {str(e)}")
+
+                # Track failure on primary provider
+                try:
+                    await self.prompt_service.track_usage(
+                        prompt_key="seo_blog_generation",
+                        tenant_id=self.tenant_id,
+                        success=False
+                    )
+                except Exception as track_error:
+                    logger.warning(f"Failed to track prompt usage failure: {str(track_error)}")
+
                 if fallback_ai:
                     logger.info(f"Trying fallback AI provider: {fallback_ai}")
                     fallback_connector = await self.connector_service.create_sdk_connector_instance_by_type(
@@ -526,6 +506,16 @@ To **outperform competitors**, improve the blog using these advanced SEO tactics
                             temperature=0.7
                         )
 
+                        # Track successful fallback usage
+                        try:
+                            await self.prompt_service.track_usage(
+                                prompt_key="seo_blog_generation",
+                                tenant_id=self.tenant_id,
+                                success=True
+                            )
+                        except Exception as track_error:
+                            logger.warning(f"Failed to track prompt usage: {str(track_error)}")
+
                         if isinstance(response, dict) and 'content' in response:
                             return response['content']
                         return str(response)
@@ -534,6 +524,17 @@ To **outperform competitors**, improve the blog using these advanced SEO tactics
 
         except Exception as e:
             logger.error(f"Content generation failed: {str(e)}")
+
+            # Track final failure if not already tracked
+            try:
+                await self.prompt_service.track_usage(
+                    prompt_key="seo_blog_generation",
+                    tenant_id=self.tenant_id,
+                    success=False
+                )
+            except Exception as track_error:
+                logger.warning(f"Failed to track prompt usage failure: {str(track_error)}")
+
             raise SEOContentGenerationError(f"Content generation failed: {str(e)}")
 
     async def _validate_content_quality(

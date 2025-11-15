@@ -101,7 +101,7 @@ window.initializeAuditLogsTable = function () {
       },
       {
         title: "Actions",
-        field: "actions",
+        field: "id",
         width: 100,
         headerSort: false,
         formatter: (cell) => formatViewAction(cell, 'viewAuditLog')
@@ -122,15 +122,45 @@ window.exportTable = function (format) {
 };
 
 window.viewAuditLog = function (logId) {
-  // Use HTMX to load audit log details
-  htmx.ajax('GET', `/features/administration/audit/partials/log_details?log_id=${logId}`, {
-    target: '#modal-body',
-    swap: 'innerHTML'
-  }).then(() => {
-    // Show the modal
-    const modal = new bootstrap.Modal(document.getElementById('modal'));
-    modal.show();
-  });
+  const url = `/features/administration/audit/partials/log_details?log_id=${logId}`;
+
+  if (typeof window.loadModalContent === 'function') {
+    window.loadModalContent(url, { modalId: 'modal' });
+    return;
+  }
+
+  fetch(url, {
+    headers: {
+      'HX-Request': 'true',
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    credentials: 'same-origin'
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+      return response.text();
+    })
+    .then(html => {
+      const modalBody = document.getElementById('modal-body');
+      if (modalBody) {
+        modalBody.innerHTML = html;
+        if (typeof window.showModal === 'function') {
+          window.showModal();
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Failed to load audit log details:', error);
+      if (typeof window.showToast === 'function') {
+        window.showToast('Failed to load audit log details. Please try again.', 'error');
+      }
+    });
+};
+
+window.refreshAuditTable = function () {
+  window.refreshTable && window.refreshTable('audit-table');
 };
 
 // Handle security alerts and populate filters (stats-card web components handle the rest)

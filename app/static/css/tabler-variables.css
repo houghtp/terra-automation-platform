@@ -1,0 +1,162 @@
+/**
+ * Tabler Theme Configuration
+ *
+ * This file configures Tabler's theme system using data attributes.
+ * Tabler uses a scale-based approach for border-radius where the base
+ * values are multiplied by a scale factor.
+ *
+ * Border Radius Scale System:
+ * - 0 = No radius (sharp corners)
+ * - 0.5 = Half radius (slightly rounded)
+ * - 1 = Default radius (standard Tabler)
+ * - 1.5 = Increased radius (more rounded) ← CURRENT
+ * - 2 = Double radius (very rounded)
+ *
+ * The scale applies to ALL components automatically:
+ * - Cards, modals, popovers, tooltips
+ * - Buttons, button groups
+ * - Form inputs, selects, textareas
+ * - Badges, alerts, toasts
+ * - Tables, dropdowns, navigation
+ * - Progress bars, pagination
+ *
+ * Usage: Set data-bs-theme-radius attribute on <html> or <body>
+ *
+ * Note: This multiplies Tabler's base radius values:
+ * - --tblr-border-radius: 6px → 9px (with scale 1.5)
+ * - --tblr-border-radius-sm: 4px → 6px (with scale 1.5)
+ * - --tblr-border-radius-lg: 8px → 12px (with scale 1.5)
+ */
+
+:root {
+    --app-border-width: 1px;
+    --app-border-style: solid;
+    --app-border-color: var(--tblr-border-color);
+    --app-border: var(--app-border-width) var(--app-border-style) var(--app-border-color);
+    --app-border-strong: calc(var(--app-border-width) * 2) var(--app-border-style) var(--app-border-color);
+}
+
+html {
+    overflow-y: scroll;
+}
+
+/* Override --app-border* values here to tweak borders globally */
+
+/* -------------------------------------------------------------
+   Global Tab Styling
+   Applies a modern underline look to all `.nav-tabs` instances.
+-------------------------------------------------------------- */
+
+.feature-tab-container {
+    margin-bottom: 1.5rem;
+}
+
+.nav-tabs {
+    border: none;
+    border-bottom: 1px solid var(--tblr-border-color);
+    padding: 0 0 0.35rem 0;
+    gap: 1.5rem;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    border-radius: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0;
+    font-weight: 600;
+    color: var(--tblr-muted, #64748b);
+    background: transparent;
+    transition: all 0.2s ease-in-out;
+    position: relative;
+}
+
+.nav-tabs .nav-link .nav-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.12);
+    color: #2563eb;
+    font-size: 1rem;
+}
+
+.nav-tabs .nav-link.active,
+.nav-tabs .nav-link:hover {
+    color: #111827;
+}
+
+.nav-tabs .nav-link.active .nav-icon,
+.nav-tabs .nav-link:hover .nav-icon {
+    background: rgba(79, 70, 229, 0.18);
+    color: #312e81;
+}
+
+.nav-tabs .nav-link .nav-text {
+    color: inherit;
+    transition: color 0.2s ease-in-out;
+}
+
+.nav-tabs .nav-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -0.35rem;
+    height: 3px;
+    border-radius: 999px;
+    background: transparent;
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.nav-tabs .nav-link:hover::after {
+    background: rgba(79, 70, 229, 0.35);
+    transform: scaleX(1);
+}
+
+.nav-tabs .nav-link.active::after {
+    background: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%);
+    transform: scaleX(1);
+}
+
+.nav-tabs.card-header-tabs {
+    background: transparent;
+    box-shadow: none;
+    gap: 1.5rem;
+    padding: 0 0 0.35rem 0.25rem;
+}
+
+.nav-tabs.card-header-tabs .nav-link {
+    padding: 0.55rem 0;
+}
+
+.nav-tabs.card-header-tabs .nav-link.active,
+.nav-tabs.card-header-tabs .nav-link:hover {
+    box-shadow: none;
+}
+
+@media (max-width: 576px) {
+    .nav-tabs {
+        width: 100%;
+        justify-content: space-between;
+        padding: 0.4rem;
+        gap: 0.5rem;
+    }
+
+    .nav-tabs .nav-link {
+        flex: 1 1 auto;
+        justify-content: center;
+        padding: 0.5rem 0;
+    }
+}

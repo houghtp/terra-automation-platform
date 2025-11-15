@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Events{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fullcalendar/bootstrap5@6.1.10/main.min.css">
+<link rel="stylesheet" href="/features/community/static/css/events-calendar.css">
+<script src="/features/core/static/js/table-base.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-pretitle">Community</div>
+            <h2 class="page-title">{{ page_title }}</h2>
+            <div class="text-muted mt-1">{{ page_description }}</div>
+        </div>
+        <div class="col-auto ms-auto">
+            <button class="btn btn-primary" hx-get="/features/community/events/partials/form" hx-target="#modal-body" hx-swap="innerHTML">
+                <i class="ti ti-calendar-plus me-1"></i> Add Event
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div id="events-calendar-wrapper">
+            <div id="events-calendar"></div>
+        </div>
+        <div id="events-table-wrapper" class="d-none">
+            <div id="events-table"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal modal-blur fade" id="modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div id="modal-body"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/bootstrap5@6.1.10/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.10/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.10/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@6.1.10/index.global.min.js"></script>
+<script src="/features/community/static/js/events-table.js"></script>
+{% endblock %}

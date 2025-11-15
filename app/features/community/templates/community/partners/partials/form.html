@@ -1,0 +1,108 @@
+<div class="modal-header">
+    <h5 class="modal-title">
+        {{ "Edit Partner" if partner else "Add Partner" }}
+    </h5>
+</div>
+
+<form
+    id="partner-form"
+    {% if partner %}
+        hx-put="/features/community/partners/{{ partner.id }}"
+    {% else %}
+        hx-post="/features/community/partners"
+    {% endif %}
+    hx-target="#modal-body"
+    hx-swap="innerHTML"
+    hx-disabled-elt="fieldset"
+    autocomplete="off"
+>
+    <div class="modal-body">
+        <fieldset class="form-fieldset">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">Name</label>
+                    <input
+                        type="text"
+                        name="name"
+                        value="{{ form_data.name if form_data and form_data.name is not none else (partner.name if partner else '') }}"
+                        class="form-control {{ 'is-invalid' if errors and errors.get('name') }}"
+                        maxlength="255"
+                        required
+                    >
+                    {% if errors and errors.get('name') %}
+                        <div class="invalid-feedback d-block">{{ errors['name'][0] }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Category</label>
+                    <input
+                        type="text"
+                        name="category"
+                        value="{{ form_data.category if form_data and form_data.category is not none else (partner.category if partner else '') }}"
+                        class="form-control"
+                        maxlength="100"
+                        placeholder="e.g. Technology, Custodian"
+                    >
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Website</label>
+                    <input
+                        type="url"
+                        name="website"
+                        value="{{ form_data.website if form_data and form_data.website is not none else (partner.website if partner else '') }}"
+                        class="form-control {{ 'is-invalid' if errors and errors.get('website') }}"
+                        maxlength="500"
+                        placeholder="https://example.com"
+                    >
+                    {% if errors and errors.get('website') %}
+                        <div class="invalid-feedback d-block">{{ errors['website'][0] }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Logo URL</label>
+                    <input
+                        type="url"
+                        name="logo_url"
+                        value="{{ form_data.logo_url if form_data and form_data.logo_url is not none else (partner.logo_url if partner else '') }}"
+                        class="form-control {{ 'is-invalid' if errors and errors.get('logo_url') }}"
+                        maxlength="500"
+                        placeholder="https://assets.example.com/logo.png"
+                    >
+                    {% if errors and errors.get('logo_url') %}
+                        <div class="invalid-feedback d-block">{{ errors['logo_url'][0] }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Offer</label>
+                    <textarea
+                        name="offer"
+                        class="form-control"
+                        rows="2"
+                    >{{ form_data.offer if form_data and form_data.offer is not none else (partner.offer if partner else '') }}</textarea>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Description</label>
+                    <textarea
+                        name="description"
+                        class="form-control"
+                        rows="3"
+                    >{{ form_data.description if form_data and form_data.description is not none else (partner.description if partner else '') }}</textarea>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            Cancel
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <span class="htmx-indicator spinner-border spinner-border-sm me-2" role="status"></span>
+            {{ "Save Changes" if partner else "Create Partner" }}
+        </button>
+    </div>
+</form>

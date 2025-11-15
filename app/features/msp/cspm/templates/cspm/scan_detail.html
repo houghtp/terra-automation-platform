@@ -20,22 +20,26 @@
     </div>
     <div class="col-auto">
       {% if scan.status == 'running' %}
-      <span class="badge bg-primary badge-lg">
-        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+      <span class="status-badge status-info text-normal" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">
+        <span class="spinner-border spinner-border-sm status-icon" role="status"></span>
         Running
       </span>
       {% elif scan.status == 'completed' %}
-      <span class="badge bg-success badge-lg">
-        <i class="ti ti-check icon"></i> Completed
+      <span class="status-badge status-success text-normal" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">
+        <i class="ti ti-check status-icon"></i> Completed
       </span>
       {% elif scan.status == 'failed' %}
-      <span class="badge bg-danger badge-lg">
-        <i class="ti ti-x icon"></i> Failed
+      <span class="status-badge status-danger text-normal" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">
+        <i class="ti ti-x status-icon"></i> Failed
       </span>
       {% elif scan.status == 'cancelled' %}
-      <span class="badge bg-secondary badge-lg">Cancelled</span>
+      <span class="status-badge status-neutral text-normal" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">
+        <i class="ti ti-ban status-icon"></i> Cancelled
+      </span>
       {% else %}
-      <span class="badge bg-secondary badge-lg">Pending</span>
+      <span class="status-badge status-neutral text-normal" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">
+        <i class="ti ti-clock status-icon"></i> Pending
+      </span>
       {% endif %}
     </div>
   </div>
@@ -103,7 +107,8 @@
             <div class="mb-3">
               <label class="form-label text-muted">Technology</label>
               <div>
-                <span class="badge bg-blue-lt">
+                <span class="app-badge app-badge-primary">
+                  <i class="ti ti-cloud status-icon"></i>
                   {{ scan.tech_type or 'M365' }}
                 </span>
               </div>
@@ -293,7 +298,10 @@
                     <strong>{{ result.title or result.check_id }}</strong>
                     <div class="text-muted small">
                       {% if result.recommendation_id %}
-                      <span class="badge bg-secondary-lt">{{ result.recommendation_id }}</span>
+                      <span class="app-badge app-badge-neutral">
+                        <i class="ti ti-id status-icon"></i>
+                        {{ result.recommendation_id }}
+                      </span>
                       {% else %}
                       <code>{{ result.check_id }}</code>
                       {% endif %}
@@ -316,34 +324,41 @@
                 <td>
                   <!-- Level badge -->
                   {% if result.level == 'L1' %}
-                  <span class="badge bg-blue-lt">L1</span>
+                  <span class="app-badge app-badge-primary">
+                    <i class="ti ti-shield status-icon"></i> L1
+                  </span>
                   {% elif result.level == 'L2' %}
-                  <span class="badge bg-purple-lt">L2</span>
+                  <span class="app-badge app-badge-purple">
+                    <i class="ti ti-shield-check status-icon"></i> L2
+                  </span>
                   {% elif result.category %}
-                  <span class="badge bg-secondary-lt">{{ result.category }}</span>
+                  <span class="app-badge app-badge-neutral">{{ result.category }}</span>
                   {% else %}
                   <span class="text-muted">-</span>
                   {% endif %}
                 </td>
                 <td>
                   {% if result.status == 'Pass' %}
-                  <span class="badge bg-success">
-                    <i class="ti ti-check icon"></i> Pass
+                  <span class="status-badge status-success">
+                    <i class="ti ti-check status-icon"></i> Pass
                   </span>
                   {% elif result.status == 'Fail' %}
-                  <span class="badge bg-danger">
-                    <i class="ti ti-x icon"></i> Fail
+                  <span class="status-badge status-danger">
+                    <i class="ti ti-x status-icon"></i> Fail
                   </span>
                   {% else %}
-                  <span class="badge bg-warning">
-                    <i class="ti ti-alert-triangle icon"></i> Error
+                  <span class="status-badge status-warning">
+                    <i class="ti ti-alert-triangle status-icon"></i> Error
                   </span>
                   {% endif %}
                 </td>
                 <td>
-                  <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#details-{{ loop.index }}" aria-expanded="false">
-                    <i class="ti ti-chevron-down icon"></i>
-                  </button>
+                  <i class="ti ti-chevron-down row-action-icon"
+                     data-bs-toggle="collapse"
+                     data-bs-target="#details-{{ loop.index }}"
+                     aria-expanded="false"
+                     title="Show details"
+                     style="cursor: pointer;"></i>
                 </td>
               </tr>
               <!-- Expandable details row with CIS metadata -->
@@ -398,7 +413,7 @@
                               <i class="ti ti-tool icon me-2"></i>Remediation
                             </h4>
                             <div class="alert alert-success mb-0">
-                              {{ result.remediation }}
+                              <div class="small">{{ result.remediation | format_procedure | safe }}</div>
                             </div>
                           </div>
                           {% endif %}
@@ -406,7 +421,7 @@
                           {% if result.audit_procedure %}
                           <div class="mb-3">
                             <h4 class="text-muted mb-2">Audit Procedure</h4>
-                            <p class="small">{{ result.audit_procedure }}</p>
+                            <div class="small">{{ result.audit_procedure | format_procedure | safe }}</div>
                           </div>
                           {% endif %}
 

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}AI Prompts{% endblock %}
+{% block page_title %}AI Prompts{% endblock %}
+{% block head %}
+<script src="/features/core/static/js/table-base.js"></script>
+{% endblock %}
+{% block content %}
+<div id="ai-prompts-area">
+    {% include "ai_prompts/partials/list_content.html" %}
+</div>
+
+<!-- Tabler Modal -->
+<div class="modal modal-blur fade" id="modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div id="modal-body">
+                <!-- Modal content will be loaded here via HTMX -->
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- AI Prompts table configuration (Tabulator operations) -->
+<script src="/features/administration/ai_prompts/static/js/ai-prompts-table.js"></script>
+{% endblock %}

@@ -27,7 +27,15 @@ logging-compliance-check: ## Run logging standards compliance check
 	@echo "🔍 Running Logging Compliance Check..."
 	@python3 scripts/check_logging_compliance.py
 
-all-compliance-checks: compliance-check logging-compliance-check ## Run all compliance checks
+route-structure-compliance: ## Run route structure compliance check
+	@echo "🔍 Running Route Structure Compliance Check..."
+	pytest tests/compliance/test_route_structure_compliance.py -v
+
+global-admin-compliance: ## Run global admin pattern compliance check
+	@echo "🔍 Running Global Admin Compliance Check..."
+	pytest tests/compliance/test_global_admin_compliance.py -v
+
+all-compliance-checks: compliance-check logging-compliance-check route-structure-compliance global-admin-compliance ## Run all compliance checks
 	@echo "✅ All compliance checks completed"
 
 compliance-report: ## Generate compliance report

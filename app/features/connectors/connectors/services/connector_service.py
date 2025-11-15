@@ -14,14 +14,16 @@ from datetime import datetime
 from app.features.connectors.connectors.models import (
     ConnectorCatalog,
     Connector,
-    ConnectorCatalogResponse,
-    ConnectorResponse,
-    ConnectorCreate,
-    ConnectorUpdate,
-    ConnectorSearchFilter,
+    ConnectorStatus,
+)
+from app.features.connectors.connectors.schemas import (
     ConfigValidationRequest,
     ConfigValidationResponse,
-    ConnectorStatus,
+    ConnectorCatalogResponse,
+    ConnectorCreate,
+    ConnectorResponse,
+    ConnectorSearchFilter,
+    ConnectorUpdate,
 )
 from app.features.core.audit_mixin import AuditContext
 import json

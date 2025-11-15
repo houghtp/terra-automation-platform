@@ -5,7 +5,7 @@ from app.features.core.route_imports import (
     # Database and dependencies
     AsyncSession, get_db,
     # Tenant and auth
-    tenant_dependency, get_current_user, get_global_admin_user, User,
+    tenant_dependency, get_current_user, get_global_admin_user, User, is_global_admin,
     # Request/Response types
     Request, HTTPException, Body, Response,
     # Response types
@@ -21,9 +21,11 @@ from app.features.core.route_imports import (
 )
 
 from app.features.administration.smtp.services import SMTPConfigurationService
-from app.features.administration.smtp.models import SMTPSearchFilter, SMTPStatus
-from app.features.administration.smtp.models import (
-    SMTPConfigurationCreate, SMTPConfigurationUpdate
+from app.features.administration.smtp.models import SMTPStatus
+from app.features.administration.smtp.schemas import (
+    SMTPSearchFilter,
+    SMTPConfigurationCreate,
+    SMTPConfigurationUpdate,
 )
 
 logger = get_logger(__name__)
@@ -101,8 +103,7 @@ async def get_smtp_configurations_api(search: str = "", status: str = "", db: As
         filters.status = SMTPStatus(status)
 
     # Global admins see all configurations across all tenants (if service supports it)
-    is_global_admin = current_user.role == "global_admin" and current_user.tenant_id == "global"
-    if is_global_admin:
+    if is_global_admin(current_user):
         # For now, use regular service (TODO: implement global service method if needed)
         configurations = await service.list_smtp_configurations(filters)
     else:
@@ -118,7 +119,7 @@ async def get_smtp_configurations_api(search: str = "", status: str = "", db: As
             result.append(config)  # Already a dict
 
     # If global admin, add tenant_name to each config
-    if is_global_admin:
+    if is_global_admin(current_user):
         from app.features.administration.tenants.services import TenantManagementService
         tenant_service = TenantManagementService(service.db)
 
@@ -145,7 +146,9 @@ async def get_smtp_configurations_api(search: str = "", status: str = "", db: As
             config['tenant_name'] = tenant_map.get(config_tenant_id, f'Unknown ({config_tenant_id})')
             logger.info(f"Config {config.get('name')} has tenant_id: {config_tenant_id}, mapped to: {config['tenant_name']}")
 
-    return result# Delete SMTP configuration (accept both DELETE and POST for compatibility)
+    return result
+
+# Delete SMTP configuration (accept both DELETE and POST for compatibility)
 @router.delete("/{config_id}/delete")
 @router.post("/{config_id}/delete")
 async def smtp_delete_api(config_id: str, db: AsyncSession = Depends(get_db), tenant_id: str = Depends(tenant_dependency), current_user: User = Depends(get_current_user)):

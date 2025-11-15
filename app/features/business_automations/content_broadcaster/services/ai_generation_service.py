@@ -9,10 +9,15 @@ This service handles:
 Ported from SEO Blog Generator.py (lines 163-246)
 """
 
+import json
 from typing import Optional, Dict, Any, List
-from openai import AsyncOpenAI
+from jinja2 import Template
+from openai import AsyncOpenAI, AuthenticationError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.sqlalchemy_imports import get_logger
+from app.features.administration.ai_prompts.services import AIPromptService
+from .prompt_templates import PROMPT_DEFAULTS
 
 logger = get_logger(__name__)
 
@@ -22,11 +27,20 @@ class AIGenerationService:
     Service for AI-powered content generation using OpenAI.
 
     Uses GPT-4 for high-quality, SEO-optimized content creation.
+    Now uses dynamic AI prompts from database with Jinja2 templates.
     """
 
-    def __init__(self):
-        """Initialize generation service."""
-        pass
+    def __init__(self, db_session: AsyncSession, tenant_id: str = "global"):
+        """
+        Initialize generation service.
+
+        Args:
+            db_session: Database session for fetching prompts
+            tenant_id: Tenant ID for tenant-specific prompt overrides
+        """
+        self.db = db_session
+        self.tenant_id = tenant_id
+        self.prompt_service = AIPromptService(db_session)
 
     async def generate_blog_post(
         self,
@@ -38,10 +52,11 @@ class AIGenerationService:
         seo_analysis: Optional[str] = None,
         previous_content: Optional[str] = None,
         validation_feedback: Optional[str] = None,
-        tone: str = "professional"
+        tone: str = "professional",
+        prompt_settings: Optional[Dict[str, Any]] = None
     ) -> str:
         """
-        Generate SEO-optimized blog post using AI.
+        Generate SEO-optimized blog post using AI with dynamic prompts from database.
 
         Args:
             title: Blog post title/topic
@@ -57,107 +72,68 @@ class AIGenerationService:
         Returns:
             Generated blog post content
 
-        Ported from SEO Blog Generator.py (lines 163-246)
+        Now uses dynamic AI prompts from database with Jinja2 templates.
         """
-        # Build context section based on available information
-        context_section = f"Title: {title}\n\n"
-
-        if description:
-            context_section += f"**Additional Context:**\n{description}\n\n"
-
-        if target_audience:
-            context_section += f"**Target Audience:** {target_audience}\n\n"
-
-        if keywords:
-            context_section += f"**Focus Keywords:** {', '.join(keywords)}\n\n"
-
-        blog_prompt = f"""
-{context_section}
-
-You are an **expert SEO blog writer**. Your task is to produce a complete, ready-to-publish blog post that is 100% SEO optimized for the topic provided by the title above{', using the latest SEO analysis and competitor insights' if seo_analysis else ' using best SEO practices and the provided context'}.
-
-Please ensure that:
-- The content is entirely on-topic and directly relevant to the title: "{title}".
-- You generate detailed, actionable content with real-world advice, concrete steps, and measurable recommendations that a reader can immediately apply.
-- The output is a fully written blog post, not just a list of suggestions or improvement tips.
-- If there is any previous blog post content provided, retain and enhance its good elements while fixing only the identified SEO issues.
-- Follow the mandatory SEO enhancements strictly to improve keyword optimization, content structure, schema markup, linking, engagement elements, and on-page/mobile SEO without removing any previous improvements.
-
----
-{f'''### **SEO Analysis (Competitor Research):**
-{seo_analysis}
-
----''' if seo_analysis else ''}
-
-### **Previous Blog Post (Use this as the base and improve it)**
-{previous_content if previous_content else "No previous version, this is the first draft."}
-
----
-### **Validation Feedback (Fix these SEO issues only)**
-{validation_feedback if validation_feedback else "No feedback yet. Optimize based on SEO best practices."}
-
----
-## **Mandatory SEO Enhancements**
-To **outperform competitors**, improve the blog using these advanced SEO tactics:
-
-✅ **1. Keyword Optimization**
-   - Ensure **primary and secondary keywords** are in **title, intro, headings, and alt text**.
-   - Use **long-tail keyword variations** for **Google Featured Snippets**.
-   - Maintain **proper keyword density** (avoid stuffing).
-   - Integrate **LSI keywords** naturally.
-
-✅ **2. Content Structure & Readability**
-   - Follow an **H1 → H2 → H3 hierarchy**.
-   - Add a **Table of Contents with jump links**.
-   - Use **short paragraphs (2-3 sentences max) for scannability**.
-   - Improve readability using **bulleted lists, numbered steps, key takeaways**.
-
-✅ **3. Schema Markup & Metadata**
-   - Implement **FAQ Schema, Recipe Schema, and HowTo Schema**.
-   - Ensure **Google Discover best practices** for mobile-first ranking.
-   - Add **Pinterest & Facebook metadata** for better social sharing.
-   - Optimize **meta title and description (160 chars max, keyword-rich)**.
-
-✅ **4. Internal & External Linking**
-   - Add **3+ internal links** to related content.
-   - Include **2+ external links** to authoritative sources (BBC Good Food, etc.).
-   - Use **keyword-rich anchor text**.
-
-✅ **5. Engagement & Interactive Elements**
-   - Include **star ratings, polls, or interactive content**.
-   - Add an **FAQ section** to capture **voice search & People Also Ask queries**.
-   - Encourage user interaction (comments, sharing).
-   - Embed **images, videos, or step-by-step visuals**.
-
-✅ **6. On-Page SEO & Mobile Friendliness**
-   - Ensure **title tag is compelling and keyword-rich**.
-   - Optimize **image alt text** with **SEO-friendly filenames**.
-   - Ensure the blog is **fast-loading & mobile-friendly (Core Web Vitals)**.
-   - Implement **canonical tags to prevent duplicate content issues**.
-
----
-- **Now, using the title "{title}" improve this blog post for maximum SEO performance.**
-- **Produce a complete and cohesive blog post that is fully optimized for SEO and ready for immediate publication.**
-- **Do not generate generic suggestions—deliver a finished blog post with all required content.**
-- **Fix ONLY the missing SEO elements.**
-- **Retain good elements from the previous version.**
-- **Do not remove previous improvements.**
-- **Make it engaging, informative, and actionable.**
-- **Use a {tone} tone.**
-- **Avoid jargon and complex terms.**
-- **Make it easy to read and understand.**
-- **Use a conversational style.**
-"""
-
         try:
-            client = AsyncOpenAI(api_key=openai_api_key)
+            prompt_settings = prompt_settings or {}
+
+            await self.prompt_service.ensure_system_prompt(
+                "seo_blog_generation",
+                PROMPT_DEFAULTS["seo_blog_generation"]
+            )
+
+            # Prepare variables for Jinja2 template rendering
+            variables = {
+                "title": title,
+                "description": description or "",
+                "target_audience": target_audience or "general readers",
+                "keywords": ", ".join(keywords) if keywords else "",
+                "seo_analysis": seo_analysis or "",
+                "previous_content": previous_content or "No previous version, this is the first draft.",
+                "validation_feedback": validation_feedback or "No feedback yet. Optimize based on SEO best practices.",
+                "tone": tone,
+                "has_seo_analysis": bool(seo_analysis),
+                "has_description": bool(description),
+                "has_target_audience": bool(target_audience),
+                "has_keywords": bool(keywords),
+                "professionalism_level": prompt_settings.get("professionalism_level", 4),
+                "humor_level": prompt_settings.get("humor_level", 1),
+                "creativity_level": prompt_settings.get("creativity_level", 3),
+            }
+
+            # Fetch and render prompt from database
+            blog_prompt = await self.prompt_service.render_prompt(
+                prompt_key="seo_blog_generation",
+                variables=variables,
+                tenant_id=self.tenant_id,
+                track_usage=True
+            )
+
+            if not blog_prompt:
+                logger.error("Failed to load prompt 'seo_blog_generation' from database")
+                blog_prompt = Template(
+                    PROMPT_DEFAULTS["seo_blog_generation"]["prompt_template"]
+                ).render(**variables)
 
             logger.info(
-                "Generating blog post",
+                "Generating blog post with dynamic prompt",
                 title=title,
                 has_previous=bool(previous_content),
-                has_feedback=bool(validation_feedback)
+                has_feedback=bool(validation_feedback),
+                prompt_length=len(blog_prompt)
             )
+
+            # === COMMENTED OUT: Original hardcoded prompt ===
+            # blog_prompt = f"""
+            # Title: {title}
+            #
+            # You are an **expert SEO blog writer**. Your task is to produce a complete, ready-to-publish blog post...
+            # [Full hardcoded prompt preserved as comment for reference]
+            # """
+            # === END COMMENTED OUT SECTION ===
+
+            # Call OpenAI with the rendered prompt
+            client = AsyncOpenAI(api_key=openai_api_key)
 
             response = await client.chat.completions.create(
                 model="gpt-4",
@@ -167,8 +143,15 @@ To **outperform competitors**, improve the blog using these advanced SEO tactics
 
             content = response.choices[0].message.content
 
+            # Track successful usage
+            await self.prompt_service.track_usage(
+                prompt_key="seo_blog_generation",
+                tenant_id=self.tenant_id,
+                success=True
+            )
+
             logger.info(
-                "Blog post generated",
+                "Blog post generated successfully with dynamic prompt",
                 title=title,
                 content_length=len(content),
                 model=response.model,
@@ -177,7 +160,34 @@ To **outperform competitors**, improve the blog using these advanced SEO tactics
 
             return content
 
+        except AuthenticationError as auth_error:
+            try:
+                await self.prompt_service.track_usage(
+                    prompt_key="seo_blog_generation",
+                    tenant_id=self.tenant_id,
+                    success=False
+                )
+            except Exception as track_error:
+                logger.warning(f"Failed to track usage failure: {track_error}")
+
+            logger.error(
+                "OpenAI authentication failed while generating blog post",
+                title=title
+            )
+            raise ValueError(
+                "OpenAI API key is invalid or expired. Update the secret in Secrets Management and try again."
+            ) from auth_error
         except Exception as e:
+            # Track failed usage
+            try:
+                await self.prompt_service.track_usage(
+                    prompt_key="seo_blog_generation",
+                    tenant_id=self.tenant_id,
+                    success=False
+                )
+            except Exception as track_error:
+                logger.warning(f"Failed to track usage failure: {track_error}")
+
             logger.error(f"Failed to generate blog post: {e}", title=title)
             raise ValueError(f"Content generation failed: {str(e)}")
 
@@ -186,7 +196,8 @@ To **outperform competitors**, improve the blog using these advanced SEO tactics
         content: str,
         title: str,
         channels: List[str],
-        openai_api_key: str
+        openai_api_key: str,
+        prompt_settings: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
         """
         Generate channel-specific content variants.
@@ -234,6 +245,7 @@ To **outperform competitors**, improve the blog using these advanced SEO tactics
             }
         }
 
+        prompt_settings = prompt_settings or {}
         variants = []
 
         for channel in channels:
@@ -244,38 +256,38 @@ To **outperform competitors**, improve the blog using these advanced SEO tactics
                 "instructions": f"Adapt content for {channel}"
             })
 
-            variant_prompt = f"""
-You are a content adaptation specialist. Your task is to adapt the following content for {channel}.
-
-**Original Content:**
-Title: {title}
-
-{content[:2000]}
-
-**Channel: {channel.upper()}**
-**Constraints:**
-- Maximum characters: {constraints['max_chars'] or 'No limit'}
-- Format: {constraints['format']}
-- Tone: {constraints['tone']}
-
-**Instructions:**
-{constraints['instructions']}
-
-**Requirements:**
-- Adapt the key message from the original content
-- Follow the character limit strictly
-- Use appropriate formatting for the channel
-- Maintain the core value proposition
-- Make it engaging and platform-appropriate
-
-Generate ONLY the adapted content, no explanations.
-"""
-
             try:
+                prompt_key = f"channel_variant_{channel}"
+                template_defaults = PROMPT_DEFAULTS.get(prompt_key)
+                if not template_defaults:
+                    prompt_key = "channel_variant_twitter"
+                    template_defaults = PROMPT_DEFAULTS["channel_variant_twitter"]
+
+                await self.prompt_service.ensure_system_prompt(prompt_key, template_defaults)
+
+                variables = {
+                    "title": title,
+                    "content": content,
+                    "constraints": constraints,
+                    "professionalism_level": prompt_settings.get("professionalism_level", 4),
+                    "humor_level": prompt_settings.get("humor_level", 1),
+                    "creativity_level": prompt_settings.get("creativity_level", 3),
+                }
+
+                variant_prompt = await self.prompt_service.render_prompt(
+                    prompt_key=prompt_key,
+                    variables=variables,
+                    tenant_id=self.tenant_id,
+                    track_usage=True
+                )
+
+                if not variant_prompt:
+                    variant_prompt = Template(template_defaults["prompt_template"]).render(**variables)
+
                 client = AsyncOpenAI(api_key=openai_api_key)
 
                 response = await client.chat.completions.create(
-                    model="gpt-4o-mini",  # Use mini for variants (cost optimization)
+                    model="gpt-4o-mini",
                     messages=[{"role": "user", "content": variant_prompt}],
                     temperature=0.7
                 )
@@ -315,6 +327,99 @@ Generate ONLY the adapted content, no explanations.
                 continue
 
         return variants
+
+    async def validate_content(
+        self,
+        title: str,
+        content: str,
+        openai_api_key: str,
+        prompt_settings: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Validate content for SEO quality and assign a score (0-100).
+
+        Args:
+            title: Content title
+            content: Content body to validate
+            openai_api_key: OpenAI API key
+
+        Returns:
+            Dict with score, status, issues, and recommendations
+        """
+        try:
+            client = AsyncOpenAI(api_key=openai_api_key)
+            await self.prompt_service.ensure_system_prompt(
+                "seo_content_validation",
+                PROMPT_DEFAULTS["seo_content_validation"]
+            )
+
+            settings = prompt_settings or {}
+            variables = {
+                "title": title,
+                "content": content,
+                "target_score": settings.get("target_score", 95),
+                "strictness_level": settings.get("strictness_level", 4),
+            }
+
+            validation_prompt = await self.prompt_service.render_prompt(
+                prompt_key="seo_content_validation",
+                variables=variables,
+                tenant_id=self.tenant_id,
+                track_usage=True
+            )
+
+            if not validation_prompt:
+                validation_prompt = Template(
+                    PROMPT_DEFAULTS["seo_content_validation"]["prompt_template"]
+                ).render(**variables)
+
+            response = await client.chat.completions.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": validation_prompt}],
+                temperature=0.3  # Lower temperature for consistent scoring
+            )
+
+            validation_text = response.choices[0].message.content
+
+            # Parse JSON response
+            validation_result = json.loads(validation_text)
+
+            # Ensure required fields
+            target_score = variables.get("target_score", 95)
+            validation_result.setdefault("score", 0)
+            validation_result.setdefault("status", "FAIL" if validation_result["score"] < target_score else "PASS")
+            validation_result.setdefault("issues", [])
+            validation_result.setdefault("recommendations", [])
+            validation_result.setdefault("strengths", [])
+
+            logger.info(
+                "Content validation completed",
+                title=title,
+                score=validation_result["score"],
+                status=validation_result["status"],
+                issue_count=len(validation_result["issues"])
+            )
+
+            return validation_result
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse validation JSON: {e}")
+            return {
+                "score": 0,
+                "status": "ERROR",
+                "issues": ["Validation failed - could not parse AI response"],
+                "recommendations": [],
+                "strengths": []
+            }
+        except Exception as e:
+            logger.error(f"Content validation failed: {e}")
+            return {
+                "score": 0,
+                "status": "ERROR",
+                "issues": [f"Validation error: {str(e)}"],
+                "recommendations": [],
+                "strengths": []
+            }
 
     async def get_generation_metadata(
         self,

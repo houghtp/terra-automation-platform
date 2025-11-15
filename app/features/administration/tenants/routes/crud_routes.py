@@ -8,7 +8,7 @@ from app.features.core.rate_limiter import rate_limit_api
 from app.features.administration.tenants.services import TenantManagementService
 from app.features.auth.dependencies import get_global_admin_user
 from app.features.auth.models import User
-from app.features.administration.tenants.models import TenantUpdate, TenantSearchFilter
+from app.features.administration.tenants.schemas import TenantSearchFilter, TenantUpdate
 
 logger = get_logger(__name__)
 

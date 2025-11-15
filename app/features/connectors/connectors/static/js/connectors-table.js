@@ -73,7 +73,7 @@ window.initializeConnectorsManagementTable = function () {
                     const value = cell.getValue();
                     if (!value) return '';
                     const formatted = value.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
-                    return `<span class="badge bg-secondary">${formatted}</span>`;
+                    return `<span class="app-badge app-badge-info">${formatted}</span>`;
                 }
             },
             {
@@ -119,7 +119,7 @@ window.initializeConnectorsManagementTable = function () {
                         case 'disabled': color = 'secondary'; break;
                     }
                     const formatted = value ? value.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : '';
-                    return `<span class="badge bg-${color}">${formatted}</span>`;
+                    return `<span class="app-badge app-badge-${color === 'secondary' ? 'neutral' : color}">${formatted}</span>`;
                 }
             },
             {
@@ -378,29 +378,3 @@ document.addEventListener("DOMContentLoaded", () => {
             initializeQuickSearch('table-quick-search', 'clear-search-btn', 'connectors-table');
         }, 100);
     }
-});
-
-// HTMX form submission handlers
-document.addEventListener('htmx:afterSettle', function (event) {
-    if (event.target.id === 'modal-body') {
-        // Form was loaded into modal, set up form submission
-        const form = event.target.querySelector('#connector-form');
-        if (form) {
-            form.addEventListener('htmx:afterRequest', function (evt) {
-                if (evt.detail.successful) {
-                    // Close modal and refresh table
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('modal'));
-                    if (modal) {
-                        modal.hide();
-                    }
-
-                    if (window.connectorsManagementTable) {
-                        window.connectorsManagementTable.replaceData();
-                    }
-
-                    showToast('Connector saved successfully', 'success');
-                }
-            });
-        }
-    }
-});

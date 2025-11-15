@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Partner Directory{% endblock %}
+
+{% block head %}
+<script src="/features/core/static/js/table-base.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-pretitle">Community</div>
+            <h2 class="page-title">{{ page_title }}</h2>
+            <div class="text-muted mt-1">{{ page_description }}</div>
+        </div>
+        <div class="col-auto ms-auto">
+            <span id="partner-total-badge" class="badge bg-teal-lt">
+                {{ partner_total }} total
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        {% set title = "Partner Directory" %}
+        {% set description = "Catalog strategic partners and keep offers up to date." %}
+        {% set icon = "ti ti-affiliate" %}
+        {% set add_url = "/features/community/partners/partials/form" %}
+        {% set entity_name = "Partner" %}
+        {% set table_id = "partners-table" %}
+        {% include 'components/ui/table_actions.html' with context %}
+    </div>
+    <div class="card-body p-0">
+        <div id="partners-table"></div>
+    </div>
+</div>
+
+<div class="modal modal-blur fade" id="modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div id="modal-body">
+                <!-- Modal content injected via HTMX -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/features/community/static/js/partners-table.js"></script>
+{% endblock %}

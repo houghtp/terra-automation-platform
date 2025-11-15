@@ -18,7 +18,7 @@ from app.features.core.audit_mixin import AuditContext
 from .content_planning_service import ContentPlanningService
 from .ai_research_service import AIResearchService
 from .ai_generation_service import AIGenerationService
-from ..models import ContentPlanStatus, ContentItem, ContentState
+from ..models import ContentPlanStatus, ContentItem, ContentState, ContentVariant
 
 logger = get_logger(__name__)
 
@@ -43,7 +43,15 @@ class ContentOrchestratorService:
         self.tenant_id = tenant_id
         self.planning_service = ContentPlanningService(db_session, tenant_id)
         self.research_service = AIResearchService(tenant_id)
-        self.generation_service = AIGenerationService()
+        self.generation_service = AIGenerationService(db_session, tenant_id)
+
+    async def _commit_and_refresh_plan(self, plan_id: str):
+        """
+        Persist current transaction and refresh plan from the database so that
+        other sessions (and subsequent reads) observe the latest status.
+        """
+        await self.db.commit()
+        return await self.planning_service.get_plan(plan_id)
 
     async def process_content_plan(
         self,
@@ -96,6 +104,17 @@ class ContentOrchestratorService:
 
             # Initialize research_data for use in generation
             research_data = {}
+            raw_settings = plan.prompt_settings or {}
+            prompt_settings = {
+                "professionalism_level": int(raw_settings.get("professionalism_level", 4) or 4),
+                "humor_level": int(raw_settings.get("humor_level", 1) or 1),
+                "creativity_level": int(raw_settings.get("creativity_level", 3) or 3),
+                "analysis_depth": int(raw_settings.get("analysis_depth", 4) or 4),
+                "strictness_level": int(raw_settings.get("strictness_level", 4) or 4),
+            }
+            prompt_settings["humor_level"] = max(0, min(5, prompt_settings["humor_level"]))
+            for key in ("professionalism_level", "creativity_level", "analysis_depth", "strictness_level"):
+                prompt_settings[key] = max(1, min(5, prompt_settings[key]))
 
             # Step 1: Research Phase (conditionally skip)
             if plan.skip_research:
@@ -108,18 +127,21 @@ class ContentOrchestratorService:
                     ContentPlanStatus.GENERATING.value,
                     {"message": "Generating content directly (research skipped)..."}
                 )
+                plan = await self._commit_and_refresh_plan(plan_id)
             else:
                 await self.planning_service.update_plan_status(
                     plan_id,
                     ContentPlanStatus.RESEARCHING.value,
                     {"message": "Starting competitor research..."}
                 )
+                plan = await self._commit_and_refresh_plan(plan_id)
 
                 # Process research (API keys fetched inside process_research)
                 research_data = await self.research_service.process_research(
                     title=plan.title,
                     db_session=self.db,
-                    num_results=3  # Analyze top 3 competitors
+                    num_results=3,  # Analyze top 3 competitors
+                    prompt_settings=prompt_settings
                 )
 
                 logger.info(
@@ -137,6 +159,7 @@ class ContentOrchestratorService:
                         "message": "Generating initial draft..."
                     }
                 )
+                plan = await self._commit_and_refresh_plan(plan_id)
 
             # Generate content with or without research insights
             content_body = await self.generation_service.generate_blog_post(
@@ -146,7 +169,8 @@ class ContentOrchestratorService:
                 keywords=plan.seo_keywords or [],
                 seo_analysis=research_data.get("seo_analysis", "") if not plan.skip_research else None,
                 openai_api_key=openai_api_key,
-                tone=plan.tone or "professional"
+                tone=plan.tone or "professional",
+                prompt_settings=prompt_settings
             )
 
             logger.info(
@@ -155,31 +179,167 @@ class ContentOrchestratorService:
                 content_length=len(content_body)
             )
 
-            # Step 3: Create ContentItem with draft
+            # Step 3: Iterative SEO Refinement Loop
+            min_seo_score = plan.min_seo_score or 95
+            max_iterations = plan.max_iterations or 3
+            current_iteration = 1
+            refinement_history = []
+            best_content = content_body
+            best_score = 0
+
+            while current_iteration <= max_iterations:
+                validation_settings = dict(prompt_settings)
+                validation_settings["target_score"] = min_seo_score
+
+                await self.planning_service.update_plan_status(
+                    plan_id,
+                    ContentPlanStatus.REFINING.value,
+                    {
+                        "message": f"Validating SEO quality (iteration {current_iteration}/{max_iterations})..."
+                    }
+                )
+                plan = await self._commit_and_refresh_plan(plan_id)
+
+                # Validate current content
+                validation_result = await self.generation_service.validate_content(
+                    title=plan.title,
+                    content=content_body,
+                    openai_api_key=openai_api_key,
+                    prompt_settings=validation_settings
+                )
+
+                seo_score = validation_result.get("score", 0)
+                validation_status = validation_result.get("status", "UNKNOWN")
+
+                # Record this iteration
+                iteration_record = {
+                    "iteration": current_iteration,
+                    "score": seo_score,
+                    "status": validation_status,
+                    "issues": validation_result.get("issues", []),
+                    "recommendations": validation_result.get("recommendations", []),
+                    "timestamp": datetime.now().isoformat()
+                }
+                refinement_history.append(iteration_record)
+
+                logger.info(
+                    "SEO validation iteration completed",
+                    plan_id=plan_id,
+                    iteration=current_iteration,
+                    score=seo_score,
+                    status=validation_status,
+                    target=min_seo_score
+                )
+
+                # Keep track of best version
+                if seo_score > best_score:
+                    best_score = seo_score
+                    best_content = content_body
+
+                # Check if we've met the target score
+                if seo_score >= min_seo_score:
+                    logger.info(
+                        "SEO target score achieved",
+                        plan_id=plan_id,
+                        score=seo_score,
+                        target=min_seo_score,
+                        iteration=current_iteration
+                    )
+                    break
+
+                # If not at target and not at max iterations, refine
+                if current_iteration < max_iterations:
+                    await self.planning_service.update_plan_status(
+                        plan_id,
+                        ContentPlanStatus.REFINING.value,
+                        {
+                            "message": f"Refining content (score: {seo_score}/{min_seo_score}, iteration {current_iteration}/{max_iterations})..."
+                        }
+                    )
+                    plan = await self._commit_and_refresh_plan(plan_id)
+
+                    # Create feedback for refinement
+                    feedback_text = f"""
+Current SEO Score: {seo_score}/100 (Target: {min_seo_score})
+Status: {validation_status}
+
+Issues to Address:
+{chr(10).join(f"- {issue}" for issue in validation_result.get('issues', []))}
+
+Recommendations:
+{chr(10).join(f"- {rec}" for rec in validation_result.get('recommendations', []))}
+
+Please improve the content to address these specific issues while maintaining the quality and message.
+"""
+
+                    # Regenerate with feedback
+                    content_body = await self.generation_service.generate_blog_post(
+                        title=plan.title,
+                        description=plan.description,
+                        target_audience=plan.target_audience,
+                        keywords=plan.seo_keywords or [],
+                        seo_analysis=research_data.get("seo_analysis", "") if not plan.skip_research else None,
+                        previous_content=content_body,
+                        validation_feedback=feedback_text,
+                        openai_api_key=openai_api_key,
+                        tone=plan.tone or "professional",
+                        prompt_settings=prompt_settings
+                    )
+
+                    logger.info(
+                        "Content refinement completed",
+                        plan_id=plan_id,
+                        iteration=current_iteration,
+                        new_content_length=len(content_body)
+                    )
+
+                current_iteration += 1
+
+            # Use the best version we achieved
+            final_content = best_content
+            final_score = best_score
+
+            logger.info(
+                "SEO refinement process completed",
+                plan_id=plan_id,
+                final_score=final_score,
+                total_iterations=len(refinement_history),
+                target_achieved=final_score >= min_seo_score
+            )
+
+            # Step 4: Create ContentItem with draft
             await self.planning_service.update_plan_status(
                 plan_id,
                 ContentPlanStatus.DRAFT_READY.value,
                 {
                     "research_data": research_data,
                     "generation_metadata": {
-                        "content_length": len(content_body),
-                        "tone": plan.tone or "professional"
+                        "content_length": len(final_content),
+                        "tone": plan.tone or "professional",
+                        "seo_score": final_score,
+                        "total_iterations": len(refinement_history),
+                        "target_achieved": final_score >= min_seo_score
                     },
-                    "message": "Draft ready for review"
+                    "latest_seo_score": final_score,
+                    "refinement_history": refinement_history,
+                    "message": f"Draft ready for review (SEO Score: {final_score}/100 after {len(refinement_history)} iterations)"
                 }
             )
+            plan = await self._commit_and_refresh_plan(plan_id)
 
             # Create the ContentItem with proper UUID (following standard pattern)
             content_item = ContentItem(
                 id=str(uuid.uuid4()),
                 tenant_id=self.tenant_id,
                 title=plan.title,
-                body=content_body,
-                state=ContentState.DRAFT.value,
+                body=final_content,
+                state=ContentState.IN_REVIEW.value,
                 content_metadata={
                     "generated_from_plan": plan_id,
                     "research_sources": len(research_data.get("sources", [])),
-                    "tone": plan.tone or "professional"
+                    "tone": plan.tone or "professional",
+                    "seo_score": final_score,
+                    "refinement_iterations": len(refinement_history)
                 },
                 tags=plan.seo_keywords or []
             )
@@ -205,6 +365,53 @@ class ContentOrchestratorService:
             plan.generated_content_item_id = content_item.id
 
             await self.db.flush()
+
+            # Step 5: Generate channel-specific variants (if channels specified)
+            if plan.target_channels and len(plan.target_channels) > 0:
+                logger.info(
+                    "Generating channel variants",
+                    plan_id=plan_id,
+                    channels=plan.target_channels
+                )
+
+                try:
+                    variants = await self.generation_service.generate_variants_per_channel(
+                        content=final_content,
+                        title=plan.title,
+                        channels=plan.target_channels,
+                        openai_api_key=openai_api_key,
+                        prompt_settings=prompt_settings
+                    )
+
+                    # Save variants to database
+                    for variant_data in variants:
+                        variant = ContentVariant(
+                            id=str(uuid.uuid4()),
+                            tenant_id=self.tenant_id,
+                            content_item_id=content_item.id,
+                            connector_catalog_key=variant_data["channel"],
+                            purpose="default",
+                            body=variant_data["body"],
+                            metadata=variant_data.get("variant_metadata", {})
+                        )
+                        self.db.add(variant)
+
+                    await self.db.flush()
+
+                    logger.info(
+                        "Channel variants generated successfully",
+                        plan_id=plan_id,
+                        variant_count=len(variants)
+                    )
+
+                except Exception as variant_error:
+                    # Don't fail the whole workflow if variant generation fails
+                    logger.error(
+                        "Failed to generate channel variants",
+                        plan_id=plan_id,
+                        error=str(variant_error)
+                    )
+
             await self.db.commit()
 
             logger.info(
@@ -220,9 +427,12 @@ class ContentOrchestratorService:
                 "content_item_id": content_item.id,
                 "status": plan.status,
                 "title": plan.title,
-                "content_length": len(content_body),
+                "content_length": len(final_content),
+                "seo_score": final_score,
+                "refinement_iterations": len(refinement_history),
+                "target_achieved": final_score >= min_seo_score,
                 "research_sources": len(research_data.get("sources", [])),
-                "message": "Content generated successfully and saved as draft"
+                "message": f"Content generated successfully (SEO: {final_score}/100 after {len(refinement_history)} iterations)"
             }
 
         except Exception as e:

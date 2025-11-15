@@ -1,0 +1,76 @@
+<div class="modal-header">
+  <h5 class="modal-title">{{ "Edit Group" if group else "Create Group" }}</h5>
+</div>
+
+<form
+  id="group-form"
+  {% if group %}
+    hx-put="/features/community/groups/{{ group.id }}"
+  {% else %}
+    hx-post="/features/community/groups"
+  {% endif %}
+  hx-target="#modal-body"
+  hx-swap="innerHTML"
+  hx-disabled-elt="fieldset"
+  autocomplete="off"
+>
+  <div class="modal-body">
+    <fieldset class="form-fieldset">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label required">Name</label>
+          <input
+            type="text"
+            name="name"
+            value="{{ form_data.name if form_data and form_data.name is not none else (group.name if group else '') }}"
+            class="form-control {{ 'is-invalid' if errors and errors.get('name') }}"
+            maxlength="255"
+            required
+          >
+          {% if errors and errors.get('name') %}
+            <div class="invalid-feedback d-block">{{ errors['name'][0] }}</div>
+          {% endif %}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Privacy</label>
+          <select
+            name="privacy"
+            class="form-select"
+          >
+            {% set selected_privacy = (form_data.privacy if form_data and form_data.privacy is not none else (group.privacy if group else 'private')) %}
+            <option value="private" {% if selected_privacy == 'private' %}selected{% endif %}>Private</option>
+            <option value="public" {% if selected_privacy == 'public' %}selected{% endif %}>Public</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Description</label>
+          <textarea
+            name="description"
+            rows="4"
+            class="form-control"
+          >{{ form_data.description if form_data and form_data.description is not none else (group.description if group else '') }}</textarea>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Owner Member ID</label>
+          <input
+            type="text"
+            name="owner_id"
+            value="{{ form_data.owner_id if form_data and form_data.owner_id is not none else (group.owner_id if group else '') }}"
+            class="form-control"
+            maxlength="36"
+          >
+        </div>
+      </div>
+    </fieldset>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+      Cancel
+    </button>
+    <button type="submit" class="btn btn-primary">
+      <span class="htmx-indicator spinner-border spinner-border-sm me-2" role="status"></span>
+      {{ "Save Changes" if group else "Create Group" }}
+    </button>
+  </div>
+</form>

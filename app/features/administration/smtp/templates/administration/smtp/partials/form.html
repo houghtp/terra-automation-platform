@@ -9,7 +9,7 @@
   {% else %}
   hx-put="/features/administration/smtp/{{ config.id }}"
   {% endif %}
-  hx-disabled-elt="this"
+  hx-disabled-elt="button[type='submit']"
   hx-indicator="#submit-spinner"
   autocomplete="off"
 >

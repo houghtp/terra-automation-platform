@@ -9,10 +9,10 @@ from app.features.core.database import get_db
 from app.deps.tenant import tenant_dependency
 from app.features.auth.dependencies import get_current_user
 from app.features.auth.models import User
-from .models import ContentUpdateRequest
 from .api_routes import get_content_service
 from ..models import ContentState, ApprovalStatus
 from ..services import ContentBroadcasterService
+from ..schemas import ContentUpdateRequest
 import structlog
 
 logger = structlog.get_logger(__name__)

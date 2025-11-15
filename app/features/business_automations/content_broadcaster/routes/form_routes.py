@@ -3,7 +3,7 @@ Content Broadcaster form routes for UI and HTMX endpoints.
 """
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Request, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 from app.features.core.database import get_db
@@ -56,17 +56,35 @@ async def get_create_plan_modal(
 
 # --- UI ROUTES (Jinja + HTMX) ---
 
+# --- PRIMARY ENTRY POINTS ---
+
 @router.get("/", response_class=HTMLResponse)
 async def content_broadcaster_page(
+    request: Request,
+    tenant_id: str = Depends(tenant_dependency),
+    current_user = Depends(get_current_user),
+):
+    """
+    Primary entry point for Content Broadcaster.
+
+    Redirects to the Content Ideas planning view so the first tab is always visible.
+    """
+    return RedirectResponse(
+        url="/features/content-broadcaster/planning",
+        status_code=302
+    )
+
+
+@router.get("/library", response_class=HTMLResponse)
+async def content_broadcaster_library_page(
     request: Request,
     db: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
     current_user = Depends(get_current_user),
     service: ContentBroadcasterService = Depends(get_content_service)
 ):
-    """Main content broadcaster page."""
+    """Content library page showing generated content and publishing workflow."""
     try:
-        # Get dashboard stats for the page
         stats = await service.get_dashboard_stats()
 
         return templates.TemplateResponse(
@@ -78,8 +96,8 @@ async def content_broadcaster_page(
                 "user": current_user
             }
         )
-    except Exception as e:
-        logger.exception("Failed to load content broadcaster page")
+    except Exception:
+        logger.exception("Failed to load content broadcaster library page")
         raise HTTPException(status_code=500, detail="Failed to load page")
 
 @router.get("/content", response_class=HTMLResponse)

@@ -1,355 +1,109 @@
 # Content Broadcaster Implementation Progress
 
-**Last Updated:** 2025-10-11
-**Status:** Phase 1 (Database) - IN PROGRESS
+**Last Updated:** 2025-11-10  
+**Current Phase:** 3 — End-to-End Workflow Demo (async Celery path live; SSE progress pending)
+
+This document now reflects the current state of the codebase. The previous version still described the pre-service state, so every section below was rewritten after inspecting the live modules under `app/features/business_automations/content_broadcaster/`.
 
 ---
 
-## ✅ Completed Tasks
+## ✅ Completed Work
 
-### 1. Documentation (100% Complete)
-- ✅ Updated PRP with content planning flow
-- ✅ Updated PROJECT_PLAN with new phases
-- ✅ Created content_plans table schema design
+### Phase 1 – Data Foundations
+- `models.py` defines fully-audited SQLAlchemy models for `ContentPlan`, `ContentVariant`, `ContentItem`, approvals, and publish jobs (lines 79-410).
+- Alembic migrations shipped (`migrations/versions/a1b2c3d4e5f6_*.py`, `493767b1324e_add_skip_research_to_content_plan.py`, `2025_11_03_add_prompt_settings_to_content_plans.py`) covering plan+variant tables, skip-research flag, and prompt settings JSON.
 
-### 2. Database Models (100% Complete)
-- ✅ Created `ContentPlanStatus` enum (8 states)
-- ✅ Created `VariantPurpose` enum (7 purposes)
-- ✅ Implemented `ContentPlan` model (lines 70-174 in models.py)
-  - Full JSONB support for research_data, generation_metadata, refinement_history
-  - One-to-one relationship with ContentItem
-  - Audit trail integration
-- ✅ Implemented `ContentVariant` model (lines 242-298 in models.py)
-  - Per-channel content optimization
-  - Metadata storage for formatting constraints
-  - Relationship with ContentItem
+### Phase 2 – Service Layer & AI Workflow
+- `services/content_planning_service.py` implements full CRUD + filtering, retry, audit-aware status updates, and refinement history helpers (501 LOC, lines 16-532).
+- `services/ai_research_service.py` now uses centralized Secret-managed OpenAI + Firecrawl clients, scrapes competitors, and returns structured research data (lines 1-377).
+- `services/ai_generation_service.py` handles blog generation, per-channel variants, SEO validation, and metadata extraction; prompt content comes from the AI Prompt Service (lines 1-520).
+- `services/content_orchestrator_service.py` coordinates research/generation/refinement, persists `latest_seo_score`, `refinement_history`, creates `ContentItem`s, and stores `ContentVariant`s when `target_channels` are provided.
+- `services/progress_stream.py` introduces an SSE-friendly pub/sub manager for live progress updates.
 
-### 3. Database Migration (100% Complete)
-- ✅ Created Alembic migration file: `a1b2c3d4e5f6_add_content_plans_and_variants_tables.py`
-- ✅ Proper indexes for tenant isolation and query performance
-- ✅ Foreign key constraints
-- ✅ JSON/JSONB defaults
-- ✅ Down migration for rollback
+### Phase 3 – API + UI (Async Demo Path)
+- FastAPI routers (`routes/planning_routes.py`, `form_routes.py`, `dashboard_routes.py`, `crud_routes.py`, `api_routes.py`) expose HTMX-friendly planning endpoints, CRUD APIs, dashboard views, and streaming SEO generation APIs.
+- `/planning` supports create/list/detail/edit/delete/retry/process/approve flows with audit + tenant isolation. The `/planning/{plan_id}/process-async` endpoint now enqueues a Celery worker while `/process` remains as a synchronous fallback.
+- Celery worker (`tasks.py`) + queue wiring (`celery_app`, `task_manager`) run the same orchestrator pipeline headlessly, updating status + error logs if failures occur.
+- Templates under `templates/content_broadcaster/` plus Tabulator-powered JS (`static/js/planning-table.js`) render planning tables, modals, SEO score badges, refinement history, and prompt overrides. UI now displays live SEO scores and refinement iteration counts.
+- `tests/test_content_broadcaster_integration.py` covers the legacy Content Broadcaster service (content CRUD, approvals, scheduling) so we have regression coverage for the original slice.
 
 ---
 
-## 🚧 In Progress
+## 🚧 Active Work / Gaps
 
-### Database Deployment
-- ⏳ Need to start PostgreSQL container
-- ⏳ Apply migration: `python3 manage_db.py upgrade`
-- ⏳ Verify tables created successfully
+1. **Background Processing Observability**  
+   - Celery worker + async endpoint are live, but we still need progress streaming (SSE/WebSocket), task dashboards, and retries surfaced in the UI. Currently users only see a status change with no detailed telemetry.
 
----
+2. **Trigger + UX Automation**  
+   - Plan creation does not enqueue processing automatically. We need a user-friendly “Process” button (already present) plus an async queue path that runs autonomously and surfaces progress via SSE (`progress_stream_manager` is unused outside SEO connector APIs).
 
-## 📋 Next Steps (Priority Order)
+3. **Automated Tests for New Modules**  
+   - `ContentPlanningService`, `AIResearchService`, `AIGenerationService`, and `ContentOrchestratorService` have zero unit/async integration tests. Only the older `ContentBroadcasterService` scenarios are covered.
 
-### HIGH PRIORITY - Core Services
+4. **Content Publishing UX Hooks**  
+   - JS handlers in `static/js/content-table.js` still contain TODO placeholders for approve/reject/schedule/publish actions. The backend APIs exist, but buttons are not wired.
 
-#### 1. Content Planning Service
-**File:** `app/features/business_automations/content_broadcaster/services/content_planning_service.py`
+5. **Advanced Insights**  
+   - Research data still leaves `keywords_found` empty (see TODO in `ai_research_service.py:353`), and we have not added dashboard visualizations for SEO gains/refinement history.
 
-**Methods to implement:**
-```python
-class ContentPlanningService(BaseService[ContentPlan]):
-    async def create_plan(self, plan_data: ContentPlanCreate) -> ContentPlan
-    async def list_plans(self, filters: PlanFilters) -> List[ContentPlan]
-    async def get_plan(self, plan_id: str) -> ContentPlan
-    async def update_plan(self, plan_id: str, updates: ContentPlanUpdate) -> ContentPlan
-    async def delete_plan(self, plan_id: str) -> bool
-    async def retry_plan(self, plan_id: str) -> ContentPlan
-    async def approve_draft(self, plan_id: str) -> ContentPlan
-```
-
-#### 2. AI Research Service
-**File:** `app/features/business_automations/content_broadcaster/services/ai_research_service.py`
-
-**Port logic from:** `docs/SEO Blog Generator.py` (lines 33-101)
-
-**Methods to implement:**
-```python
-class AIResearchService:
-    async def fetch_top_google_results(self, query: str, num_results: int = 5) -> List[Dict]
-    async def scrape_article_content(self, url: str) -> str
-    async def analyze_competitor_seo(self, combined_content: str) -> str
-    async def process_research(self, plan_id: str, title: str) -> Dict
-```
-
-**API Keys needed** (from Secrets slice):
-- `serpapi_key` or `scrapingbee_api_key`
-- `openai_api_key` (for SEO analysis)
-
-#### 3. AI Generation Service
-**File:** `app/features/business_automations/content_broadcaster/services/ai_generation_service.py`
-
-**Port logic from:** `docs/SEO Blog Generator.py` (lines 163-246)
-
-**Methods to implement:**
-```python
-class AIGenerationService:
-    async def generate_blog_post(
-        self,
-        title: str,
-        seo_analysis: str,
-        previous_content: Optional[str] = None,
-        validation_feedback: Optional[Dict] = None
-    ) -> str
-
-    async def generate_variants_per_channel(
-        self,
-        content: str,
-        channels: List[str]
-    ) -> List[ContentVariant]
-```
-
-#### 4. AI Validation Service
-**File:** `app/features/business_automations/content_broadcaster/services/ai_validation_service.py`
-
-**Port logic from:** `docs/SEO Blog Generator.py` (lines 248-355)
-
-**Methods to implement:**
-```python
-class AIValidationService:
-    async def validate_content(self, title: str, body: str) -> Dict
-    # Returns: {"score": 85, "status": "FAIL", "issues": [...], "recommendations": {...}}
-
-    async def extract_json_response(self, raw_response: str) -> Dict
-```
-
-**SEO Scoring Criteria (0-100):**
-- Keyword Optimization (20 points)
-- Content Structure & Readability (15 points)
-- Schema Markup & Metadata (15 points)
-- Internal & External Links (15 points)
-- Engagement & Interactive Elements (15 points)
-- On-Page SEO & Mobile Friendliness (20 points)
-
-#### 5. AI Refinement Service
-**File:** `app/features/business_automations/content_broadcaster/services/ai_refinement_service.py`
-
-**Methods to implement:**
-```python
-class AIRefinementService:
-    async def refine_content(
-        self,
-        content: str,
-        validation_feedback: Dict,
-        previous_version: str
-    ) -> str
-
-    async def humanize_language(self, content: str) -> str
-
-    async def refinement_loop(
-        self,
-        plan_id: str,
-        initial_content: str,
-        min_score: int,
-        max_iterations: int
-    ) -> Dict  # Returns: {final_content, final_score, iterations_used}
-```
-
-### MEDIUM PRIORITY - Background Worker
-
-#### 6. Celery Worker
-**File:** `app/features/business_automations/content_broadcaster/tasks.py`
-
-**Task to implement:**
-```python
-@celery_app.task(name="content_broadcaster.process_content_plan")
-def process_content_plan(plan_id: str):
-    """
-    Background task to process content plans:
-    1. Update status to 'researching'
-    2. Call ai_research_service.process_research()
-    3. Update status to 'generating'
-    4. Call ai_generation_service.generate_blog_post()
-    5. Update status to 'refining'
-    6. Call ai_refinement_service.refinement_loop()
-    7. Create ContentItem with final draft
-    8. Update plan status to 'draft_ready'
-    9. Link plan to content_item
-    """
-```
-
-**Error Handling:**
-- Catch all exceptions
-- Log to `content_plans.error_log`
-- Set status to 'failed'
-- Implement retry logic
-
-### MEDIUM PRIORITY - API Routes
-
-#### 7. Planning Routes
-**File:** `app/features/business_automations/content_broadcaster/routes/planning_routes.py`
-
-**Endpoints:**
-- `GET /planning` - List plans
-- `POST /planning` - Create plan (triggers worker)
-- `GET /planning/{id}` - Get plan details
-- `PUT /planning/{id}` - Update plan
-- `DELETE /planning/{id}` - Archive plan
-- `POST /planning/{id}/retry` - Retry failed plan
-- `POST /planning/{id}/approve-draft` - Approve draft
-- `GET /planning/{id}/iterations` - View refinement history
-
-### LOWER PRIORITY - UI Templates
-
-#### 8. Planning UI
-**Files:**
-- `templates/content_broadcaster/planning_list.html`
-- `templates/content_broadcaster/partials/create_plan_modal.html`
-- `templates/content_broadcaster/partials/plan_detail_modal.html`
-- `templates/content_broadcaster/partials/plan_status_badge.html`
+6. **Operational Readiness**  
+   - Need runbook updates covering: starting Postgres, running `python3 manage_db.py upgrade`, configuring OpenAI + Firecrawl secrets, and verifying migrations. Current doc assumes these steps without concrete verification.
 
 ---
 
-## 📊 Implementation Status by File
+## 📋 Next Actions (Priority Order)
 
-| File | Status | Lines | Notes |
-|------|--------|-------|-------|
-| `models.py` | ✅ Complete | 374 total | Added ContentPlan (105 lines), ContentVariant (57 lines) |
-| `migrations/a1b2c3d4e5f6...py` | ✅ Complete | 181 lines | Migration ready to apply |
-| `services/content_planning_service.py` | ❌ Not Started | 0 | HIGH PRIORITY |
-| `services/ai_research_service.py` | ❌ Not Started | 0 | HIGH PRIORITY |
-| `services/ai_generation_service.py` | ❌ Not Started | 0 | HIGH PRIORITY |
-| `services/ai_validation_service.py` | ❌ Not Started | 0 | HIGH PRIORITY |
-| `services/ai_refinement_service.py` | ❌ Not Started | 0 | HIGH PRIORITY |
-| `tasks.py` | ❌ Not Started | 0 | MEDIUM PRIORITY |
-| `routes/planning_routes.py` | ❌ Not Started | 0 | MEDIUM PRIORITY |
-| Templates (planning UI) | ❌ Not Started | 0 | LOWER PRIORITY |
+1. **Progress Streaming + Task UX**
+   - Publish worker progress (researching/generating/refining) via `progress_stream_manager` and surface it on the planning table/cards.  
+   - Persist Celery task IDs + timestamps so users can check status/history.  
+   - Consider auto-enqueue on plan creation or scheduled batches once observability is solid.
 
----
+2. **Testing Pass**
+   - Add async unit tests for `ContentPlanningService` (validation, filtering, status updates) and `ContentOrchestratorService` (happy path + failure).  
+   - Mock OpenAI/Firecrawl clients to keep tests deterministic.  
+   - Extend integration tests to cover the planning routes (HTMX responses) and variant generation.
 
-## 🔧 Technical Notes
+3. **UI Wiring + UX Polish**
+   - Hook the TODO actions in `static/js/content-table.js` to the existing `/api/{content_id}` endpoints so approvals, rejections, scheduling, and publishing work end-to-end.  
+   - Finish modal implementations referenced in `partials/list_content.html` and add SSE-powered progress indicators.
 
-### Database Schema Highlights
+4. **Research Insights Enhancements**
+   - Extract keyword summaries inside `AIResearchService.process_research` and surface them in `metadata_tab.html`.  
+   - Add a compact competitor comparison widget (Doc PRP §4.2 requirement).
 
-**content_plans table:**
-- Primary key: UUID string
-- Tenant isolation: `tenant_id` indexed
-- Status enum: 8 states (planned → researching → generating → refining → draft_ready → approved/archived/failed)
-- JSONB fields for flexible data storage
-- One-to-one FK to content_items
-
-**content_variants table:**
-- Unique constraint: `(content_item_id, connector_catalog_key, purpose)`
-- Optimized for multi-channel publishing
-- JSONB metadata for channel-specific constraints
-
-### Dependencies from SEO Blog Generator
-
-**Python Packages Needed:**
-- `openai` (already in requirements.txt)
-- `requests` (already in requirements.txt)
-- `beautifulsoup4` (already in requirements.txt)
-- SerpAPI client or ScrapingBee client (need to add)
-
-**API Keys Required (via Secrets slice):**
-- `openai_api_key` ✅ Already supported
-- `serpapi_key` ❌ Need to add support
-- `scrapingbee_api_key` or `scrapingdog_api_key` ❌ Need to add
-
-### Service Layer Architecture
-
-All services should:
-1. Inherit from `BaseService[Model]` for tenant isolation
-2. Use async/await for all operations
-3. Fetch API keys from Secrets slice (never hardcode)
-4. Log all operations with structured logging
-5. Handle errors gracefully with detailed error messages
-6. Store intermediate results in JSONB fields for debugging
-
-### Worker Architecture
-
-Celery task should:
-1. Poll `content_plans` where `status = 'planned'`
-2. Update status before each step
-3. Store all intermediate data in JSONB fields
-4. Support graceful failure and retry
-5. Be idempotent (can be run multiple times safely)
-6. Have configurable timeouts
+5. **Ops + Docs**
+   - Add a short runbook section (README or doc) describing DB migration commands, secret prerequisites, and demo checklist so onboarding engineers can reproduce the flow without tribal knowledge.
 
 ---
 
-## 🎯 Success Criteria
+## 📊 File Status Snapshot
 
-### Phase 1 Complete When:
-- ✅ Models created
-- ✅ Migration created
-- ⏳ Migration applied successfully
-- ⏳ Tables visible in database
-
-### Phase 2 Complete When:
-- ❌ All 5 AI services implemented
-- ❌ Unit tests for each service
-- ❌ Integration with Secrets slice verified
-- ❌ API keys fetched successfully
-
-### Phase 3 Complete When:
-- ❌ Celery worker implemented
-- ❌ Worker processes plans successfully
-- ❌ State transitions working correctly
-- ❌ Error handling tested
-
-### Phase 4 Complete When:
-- ❌ Planning routes implemented
-- ❌ Routes tested with Postman/httpx
-- ❌ CRUD operations working
-
-### Phase 5 Complete When:
-- ❌ Basic planning UI created
-- ❌ Users can create plans via web interface
-- ❌ Plan status visible in UI
-- ❌ Iteration history viewable
-
-### PoC Complete When:
-- ❌ End-to-end workflow tested: create plan → AI generates content → draft ready → approve → schedule → publish
-- ❌ At least one successful content generation from planning to publishing
-- ❌ All critical paths have error handling
-- ❌ Documentation updated with usage examples
+| File / Area | Status | Notes |
+|-------------|--------|-------|
+| `models.py` | ✅ | ContentPlan/Variant/Item definitions with audit + enums. |
+| `migrations/*.py` | ✅ | Tables, skip_research, prompt settings migrations present. |
+| `services/content_planning_service.py` | ✅ | CRUD, filters, status + audit helpers implemented. |
+| `services/ai_research_service.py` | ✅ | Firecrawl/OpenAI powered research pipeline. |
+| `services/ai_generation_service.py` | ✅ | Blog drafts, variants, validation, metadata extraction. |
+| `services/content_orchestrator_service.py` | ✅ | Research→Generation→Refinement pipeline + variant persistence. |
+| `services/progress_stream.py` | ✅ | SSE pub/sub utility (needs adoption inside planning workflow). |
+| `routes/planning_routes.py` | ✅ | HTMX/JSON API for planning with new `/process-async` Celery enqueue + sync fallback. |
+| `templates/content_broadcaster/*` | ✅ | Planning UI, modals, SEO score badges, prompt management. |
+| `static/js/planning-table.js` | ✅ | Tabulator table, status badges, async process trigger + view actions. |
+| `static/js/content-table.js` | ⚠️ | Core actions still TODO in JS even though backend APIs exist. |
+| `content_broadcaster/tasks.py` | ✅ | Celery worker coordinates orchestrator + secret retrieval for plans. |
+| Tests (new services) | ❌ | Only legacy ContentBroadcaster tests exist; planning/AI pipeline untested. |
 
 ---
 
-## 📝 Commands to Run Next
+## 📝 Demo Checklist (current state)
 
-```bash
-# 1. Start PostgreSQL
-docker start postgres  # or docker-compose up -d postgres
+- [x] Create content plan via UI/form or API.  
+- [x] Run `/planning/{plan_id}/process-async` (Celery) or `/process` (sync fallback) to generate research → draft → variants.  
+- [x] View SEO score, refinement history, and generated draft in HTMX modal.  
+- [x] Approve/schedule content via backend APIs (front-end buttons still TODO).  
+- [ ] Trigger processing automatically via Celery/GH worker.  
+- [ ] Display real-time progress and job history in UI.  
+- [ ] Show published metrics/accounts after jobs execute.
 
-# 2. Apply migration
-python3 manage_db.py upgrade
-
-# 3. Verify tables created
-python3 manage_db.py current
-# Should show: a1b2c3d4e5f6
-
-# 4. Check database
-psql $DATABASE_URL -c "\dt content_*"
-# Should show: content_items, content_plans, content_variants
-
-# 5. Start implementing services
-# Create: services/content_planning_service.py
-# Create: services/ai_research_service.py
-# etc.
-```
-
----
-
-## 📚 Reference Documents
-
-- **PRP:** [docs/PRP_Content_Broadcaster_Slice_FULL.md](PRP_Content_Broadcaster_Slice_FULL.md)
-- **Project Plan:** [docs/PROJECT_PLAN_Content_Broadcaster_Slice.md](PROJECT_PLAN_Content_Broadcaster_Slice.md)
-- **SEO Blog Generator:** [docs/SEO Blog Generator.py](SEO%20Blog%20Generator.py)
-- **README:** [README.md](../README.md)
-- **Models:** [models.py](../models.py)
-
----
-
-## 🤝 Contributors
-
-- AI Assistant: Architecture, models, migration, documentation
-- Paul (Human): Requirements, SEO Blog Generator script, validation
-
----
-
-**Next Session:** Start implementing AI services, beginning with `content_planning_service.py`
+This should serve as the authoritative progress tracker going forward. Update it whenever a major milestone (worker, tests, UI wiring, ops runbook) lands.

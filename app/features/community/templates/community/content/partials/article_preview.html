@@ -1,0 +1,7 @@
+{% if has_content | default(false) %}
+<div class="markdown-content">
+    {{ rendered | default("") | safe }}
+</div>
+{% else %}
+<div class="text-muted">Enter markdown content above and click Preview to see the rendered article.</div>
+{% endif %}

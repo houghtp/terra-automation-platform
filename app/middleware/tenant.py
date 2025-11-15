@@ -44,7 +44,7 @@ class TenantMiddleware:
                     tenant = possible
 
         if not tenant:
-            tenant = "unknown"
+            tenant = "global"
 
         # sanitize/truncate
         tenant = tenant.strip()[:64]

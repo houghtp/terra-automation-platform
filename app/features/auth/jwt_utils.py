@@ -76,19 +76,15 @@ class JWTUtils:
     @staticmethod
     def _get_algorithm() -> str:
         """Get JWT algorithm from environment with security validation."""
-        algorithm = os.getenv("JWT_ALGORITHM", "HS256")
+        algorithm = os.getenv("JWT_ALGORITHM", "HS512")
 
         # Security check: ensure algorithm is secure
         allowed_algorithms = ["HS256", "HS384", "HS512", "RS256", "RS384", "RS512"]
         if algorithm not in allowed_algorithms:
             raise ValueError(f"JWT_ALGORITHM '{algorithm}' is not supported. Use one of: {allowed_algorithms}")
 
-        # Warn about deprecated algorithms
-        deprecated_algorithms = ["HS256"]  # Consider upgrading to HS512 or RS256
-        if algorithm in deprecated_algorithms:
-            import logging
-            logger = structlog.get_logger(__name__)
-            logger.info(f"JWT_ALGORITHM '{algorithm}' is functional but consider upgrading to HS512 or RS256 for enhanced security")
+        # Note: HS256 is still functional but HS512 provides better security
+        # No warning needed anymore since we default to HS512
 
         return algorithm
 

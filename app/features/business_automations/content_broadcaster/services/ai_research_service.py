@@ -10,9 +10,14 @@ Uses centralized API clients from app.features.core.utils.external_api_clients
 """
 
 from typing import List, Dict, Any, Optional
+from jinja2 import Template
 import httpx
 
 from app.features.core.sqlalchemy_imports import get_logger
+from app.features.administration.ai_prompts.services import AIPromptService
+from .prompt_templates import PROMPT_DEFAULTS
+from openai import AuthenticationError
+
 from app.features.core.utils.external_api_clients import (
     get_openai_client_from_secret,
     get_firecrawl_client_from_secret,
@@ -47,6 +52,7 @@ class AIResearchService:
         self.tenant_id = tenant_id
         self.openai_client: Optional[OpenAIClient] = None
         self.firecrawl_client: Optional[FirecrawlClient] = None
+        self.prompt_service: Optional[AIPromptService] = None
 
     async def _init_clients(self, db_session, accessed_by_user=None):
         """
@@ -73,6 +79,12 @@ class AIResearchService:
             tenant_id=self.tenant_id,
             secret_name="Firecrawl API Key",
             accessed_by_user=accessed_by_user
+        )
+
+        self.prompt_service = AIPromptService(db_session)
+        await self.prompt_service.ensure_system_prompt(
+            "seo_competitor_analysis",
+            PROMPT_DEFAULTS["seo_competitor_analysis"]
         )
 
         logger.info("API clients initialized successfully", tenant_id=self.tenant_id)
@@ -184,7 +196,8 @@ class AIResearchService:
 
     async def analyze_competitor_seo(
         self,
-        combined_content: str
+        combined_content: str,
+        prompt_settings: Optional[Dict[str, Any]] = None
     ) -> str:
         """
         AI-powered SEO analysis of competitor content.
@@ -198,57 +211,32 @@ class AIResearchService:
         if not self.openai_client:
             raise ValueError("OpenAI client not initialized. Call _init_clients() first.")
 
-        analysis_prompt = f"""
-You are an advanced SEO strategist. Your task is to analyze the following articles and provide a structured SEO analysis.
-
-### **Key SEO Areas to Analyze:**
-#### **1. Keyword Optimization**
-   - Identify **primary keywords**, **secondary keywords**, and **LSI (related) keywords**.
-   - Suggest **long-tail queries** that could help rank in **Google's Featured Snippets**.
-   - Compare keyword **density and placement** with top competitors.
-
-#### **2. Content Structure & Readability**
-   - Evaluate **H1, H2, H3 hierarchy** for clear sectioning.
-   - Suggest **questions that could be H2s/H3s** to improve scannability.
-   - Assess **sentence complexity (Flesch-Kincaid Score)** for readability.
-   - Identify missing elements like **Table of Contents, jump links, and bulleted lists**.
-
-#### **3. Headers & Schema Markup**
-   - Identify whether **FAQ Schema, Recipe Schema, or HowTo Schema** is present.
-   - Suggest **Google-approved JSON-LD structured data** improvements.
-   - Ensure **Google Discover optimization** (e.g., Web Stories, short-form content).
-
-#### **4. Internal & External Linking**
-   - Identify **internal linking gaps** using **topic clusters**.
-   - Recommend **external authority links** (e.g., BBC Good Food, AllRecipes).
-   - Suggest **anchor text improvements** for better topic relevancy.
-
-#### **5. Engagement & Interactive Elements**
-   - Check for **star ratings, comment sections, and polls**.
-   - Identify whether **videos, GIFs, or interactive elements** are used.
-   - Suggest **ways to improve dwell time and reduce bounce rate**.
-
-#### **6. On-Page SEO Optimization**
-   - Assess **meta title & description** for CTR optimization.
-   - Check **image alt text** and **file names** (e.g., "cottage_pie_recipe.jpg").
-   - Evaluate **canonical tags, structured breadcrumbs, and URL structure**.
-
----
-### **Content to Analyze:**
-{combined_content[:10000]}
-
----
-### **Optimization Plan:**
-Provide an **actionable improvement plan** covering all six SEO areas above.
-- **List specific improvements**, including **example keyword placements**.
-- Ensure **recommendations align with Google's ranking factors**.
-- Suggest **automation-friendly optimizations** for AI-powered content creation.
-"""
-
         try:
+            assert self.prompt_service is not None
+            await self.prompt_service.ensure_system_prompt(
+                "seo_competitor_analysis",
+                PROMPT_DEFAULTS["seo_competitor_analysis"]
+            )
+
+            variables = {
+                "combined_content": combined_content[:10000],
+                "analysis_depth": (prompt_settings or {}).get("analysis_depth", 4),
+            }
+
+            prompt = await self.prompt_service.render_prompt(
+                prompt_key="seo_competitor_analysis",
+                variables=variables,
+                tenant_id=self.tenant_id,
+                track_usage=True
+            )
+
+            if not prompt:
+                template = Template(PROMPT_DEFAULTS["seo_competitor_analysis"]["prompt_template"])
+                prompt = template.render(**variables)
+
             messages = [
                 {"role": "system", "content": "You are an expert SEO strategist."},
-                {"role": "user", "content": analysis_prompt}
+                {"role": "user", "content": prompt}
             ]
 
             analysis = await self.openai_client.chat_completion(
@@ -264,6 +252,14 @@ Provide an **actionable improvement plan** covering all six SEO areas above.
 
             return analysis
 
+        except AuthenticationError as auth_error:
+            logger.error(
+                "OpenAI authentication failed during competitor analysis",
+                tenant_id=self.tenant_id
+            )
+            raise ValueError(
+                "OpenAI API key is invalid or expired. Update the secret in Secrets Management and retry."
+            ) from auth_error
         except Exception as e:
             logger.exception("Failed to analyze competitor SEO")
             return f"⚠ Failed to perform SEO analysis: {str(e)}"
@@ -273,6 +269,7 @@ Provide an **actionable improvement plan** covering all six SEO areas above.
         title: str,
         db_session,
         num_results: int = 3,
+        prompt_settings: Optional[Dict[str, Any]] = None,
         accessed_by_user=None
     ) -> Dict[str, Any]:
         """
@@ -306,6 +303,8 @@ Provide an **actionable improvement plan** covering all six SEO areas above.
 
         # Initialize API clients
         await self._init_clients(db_session, accessed_by_user=accessed_by_user)
+
+        prompt_settings = prompt_settings or {}
 
         # Fetch Google results using Firecrawl
         top_results = await self.fetch_google_results(
@@ -342,7 +341,8 @@ Provide an **actionable improvement plan** covering all six SEO areas above.
 
         # Perform SEO analysis
         seo_analysis = await self.analyze_competitor_seo(
-            combined_content=combined_content
+            combined_content=combined_content,
+            prompt_settings=prompt_settings
         )
 
         # Build research data structure

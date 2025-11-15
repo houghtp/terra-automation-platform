@@ -1,18 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme-radius="2">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FastAPI Template - {% block title %}Home{% endblock %}</title>
 
-    <!-- Tabler CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/css/tabler.min.css" rel="stylesheet"/>
-    <!-- Tabler Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" rel="stylesheet"/>
-    <!-- Bootstrap (included in Tabler) -->
+    <!-- Tabler CSS (Latest stable version) -->
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/css/tabler.min.css" rel="stylesheet" />
+    <!-- Tabler Icons (Latest version) -->
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" rel="stylesheet" />
 
-    <!-- Google Fonts - Inter (commented out to use Tabler's default) -->
-    <!-- <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"> -->
+    <!-- Inter Font (Tabler's default font) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Tabler CSS Variable Overrides -->
+    <link href="/static/css/tabler-variables.css" rel="stylesheet">
 
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.6"></script>
@@ -24,46 +30,41 @@
     <!-- Tabulator CSS (official CDN, must come before any custom styles) -->
     <link href="https://unpkg.com/tabulator-tables@6.3.0/dist/css/tabulator_semanticui.min.css" rel="stylesheet">
 
-    <!-- Tabulator custom styling -->
-    <link href="/static/css/tabulator-unified.css" rel="stylesheet">
+    <!-- Consolidated app theme (tables, loaders, modals, dashboards) -->
+    <link href="/static/css/app-theme.css" rel="stylesheet">
 
-    <!-- Unified loader system -->
-        <!-- Chart, Table, and Unified Component Styles -->
-    <link href="/features/core/static/css/unified-loaders.css" rel="stylesheet">
-    <link href="/features/core/static/css/simple-loader.css" rel="stylesheet">
-
-    <!-- Chart widgets styling -->
-    <link href="/static/css/chart-widgets.css" rel="stylesheet">
-
-    <!-- Custom modal and toast styles -->
-    <link href="/static/css/modal.css" rel="stylesheet">
+    <!-- Note: tabler-modern-overrides.css removed - using default Tabler styling -->
 
     <script src="https://unpkg.com/tabulator-tables@6.3.0/dist/js/tabulator.min.js"></script>
     <!-- ECharts (global, if used on most pages) -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 
     <!-- Shared site utilities (global) -->
-    <script src="/static/js/site.js"></script>
+    <script src="/static/js/site.js?v=20251105-3"></script>
 
     <!-- Core form validation utilities -->
-    <script src="/features/core/static/js/form-validation.js"></script>    {% block head %}{% endblock %}
+    <script src="/features/core/static/js/form-validation.js"></script> {% block head %}{% endblock %}
 </head>
 
 <body>
-    <!-- Tabler Theme Script -->
-    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/js/tabler-theme.min.js"></script>
-    <!-- Page wrapper -->
+    <!-- Tabler Core JS & Theme Controls -->
+    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler-theme.min.js"></script>
+
+    <!-- Page wrapper with fluid layout -->
     <div class="page">
         <!-- Sidebar -->
-        <aside class="navbar navbar-vertical navbar-expand-lg navbar-dark bg-dark" data-bs-theme="dark" style="background-color: #1e293b !important;">
+        <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
             <div class="container-fluid">
                 <!-- Logo section -->
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu"
+                    aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <h1 class="navbar-brand navbar-brand-autodark">
                     <a href="/" class="d-flex align-items-center text-decoration-none">
-                        <div class="d-flex align-items-center justify-content-center bg-primary rounded me-3" style="width: 32px; height: 32px;">
+                        <div class="d-flex align-items-center justify-content-center bg-primary rounded me-3"
+                            style="width: 32px; height: 32px;">
                             <span class="text-white fw-bold">FT</span>
                         </div>
                         <span class="text-white fs-4 fw-semibold">FastAPI Template</span>
@@ -80,25 +81,89 @@
                                 <span class="nav-link-title">Dashboard</span>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path.startswith('/features/community') %}{% else %}collapsed{% endif %}"
+                                href="#community-menu" data-bs-toggle="collapse" role="button"
+                                aria-expanded="{% if request.path.startswith('/features/community') %}true{% else %}false{% endif %}"
+                                aria-controls="community-menu">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="ti ti-users icon"></i>
+                                </span>
+                                <span class="nav-link-title">Community Hub</span>
+                            </a>
+                            <div class="collapse {% if request.path.startswith('/features/community') %}show{% endif %}"
+                                id="community-menu">
+                                <ul class="nav nav-sm flex-column ms-3">
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/features/community' %} active{% endif %}"
+                                            href="/features/community">
+                                            <i class="ti ti-dashboard icon me-2"></i> Overview
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/features/community/members' %} active{% endif %}"
+                                            href="/features/community/members">
+                                            <i class="ti ti-address-book icon me-2"></i> Members
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/features/community/partners' %} active{% endif %}"
+                                            href="/features/community/partners">
+                                            <i class="ti ti-affiliate icon me-2"></i> Partners
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/features/community/groups' %} active{% endif %}"
+                                            href="/features/community/groups">
+                                            <i class="ti ti-users-group icon me-2"></i> Groups
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/features/community/content' %} active{% endif %}"
+                                            href="/features/community/content">
+                                            <i class="ti ti-book icon me-2"></i> Content Hub
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/features/community/events' %} active{% endif %}"
+                                            href="/features/community/events">
+                                            <i class="ti ti-calendar-event icon me-2"></i> Events
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/features/community/polls' %} active{% endif %}"
+                                            href="/features/community/polls">
+                                            <i class="ti ti-chart-bar icon me-2"></i> Polls
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/features/community/messages' %} active{% endif %}"
+                                            href="/features/community/messages">
+                                            <i class="ti ti-messages icon me-2"></i> Messages
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
 
                         <!-- Connectors collapsible section -->
                         <li class="nav-item">
                             <a class="nav-link {% if request.path.startswith('/features/connectors') %}{% else %}collapsed{% endif %}"
-                                href="#connectors-menu"
-                                data-bs-toggle="collapse"
-                                role="button"
+                                href="#connectors-menu" data-bs-toggle="collapse" role="button"
                                 aria-expanded="{% if request.path.startswith('/features/connectors') %}true{% else %}false{% endif %}"
                                 aria-controls="connectors-menu">
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                <i class="ti ti-plug icon"></i>
+                                    <i class="ti ti-plug icon"></i>
                                 </span>
                                 <span class="nav-link-title">Connectors</span>
                             </a>
-                            <div class="collapse {% if request.path.startswith('/features/connectors') %}show{% endif %}" id="connectors-menu">
+                            <div class="collapse {% if request.path.startswith('/features/connectors') %}show{% endif %}"
+                                id="connectors-menu">
                                 <ul class="nav nav-sm flex-column ms-3">
                                     <li class="nav-item">
-                                        <a class="nav-link{% if request.path == '/features/connectors' %} active{% endif %}" href="/features/connectors">
-                                        <i class="ti ti-settings icon me-2"></i> Manage Connectors
+                                        <a class="nav-link{% if request.path == '/features/connectors' %} active{% endif %}"
+                                            href="/features/connectors">
+                                            <i class="ti ti-settings icon me-2"></i> Manage Connectors
                                         </a>
                                     </li>
                                 </ul>
@@ -108,46 +173,51 @@
                         <!-- Automations collapsible section -->
                         <li class="nav-item">
                             <a class="nav-link {% if request.path.startswith('/automations') %}{% else %}collapsed{% endif %}"
-                                href="#automations-menu"
-                                data-bs-toggle="collapse"
-                                role="button"
+                                href="#automations-menu" data-bs-toggle="collapse" role="button"
                                 aria-expanded="{% if request.path.startswith('/automations') %}true{% else %}false{% endif %}"
                                 aria-controls="automations-menu">
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                <i class="ti ti-robot icon"></i>
+                                    <i class="ti ti-robot icon"></i>
                                 </span>
                                 <span class="nav-link-title">Business Automations</span>
                             </a>
-                            <div class="collapse {% if request.path.startswith('/automations') %}show{% endif %}" id="automations-menu">
+                            <div class="collapse {% if request.path.startswith('/automations') %}show{% endif %}"
+                                id="automations-menu">
                                 <ul class="nav nav-sm flex-column ms-3">
                                     <li class="nav-item">
-                                        <a class="nav-link{% if request.path == '/automations/meeting-intelligence' %} active{% endif %}" href="/automations/meeting-intelligence">
-                                        <i class="ti ti-microphone icon me-2"></i> Meeting Intelligence
+                                        <a class="nav-link{% if request.path == '/automations/meeting-intelligence' %} active{% endif %}"
+                                            href="/automations/meeting-intelligence">
+                                            <i class="ti ti-microphone icon me-2"></i> Meeting Intelligence
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link{% if request.path == '/features/content-broadcaster' %} active{% endif %}" href="/features/content-broadcaster">
-                                        <i class="ti ti-broadcast icon me-2"></i> Content Broadcaster
+                                        <a class="nav-link{% if request.path.startswith('/features/content-broadcaster') %} active{% endif %}"
+                                            href="/features/content-broadcaster">
+                                            <i class="ti ti-broadcast icon me-2"></i> Content Broadcaster
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link{% if request.path == '/automations/sales-outreach' %} active{% endif %}" href="/automations/sales-outreach">
-                                        <i class="ti ti-briefcase icon me-2"></i> Sales Outreach Prep
+                                        <a class="nav-link{% if request.path == '/automations/sales-outreach' %} active{% endif %}"
+                                            href="/automations/sales-outreach">
+                                            <i class="ti ti-briefcase icon me-2"></i> Sales Outreach Prep
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link{% if request.path == '/automations/community-guard' %} active{% endif %}" href="/automations/community-guard">
-                                        <i class="ti ti-shield icon me-2"></i> Community Guard
+                                        <a class="nav-link{% if request.path == '/automations/community-guard' %} active{% endif %}"
+                                            href="/automations/community-guard">
+                                            <i class="ti ti-shield icon me-2"></i> Community Guard
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link{% if request.path == '/automations/social-listening' %} active{% endif %}" href="/automations/social-listening">
-                                        <i class="ti ti-brand-twitter icon me-2"></i> Social Listening
+                                        <a class="nav-link{% if request.path == '/automations/social-listening' %} active{% endif %}"
+                                            href="/automations/social-listening">
+                                            <i class="ti ti-brand-twitter icon me-2"></i> Social Listening
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link{% if request.path == '/business-automations/demo/items' %} active{% endif %}" href="/business-automations/demo/items">
-                                        <i class="ti ti-users icon me-2"></i> Demo
+                                        <a class="nav-link{% if request.path == '/business-automations/demo/items' %} active{% endif %}"
+                                            href="/business-automations/demo/items">
+                                            <i class="ti ti-users icon me-2"></i> Demo
                                         </a>
                                     </li>
                                 </ul>
@@ -157,24 +227,46 @@
                         <!-- MSP collapsible section -->
                         <li class="nav-item">
                             <a class="nav-link {% if request.path.startswith('/msp') %}{% else %}collapsed{% endif %}"
-                                href="#msp-menu"
-                                data-bs-toggle="collapse"
-                                role="button"
+                                href="#msp-menu" data-bs-toggle="collapse" role="button"
                                 aria-expanded="{% if request.path.startswith('/msp') %}true{% else %}false{% endif %}"
                                 aria-controls="msp-menu">
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                <i class="ti ti-server icon"></i>
+                                    <i class="ti ti-server icon"></i>
                                 </span>
                                 <span class="nav-link-title">MSP</span>
                             </a>
                             <div class="collapse {% if request.path.startswith('/msp') %}show{% endif %}" id="msp-menu">
                                 <ul class="nav nav-sm flex-column ms-3">
-                                <li class="nav-item">
-                                    <a class="nav-link{% if request.path == '/msp/security-trust' %} active{% endif %}" href="/msp/security-trust">
-                                    <i class="ti ti-lock icon me-2"></i> Security & Trust
-                                    </a>
-                                </li>
-                                <!-- Add more MSP features here later -->
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/msp/security-trust' %} active{% endif %}"
+                                            href="/msp/security-trust">
+                                            <i class="ti ti-lock icon me-2"></i> Security & Trust
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/msp/cspm/m365-tenants' %} active{% endif %}"
+                                            href="/msp/cspm/m365-tenants">
+                                            <i class="ti ti-cloud icon me-2"></i> M365 Tenants
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/msp/cspm/tenant-benchmarks' %} active{% endif %}"
+                                            href="/msp/cspm/tenant-benchmarks">
+                                            <i class="ti ti-list-details icon me-2"></i> Tenant Benchmarks
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/msp/cspm/benchmarks' %} active{% endif %}"
+                                            href="/msp/cspm/benchmarks">
+                                            <i class="ti ti-list-check icon me-2"></i> Benchmarks
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/msp/cspm/scans' %} active{% endif %}"
+                                            href="/msp/cspm/scans">
+                                            <i class="ti ti-shield-check icon me-2"></i> Compliance Scans
+                                        </a>
+                                    </li>
                                 </ul>
                             </div>
                         </li>
@@ -190,46 +282,57 @@
                         <!-- Administration collapsible section -->
                         <li class="nav-item">
                             <a class="nav-link {% if request.path.startswith('/administration') %}{% else %}collapsed{% endif %}"
-                                href="#admin-menu"
-                                data-bs-toggle="collapse"
-                                role="button"
+                                href="#admin-menu" data-bs-toggle="collapse" role="button"
                                 aria-expanded="{% if request.path.startswith('/administration') %}true{% else %}false{% endif %}"
                                 aria-controls="admin-menu">
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                <i class="ti ti-settings icon"></i>
+                                    <i class="ti ti-settings icon"></i>
                                 </span>
                                 <span class="nav-link-title">Administration</span>
                             </a>
-                            <div class="collapse {% if request.path.startswith('/administration') %}show{% endif %}" id="admin-menu">
+                            <div class="collapse {% if request.path.startswith('/administration') %}show{% endif %}"
+                                id="admin-menu">
                                 <ul class="nav nav-sm flex-column ms-3">
                                     <li class="nav-item">
-                                        <a class="nav-link{% if request.path == '/administration/secrets' %} active{% endif %}" href="/features/administration/secrets">
-                                        <i class="ti ti-key icon me-2"></i> Secrets Management
+                                        <a class="nav-link{% if request.path == '/administration/secrets' %} active{% endif %}"
+                                            href="/features/administration/secrets">
+                                            <i class="ti ti-key icon me-2"></i> Secrets Management
                                         </a>
                                     </li>
                                     <li class="nav-item" id="tenants-menu-item">
-                                        <a class="nav-link{% if request.path == '/administration/tenants' %} active{% endif %}" href="/features/administration/tenants">
-                                        <i class="ti ti-building icon me-2"></i> Tenants
+                                        <a class="nav-link{% if request.path == '/administration/tenants' %} active{% endif %}"
+                                            href="/features/administration/tenants">
+                                            <i class="ti ti-building icon me-2"></i> Tenants
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link{% if request.path == '/administration/users' %} active{% endif %}" href="/features/administration/users">
-                                        <i class="ti ti-user-cog icon me-2"></i> Users & Roles
+                                        <a class="nav-link{% if request.path == '/administration/users' %} active{% endif %}"
+                                            href="/features/administration/users">
+                                            <i class="ti ti-user-cog icon me-2"></i> Users & Roles
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link{% if request.path == '/administration/audit' %} active{% endif %}" href="/features/administration/audit">
-                                        <i class="ti ti-clipboard-text icon me-2"></i> Audit Logs
+                                        <a class="nav-link{% if request.path == '/administration/audit' %} active{% endif %}"
+                                            href="/features/administration/audit">
+                                            <i class="ti ti-clipboard-text icon me-2"></i> Audit Logs
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link{% if request.path == '/administration/logs' %} active{% endif %}" href="/features/administration/logs">
-                                        <i class="ti ti-file-text icon me-2"></i> Application Logs
+                                        <a class="nav-link{% if request.path == '/administration/logs' %} active{% endif %}"
+                                            href="/features/administration/logs">
+                                            <i class="ti ti-file-text icon me-2"></i> Application Logs
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link{% if request.path == '/administration/smtp' %} active{% endif %}" href="/features/administration/smtp">
-                                        <i class="ti ti-mail icon me-2"></i> SMTP Configuration
+                                        <a class="nav-link{% if request.path == '/administration/smtp' %} active{% endif %}"
+                                            href="/features/administration/smtp">
+                                            <i class="ti ti-mail icon me-2"></i> SMTP Configuration
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link{% if request.path == '/administration/ai-prompts' %} active{% endif %}"
+                                            href="/features/administration/ai-prompts">
+                                            <i class="ti ti-message-code icon me-2"></i> AI Prompts
                                         </a>
                                     </li>
                                 </ul>
@@ -244,16 +347,24 @@
         <div class="page-wrapper">
             <!-- Page header with user menu -->
             <div class="page-header d-print-none">
-                <div class="container-fluid">
+                <div class="container-fluid px-4">
                     <div class="row g-2 align-items-center">
                         <div class="col">
                             <!-- Page title can be set in individual templates -->
                         </div>
                         <div class="col-auto ms-auto d-print-none">
+                            <!-- Tenant Switcher (Global Admin Only) -->
+                            <div class="btn-list">
+                                <div id="tenant-switcher-container">
+                                    <!-- Will be populated by JavaScript if user is global admin -->
+                                </div>
+                            </div>
+
                             <!-- User menu -->
                             <div class="btn-list">
                                 <div class="dropdown">
-                                    <a href="#" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <a href="#" class="btn btn-outline-primary dropdown-toggle"
+                                        data-bs-toggle="dropdown" aria-expanded="false">
                                         <i class="ti ti-user me-1"></i>
                                         <span class="d-none d-sm-inline">Account</span>
                                     </a>
@@ -287,9 +398,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Tabler Core JS -->
-    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/js/tabler.min.js"></script>
 
     <!-- Logout functionality -->
     <script>
@@ -326,6 +434,164 @@
         }
     </script>
 
+    <!-- Tenant Switcher Script (Global Admin Only) -->
+    <script>
+        // Tenant switcher functionality
+        let currentTenantSwitch = null;
+
+        async function initTenantSwitcher() {
+            const container = document.getElementById('tenant-switcher-container');
+            if (!container) {
+                console.log('Tenant switcher container not found');
+                return;
+            }
+
+            console.log('Initializing tenant switcher...');
+
+            try {
+                // Get current switch status
+                const token = localStorage.getItem('access_token') || document.cookie.split('access_token=')[1]?.split(';')[0];
+                console.log('Using token:', token ? 'Token found' : 'No token');
+
+                const statusResponse = await fetch('/auth/tenant-switch/current', {
+                    headers: {
+                        'Authorization': `Bearer ${token || ''}`
+                    }
+                });
+
+                console.log('Status response:', statusResponse.status);
+                if (!statusResponse.ok) {
+                    console.log('Not authorized for tenant switching (expected for non-global admins)');
+                    return;
+                }
+
+                const statusData = await statusResponse.json();
+                currentTenantSwitch = statusData.is_switched ? statusData.tenant_id : null;
+
+                // Get available tenants
+                const tenantsResponse = await fetch('/auth/tenant-switch/available-tenants', {
+                    headers: {
+                        'Authorization': `Bearer ${token || ''}`
+                    }
+                });
+
+                console.log('Tenants response:', tenantsResponse.status);
+                if (!tenantsResponse.ok) {
+                    console.error('Failed to fetch tenants');
+                    return;
+                }
+
+                const tenants = await tenantsResponse.json();
+                console.log('Loaded tenants:', tenants.length);
+
+                // Build tenant switcher UI
+                let dropdownHtml = `
+                    <div class="dropdown">
+                        <a href="#" class="btn ${currentTenantSwitch ? 'btn-primary' : 'btn-outline-secondary'} dropdown-toggle"
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="ti ti-building me-1"></i>
+                            <span class="d-none d-sm-inline">${currentTenantSwitch ? 'Tenant: ' + getTenantName(tenants, currentTenantSwitch) : 'Global View'}</span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end" style="min-width: 250px;">
+                            <h6 class="dropdown-header">Switch Tenant Context</h6>
+                `;
+
+                // Add global option
+                if (currentTenantSwitch) {
+                    dropdownHtml += `
+                        <a class="dropdown-item" href="#" onclick="clearTenantSwitch(); return false;">
+                            <i class="ti ti-world me-2"></i>
+                            <strong>Global View</strong>
+                        </a>
+                        <div class="dropdown-divider"></div>
+                    `;
+                }
+
+                // Add tenant options
+                tenants.forEach(tenant => {
+                    const isActive = currentTenantSwitch === tenant.id;
+                    const statusBadge = tenant.is_active ?
+                        '<span class="app-badge app-badge-success ms-2">Active</span>' :
+                        '<span class="app-badge app-badge-neutral ms-2">Inactive</span>';
+
+                    dropdownHtml += `
+                        <a class="dropdown-item ${isActive ? 'active' : ''}" href="#"
+                           onclick="switchTenant('${tenant.id}', '${tenant.name}'); return false;">
+                            <i class="ti ti-building me-2"></i>
+                            ${tenant.name}
+                            ${statusBadge}
+                        </a>
+                    `;
+                });
+
+                dropdownHtml += `
+                        </div>
+                    </div>
+                `;
+
+                container.innerHTML = dropdownHtml;
+
+            } catch (error) {
+                console.error('Failed to initialize tenant switcher:', error);
+            }
+        }
+
+        function getTenantName(tenants, tenantId) {
+            const tenant = tenants.find(t => t.id === tenantId);
+            return tenant ? tenant.name : tenantId;
+        }
+
+        async function switchTenant(tenantId, tenantName) {
+            try {
+                const response = await fetch('/auth/tenant-switch/switch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`
+                    },
+                    body: JSON.stringify({ tenant_id: tenantId })
+                });
+
+                if (response.ok) {
+                    showToast(`Switched to tenant: ${tenantName}`, 'success');
+                    // Reload page to apply tenant context
+                    setTimeout(() => window.location.reload(), 500);
+                } else {
+                    const error = await response.json();
+                    showToast(error.detail || 'Failed to switch tenant', 'error');
+                }
+            } catch (error) {
+                console.error('Switch tenant error:', error);
+                showToast('Failed to switch tenant', 'error');
+            }
+        }
+
+        async function clearTenantSwitch() {
+            try {
+                const response = await fetch('/auth/tenant-switch/clear', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`
+                    }
+                });
+
+                if (response.ok) {
+                    showToast('Returned to global view', 'success');
+                    // Reload page to apply global context
+                    setTimeout(() => window.location.reload(), 500);
+                } else {
+                    showToast('Failed to clear tenant switch', 'error');
+                }
+            } catch (error) {
+                console.error('Clear tenant switch error:', error);
+                showToast('Failed to clear tenant switch', 'error');
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', initTenantSwitcher);
+    </script>
+
     <!-- User role-based UI script -->
     <script>
         // Check user role and hide tenants menu if not global admin
@@ -358,6 +624,68 @@
         document.addEventListener('DOMContentLoaded', checkUserRoleAndHideMenu);
     </script>
 
+    <!-- Sidebar active state indicator -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentPath = window.location.pathname;
+
+            // Find all navigation links in the vertical navbar
+            document.querySelectorAll('.navbar-vertical .nav-link').forEach(link => {
+                const linkHref = link.getAttribute('href');
+
+                // Check if this link matches the current path
+                if (linkHref && currentPath.startsWith(linkHref) && linkHref !== '/') {
+                    link.classList.add('active');
+
+                    // If this link is in a collapse menu, expand the parent and mark it active
+                    const parentCollapse = link.closest('.collapse');
+                    if (parentCollapse) {
+                        parentCollapse.classList.add('show');
+                        // Find the parent toggle and mark it active too
+                        const parentToggle = document.querySelector(`[data-bs-target="#${parentCollapse.id}"]`);
+                        if (parentToggle) {
+                            parentToggle.classList.add('active');
+                        }
+                    }
+                } else if (linkHref === '/' && currentPath === '/') {
+                    // Special case for home/dashboard
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+
+    <!-- HTMX Event Handlers -->
+    <script>
+        // Close modal on HX-Trigger: closeModal
+        document.body.addEventListener('closeModal', function() {
+            const modalEl = document.getElementById('modal');
+            if (!modalEl) return;
+
+            // Check if Bootstrap is available
+            if (typeof bootstrap === "undefined") {
+                console.warn("Bootstrap not loaded, falling back to manual modal close");
+                modalEl.classList.remove("show");
+                modalEl.style.display = "none";
+                modalEl.setAttribute("aria-hidden", "true");
+                document.body.classList.remove("modal-open");
+
+                // Remove backdrop if exists
+                const backdrop = document.querySelector(".modal-backdrop");
+                if (backdrop) {
+                    backdrop.remove();
+                }
+                return;
+            }
+
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) {
+                modal.hide();
+            }
+        });
+    </script>
+
     {% block scripts %}{% endblock %}
 </body>
+
 </html>

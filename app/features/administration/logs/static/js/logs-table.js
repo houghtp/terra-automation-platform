@@ -110,15 +110,45 @@ window.exportTable = function (format) {
 };
 
 window.viewLogDetails = function (logId) {
-    // Use HTMX to load log details
-    htmx.ajax('GET', `/features/administration/logs/partials/log_details?log_id=${logId}`, {
-        target: '#modal-body',
-        swap: 'innerHTML'
-    }).then(() => {
-        // Show the modal
-        const modal = new bootstrap.Modal(document.getElementById('modal'));
-        modal.show();
-    });
+    const url = `/features/administration/logs/partials/log_details?log_id=${logId}`;
+
+    if (typeof window.loadModalContent === 'function') {
+        window.loadModalContent(url, { modalId: 'modal' });
+        return;
+    }
+
+    fetch(url, {
+        headers: {
+            'HX-Request': 'true',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Request failed with status ${response.status}`);
+            }
+            return response.text();
+        })
+        .then(html => {
+            const modalBody = document.getElementById('modal-body');
+            if (modalBody) {
+                modalBody.innerHTML = html;
+                if (typeof window.showModal === 'function') {
+                    window.showModal();
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Failed to load log details:', error);
+            if (typeof window.showToast === 'function') {
+                window.showToast('Failed to load log details. Please try again.', 'error');
+            }
+        });
+};
+
+window.refreshLogs = function () {
+    window.refreshTable && window.refreshTable('logs-table');
 };
 
 document.addEventListener("DOMContentLoaded", () => {

@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.features.administration.users.services import UserManagementService
-from app.features.administration.users.models import (
+from app.features.administration.users.schemas import (
     UserCreate, UserUpdate, UserResponse, UserSearchFilter,
     UserStatus, UserRole, UserDashboardStats
 )

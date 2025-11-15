@@ -11,7 +11,7 @@ from app.features.core.database import get_db, get_async_session
 from app.deps.tenant import tenant_dependency
 from app.features.auth.dependencies import get_current_user
 from app.features.auth.models import User
-from .models import (
+from ..schemas import (
     ContentCreateRequest, ContentScheduleRequest, ApprovalRequest,
     RejectRequest, SEOContentGenerationRequest
 )

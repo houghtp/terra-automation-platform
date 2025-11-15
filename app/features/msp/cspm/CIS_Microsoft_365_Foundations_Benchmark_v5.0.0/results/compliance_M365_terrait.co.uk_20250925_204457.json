@@ -1,0 +1,18 @@
+{
+  "CheckId": "2.1.8_ensure_that_spf_records_are_published_for_all_exchange",
+  "Details": [
+    {
+      "IsCompliant": false,
+      "Domain": "N/A",
+      "Details": "No verified domains found in tenant"
+    }
+  ],
+  "TechType": "M365",
+  "Status": "Fail",
+  "EndTime": "2025-09-25T19:45:03.783528Z",
+  "TenantId": "terrait.co.uk",
+  "Category": "L1",
+  "StartTime": "2025-09-25T19:44:57.6113254Z",
+  "Error": null,
+  "Duration": 6.1722026
+}

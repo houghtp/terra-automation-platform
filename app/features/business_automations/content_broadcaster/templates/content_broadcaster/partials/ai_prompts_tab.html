@@ -1,0 +1,193 @@
+{% set prompts = prompt_entries or [] %}
+
+<div id="plan-prompts-panel"
+     hx-get="/features/content-broadcaster/planning/{{ plan.id }}/partials/prompts"
+     hx-trigger="refreshPromptTable from:body, promptPanelRefresh from:body"
+     hx-target="this"
+     hx-swap="outerHTML">
+<div class="ai-prompts-overview">
+    <div class="mb-3">
+        <p class="text-muted mb-2">
+            These templates drive the blog draft and channel variants generated for every plan. Update them here to tailor
+            the AI output for this tenant without touching the global defaults.
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="/features/administration/ai-prompts" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">
+                <i class="ti ti-external-link me-1"></i>
+                Open AI Prompt Manager
+            </a>
+            {% if has_tenant_prompt_access %}
+            <button
+                type="button"
+                class="btn btn-outline-primary btn-sm"
+                hx-get="/features/administration/ai-prompts/forms/create"
+                hx-target="#modal-body"
+                hx-swap="innerHTML"
+                data-bs-toggle="modal"
+                data-bs-target="#modal">
+                <i class="ti ti-plus me-1"></i>
+                Create New Prompt
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if prompts %}
+    <div class="row g-3">
+        {% for prompt in prompts %}
+            {% set active = prompt.active_prompt %}
+            {% set override = prompt.tenant_prompt %}
+            {% set system_prompt = prompt.system_prompt %}
+            <div class="col-12 col-xl-6">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h4 class="card-title mb-1">{{ prompt.definition.label }}</h4>
+                                <div class="text-muted small">
+                                    <code>{{ prompt.definition.key or prompt.definition.label }}</code>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                {% if override %}
+                                <span class="badge bg-indigo">Tenant Override</span>
+                                {% elif active %}
+                                <span class="badge bg-green">System Prompt</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Not Configured</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if active %}
+                            <div class="mb-3">
+                                {% if active.description %}
+                                <p class="mb-2 text-muted">{{ active.description }}</p>
+                                {% endif %}
+                                <div class="d-flex flex-wrap gap-3 small text-muted">
+                                    {% if active.ai_model %}
+                                    <div><i class="ti ti-cpu me-1"></i>{{ active.ai_model }}</div>
+                                    {% endif %}
+                                    {% if active.updated_at %}
+                                    <div>
+                                        <i class="ti ti-clock me-1"></i>
+                                        Updated {{ active.updated_at.strftime('%b %d, %Y') if active.updated_at else 'N/A' }}
+                                    </div>
+                                    {% endif %}
+                                    <div>
+                                        <i class="ti ti-variables me-1"></i>
+                                        {{ (active.required_variables or {}).keys()|list|length }}
+                                        required · {{ (active.optional_variables or {}).keys()|list|length }} optional vars
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex flex-wrap gap-2 mt-auto">
+                                {% if override %}
+                                <button
+                                    type="button"
+                                    class="btn btn-primary"
+                                    hx-get="/features/administration/ai-prompts/forms/{{ override.id }}/edit"
+                                    hx-target="#modal-body"
+                                    hx-swap="innerHTML"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modal">
+                                    <i class="ti ti-edit me-1"></i>
+                                    Edit Tenant Prompt
+                                </button>
+                                {% elif is_global_admin_user %}
+                                <button
+                                    type="button"
+                                    class="btn btn-primary"
+                                    hx-get="/features/administration/ai-prompts/forms/{{ active.id }}/edit"
+                                    hx-target="#modal-body"
+                                    hx-swap="innerHTML"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modal">
+                                    <i class="ti ti-edit me-1"></i>
+                                    Edit System Prompt
+                                </button>
+                                {% endif %}
+
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-secondary"
+                                    hx-get="/features/administration/ai-prompts/partials/details?prompt_id={{ active.id }}"
+                                    hx-target="#modal-body"
+                                    hx-swap="innerHTML"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modal">
+                                    <i class="ti ti-eye me-1"></i>
+                                    View Details
+                                </button>
+
+                                {% if has_tenant_prompt_access and system_prompt and not override %}
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-primary"
+                                    hx-get="/features/administration/ai-prompts/forms/create?base_prompt_id={{ system_prompt.id }}"
+                                    hx-target="#modal-body"
+                                    hx-swap="innerHTML"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modal">
+                                    <i class="ti ti-copy-plus me-1"></i>
+                                    Customize for this Tenant
+                                </button>
+                                {% endif %}
+
+                                {% if has_tenant_prompt_access and override %}
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-danger"
+                                    hx-delete="/features/content-broadcaster/planning/{{ plan.id }}/prompts/{{ override.id }}"
+                                    hx-target="#plan-prompts-panel"
+                                    hx-swap="outerHTML"
+                                    hx-confirm="Are you sure you want to remove this tenant-specific customization?">
+                                    <i class="ti ti-restore me-1"></i>
+                                    Reset to System Default
+                                </button>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning mb-3">
+                                <i class="ti ti-alert-triangle me-2"></i>
+                                No active prompt found for this key. Add one in the AI Prompt manager.
+                            </div>
+
+                            {% if has_tenant_prompt_access and system_prompt %}
+                            <button
+                                type="button"
+                                class="btn btn-outline-primary"
+                                hx-get="/features/administration/ai-prompts/forms/create?base_prompt_id={{ system_prompt.id }}"
+                                hx-target="#modal-body"
+                                hx-swap="innerHTML"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modal">
+                                <i class="ti ti-copy-plus me-1"></i>
+                                Customize for this Tenant
+                            </button>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    {% else %}
+        <div class="alert alert-warning mb-0">
+            <i class="ti ti-alert-circle me-2"></i>
+            No AI prompts found for this tenant. Visit the <a href="/features/administration/ai-prompts" class="alert-link">AI Prompt Manager</a> to seed the defaults.
+        </div>
+    {% endif %}
+
+    <div class="alert alert-info mt-4 mb-0">
+        <div class="d-flex">
+            <i class="ti ti-info-circle me-2 mt-1"></i>
+            <div>
+                Need deeper customization? Open the full <a href="/features/administration/ai-prompts" class="alert-link">AI Prompt Manager</a> to review usage stats,
+                create new templates, or manage tenant-wide overrides.
+            </div>
+        </div>
+    </div>
+</div>
+</div>

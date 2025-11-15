@@ -30,9 +30,11 @@ passlib[bcrypt]>=1.7.4,<2.0.0     # Password hashing
 bcrypt>=3.2.0,<4.0.0              # Compatible bcrypt version (passlib 1.7.4 compatible)
 email-validator>=2.0.0            # Email validation for Pydantic
 cryptography>=41.0.0              # Encryption for sensitive data (SMTP passwords, connector auth)
+itsdangerous>=2.0.0               # Session signing and security (for SessionMiddleware)
 qrcode>=7.4.2                     # QR code generation for MFA
 pyotp>=2.9.0                      # TOTP/HOTP generation for MFA
 jsonschema>=4.17.0                # JSON Schema validation for connector configs
+markdown>=3.5,<4.0               # Markdown rendering for Content Hub previews
 
 # Optional cloud secrets management dependencies
 # Uncomment based on your deployment environment:

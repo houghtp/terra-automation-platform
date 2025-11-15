@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}M365 Tenant Management{% endblock %}
+{% block head %}
+<script src="/features/core/static/js/table-base.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <div id="m365-tenant-area" data-global-admin="{{ 'true' if is_global_admin|default(False) else 'false' }}">
+      {% include "cspm/partials/m365_tenant_list_content.html" %}
+    </div>
+  </div>
+</div>
+
+<!-- Tabler Modal -->
+<div class="modal modal-blur fade" id="modal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div id="modal-body">
+        <!-- Modal content will be loaded here via HTMX -->
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/features/msp/cspm/static/js/m365-tenants-table.js"></script>
+{% endblock %}

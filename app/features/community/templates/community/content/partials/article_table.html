@@ -1,0 +1,74 @@
+<div
+    id="content-articles-wrapper"
+    hx-get="/features/community/content/partials/articles"
+    hx-trigger="refreshContentTables from:body"
+    hx-target="#content-articles-wrapper"
+    hx-swap="outerHTML">
+    {% if articles %}
+    <div class="table-responsive">
+        <table class="table table-vcenter table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Tags</th>
+                    <th class="text-nowrap">Published</th>
+                    <th class="text-end" style="width: 160px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for article in articles %}
+                <tr>
+                    <td>
+                        <div class="fw-semibold">{{ article.title }}</div>
+                        <div class="text-muted text-truncate" style="max-width: 320px;">{{ article.body_md[:120] }}{% if article.body_md|length > 120 %}…{% endif %}</div>
+                    </td>
+                    <td class="text-muted text-capitalize">{{ article.category or '—' }}</td>
+                    <td>
+                        {% for tag in article.tags or [] %}
+                        <span class="badge bg-blue-lt text-blue me-1">{{ tag }}</span>
+                        {% endfor %}
+                    </td>
+                    <td class="text-muted">
+                        {% if article.published_at %}
+                            {{ article.published_at.strftime("%b %d, %Y") }}
+                        {% else %}
+                            <span class="badge bg-secondary-lt text-secondary">Draft</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <div class="btn-list justify-content-end">
+                            <button
+                                class="btn btn-outline-primary btn-sm"
+                                data-bs-toggle="modal"
+                                data-bs-target="#content-form-modal"
+                                hx-get="/features/community/content/partials/article_form?content_id={{ article.id }}"
+                                hx-target="#content-form-modal-body"
+                                hx-swap="innerHTML">
+                                <i class="ti ti-pencil"></i>
+                            </button>
+                            <button
+                                class="btn btn-outline-danger btn-sm"
+                                hx-post="/features/community/content/articles/{{ article.id }}/delete"
+                                hx-target="closest tr"
+                                hx-swap="none"
+                                hx-confirm="Delete this article?">
+                                <i class="ti ti-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="p-4 text-center text-muted">
+        <div class="mb-2">
+            <i class="ti ti-notebook icon-lg"></i>
+        </div>
+        <p class="mb-1 fw-semibold">No articles published yet.</p>
+        <p class="mb-0">Start by writing your first long-form guide.</p>
+    </div>
+    {% endif %}
+</div>

@@ -1,0 +1,202 @@
+/* Custom FullCalendar styling to align with Tabler look and feel */
+
+#events-calendar {
+    min-height: 640px;
+}
+
+#events-calendar-wrapper {
+    transition: max-height 0.2s ease;
+}
+
+#events-calendar-wrapper.showing-list {
+    max-height: 120px;
+}
+
+#events-calendar-wrapper.showing-list #events-calendar {
+    min-height: 0;
+}
+
+#events-calendar-wrapper.showing-list .fc-view-harness {
+    display: none;
+}
+
+#events-calendar-wrapper.showing-list .fc-scrollgrid {
+    display: none;
+}
+
+.fc {
+    --fc-border-color: #d7dde8;
+    --fc-page-bg-color: #ffffff;
+    --fc-neutral-bg-color: #f8fafc;
+    --fc-today-bg-color: rgba(46, 104, 229, 0.08);
+    --fc-event-border-color: transparent;
+    --fc-button-text-color: #1f2937;
+    --fc-button-bg-color: #eef2f8;
+    --fc-button-border-color: #d7dde8;
+    --fc-button-hover-bg-color: #e3e8f3;
+    --fc-button-hover-border-color: #c8d0de;
+    --fc-button-active-bg-color: #2e68e5;
+    --fc-button-active-border-color: #2e68e5;
+    --fc-button-active-text-color: #ffffff;
+}
+
+.fc .fc-scrollgrid {
+    border: 1px solid var(--fc-border-color);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    background-color: #ffffff;
+}
+
+.fc .fc-toolbar {
+    margin-bottom: 1.5rem;
+}
+
+.fc .fc-toolbar-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.fc .fc-toolbar .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    padding: 0.45rem 0.85rem;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.fc .fc-toolbar .btn i {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.fc .fc-toolbar .btn.btn-active {
+    background-color: var(--fc-button-active-bg-color);
+    border-color: var(--fc-button-active-border-color);
+    color: var(--fc-button-active-text-color);
+}
+
+.fc .fc-toolbar .btn:not(.btn-active) {
+    color: #334155;
+}
+
+.fc .fc-toolbar .btn:not(.btn-active):hover {
+    background-color: var(--fc-button-hover-bg-color);
+    border-color: var(--fc-button-hover-border-color);
+}
+
+.fc .fc-daygrid-day-frame {
+    padding: 0.75rem;
+    background-color: #ffffff;
+}
+
+.fc .fc-daygrid-day {
+    border-right: 1px solid var(--fc-border-color);
+    border-bottom: 1px solid var(--fc-border-color);
+}
+
+.fc .fc-daygrid-day:first-child {
+    border-left: none;
+}
+
+.fc .fc-daygrid-day-top {
+    justify-content: flex-end;
+    margin-bottom: 0.35rem;
+}
+
+.fc .fc-daygrid-day-number {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+    background-color: rgba(46, 104, 229, 0.18);
+    color: #1f2937;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+}
+
+.fc .fc-daygrid-event-harness {
+    margin-top: 0.25rem;
+}
+
+.fc .fc-event {
+    border-radius: 0.5rem;
+    background-color: rgba(46, 104, 229, 0.16);
+    color: #1f3a8a;
+    padding: 0.4rem 0.6rem;
+    font-weight: 500;
+    border: none;
+}
+
+.fc .fc-event:hover {
+    background-color: rgba(46, 104, 229, 0.24);
+}
+
+.fc .fc-timegrid-slot {
+    border-style: solid;
+    border-color: var(--fc-border-color);
+}
+
+.fc .fc-timegrid-col {
+    border-right: 1px solid var(--fc-border-color);
+    background-color: #ffffff;
+}
+
+.fc .fc-timegrid-axis {
+    color: #64748b;
+    font-weight: 500;
+}
+
+.fc .fc-timegrid-now-indicator-line {
+    border-color: #dc2626;
+}
+
+.fc .fc-daygrid-day.fc-day-other .fc-daygrid-day-number {
+    color: #94a3b8;
+}
+
+.fc .fc-daygrid-day.fc-day-other .fc-daygrid-day-frame {
+    background-color: #f8fafc;
+}
+
+.fc .fc-list-table td {
+    padding: 0.75rem 1rem;
+}
+
+.fc .fc-toolbar .btn .fc-icon {
+    margin: 0;
+    font-size: 0;
+}
+
+.fc .fc-toolbar .btn .fc-icon::before {
+    display: none;
+}
+
+.fc .fc-toolbar .btn .fc-icon {
+    width: 0;
+}
+
+#events-table-wrapper {
+    padding: 0.25rem;
+}
+
+@media (max-width: 991.98px) {
+    #events-calendar {
+        min-height: 520px;
+    }
+
+    .fc .fc-toolbar {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .fc .fc-toolbar .fc-toolbar-chunk {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+}

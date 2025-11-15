@@ -14,7 +14,7 @@
                             <a href="/features/content-broadcaster">Content Broadcaster</a>
                         </li>
                         <li class="breadcrumb-item">
-                            <a href="/features/content-broadcaster">Content Library</a>
+                            <a href="/features/content-broadcaster/library">Content Library</a>
                         </li>
                         <li class="breadcrumb-item active" aria-current="page">{{ content.title }}</li>
                     </ol>
@@ -27,7 +27,7 @@
         <!-- Actions -->
         <div class="col-auto ms-auto d-print-none">
             <div class="btn-list">
-                <a href="/features/content-broadcaster" class="btn">
+                <a href="/features/content-broadcaster/library" class="btn">
                     <i class="ti ti-arrow-left me-1"></i>
                     Back to Library
                 </a>
@@ -106,7 +106,51 @@
 
                             <!-- Content Body -->
                             <div class="content-body" style="line-height: 1.8; font-size: 1rem;">
-                                <div class="markdown-content">{{ content.body | safe }}</div>
+                                <div class="published-content">
+                                    {% if content.body %}
+                                        {% set paragraphs = content.body.split('\n\n') %}
+                                        {% for para in paragraphs %}
+                                            {% if para.strip() %}
+                                                {% if para.strip().startswith('#') %}
+                                                    {# Handle markdown headers #}
+                                                    {% if para.strip().startswith('### ') %}
+                                                        <h3>{{ para.strip()[4:] }}</h3>
+                                                    {% elif para.strip().startswith('## ') %}
+                                                        <h2>{{ para.strip()[3:] }}</h2>
+                                                    {% elif para.strip().startswith('# ') %}
+                                                        <h1>{{ para.strip()[2:] }}</h1>
+                                                    {% else %}
+                                                        <p>{{ para | replace('\n', '<br>') | safe }}</p>
+                                                    {% endif %}
+                                                {% elif para.strip().startswith('- ') or para.strip().startswith('* ') %}
+                                                    {# Handle lists #}
+                                                    <ul>
+                                                    {% set list_items = para.split('\n') %}
+                                                    {% for item in list_items %}
+                                                        {% if item.strip() and (item.strip().startswith('- ') or item.strip().startswith('* ')) %}
+                                                            <li>{{ item.strip()[2:] }}</li>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                    </ul>
+                                                {% elif para.strip()[0].isdigit() and '. ' in para %}
+                                                    {# Handle numbered lists #}
+                                                    <ol>
+                                                    {% set list_items = para.split('\n') %}
+                                                    {% for item in list_items %}
+                                                        {% if item.strip() and item.strip()[0].isdigit() and '. ' in item %}
+                                                            <li>{{ item.split('. ', 1)[1] if '. ' in item else item }}</li>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                    </ol>
+                                                {% else %}
+                                                    <p>{{ para | replace('\n', '<br>') | safe }}</p>
+                                                {% endif %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-muted">No content available.</p>
+                                    {% endif %}
+                                </div>
                             </div>
 
                             <hr class="my-4">
@@ -193,60 +237,113 @@ function editContent(contentId) {
     margin: 0 auto;
 }
 
-.markdown-content {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+.published-content {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #2c3e50;
+    line-height: 1.8;
 }
 
-.markdown-content h1 {
-    font-size: 2rem;
+.published-content h1 {
+    font-size: 2.25rem;
     font-weight: 700;
+    margin-top: 2.5rem;
+    margin-bottom: 1.25rem;
+    color: #1a1a1a;
+    border-bottom: 3px solid #0054a6;
+    padding-bottom: 0.75rem;
+}
+
+.published-content h1:first-child {
+    margin-top: 0;
+}
+
+.published-content h2 {
+    font-size: 1.75rem;
+    font-weight: 600;
     margin-top: 2rem;
     margin-bottom: 1rem;
+    color: #2c3e50;
     border-bottom: 2px solid #e9ecef;
     padding-bottom: 0.5rem;
 }
 
-.markdown-content h2 {
-    font-size: 1.5rem;
+.published-content h3 {
+    font-size: 1.375rem;
     font-weight: 600;
     margin-top: 1.5rem;
     margin-bottom: 0.75rem;
+    color: #34495e;
 }
 
-.markdown-content h3 {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-top: 1.25rem;
-    margin-bottom: 0.75rem;
+.published-content p {
+    margin-bottom: 1.25rem;
+    line-height: 1.8;
+    font-size: 1.0625rem;
+    color: #2c3e50;
+    text-align: justify;
 }
 
-.markdown-content p {
-    margin-bottom: 1rem;
+.published-content ul, .published-content ol {
+    margin-left: 2rem;
+    margin-bottom: 1.25rem;
     line-height: 1.8;
 }
 
-.markdown-content ul, .markdown-content ol {
-    margin-left: 1.5rem;
-    margin-bottom: 1rem;
+.published-content ul {
+    list-style-type: disc;
 }
 
-.markdown-content li {
-    margin-bottom: 0.5rem;
+.published-content ol {
+    list-style-type: decimal;
 }
 
-.markdown-content code {
+.published-content li {
+    margin-bottom: 0.625rem;
+    font-size: 1.0625rem;
+    color: #2c3e50;
+    padding-left: 0.5rem;
+}
+
+.published-content li::marker {
+    color: #0054a6;
+    font-weight: 600;
+}
+
+.published-content strong {
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.published-content em {
+    font-style: italic;
+}
+
+.published-content code {
     background: #f8f9fa;
-    padding: 0.2rem 0.4rem;
-    border-radius: 3px;
-    font-size: 0.9em;
-}
-
-.markdown-content pre {
-    background: #f8f9fa;
-    padding: 1rem;
+    padding: 0.2rem 0.5rem;
     border-radius: 4px;
+    font-size: 0.9em;
+    font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+    color: #c7254e;
+    border: 1px solid #e9ecef;
+}
+
+.published-content pre {
+    background: #f8f9fa;
+    padding: 1.25rem;
+    border-radius: 6px;
     overflow-x: auto;
-    margin-bottom: 1rem;
+    margin-bottom: 1.25rem;
+    border: 1px solid #e9ecef;
+}
+
+.published-content blockquote {
+    border-left: 4px solid #0054a6;
+    padding-left: 1.25rem;
+    margin-left: 0;
+    margin-bottom: 1.25rem;
+    font-style: italic;
+    color: #555;
 }
 </style>
 {% endblock %}

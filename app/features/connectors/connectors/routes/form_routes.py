@@ -6,11 +6,8 @@ Provides HTMX-powered form submission and inline validation.
 
 from app.features.core.route_imports import *
 from app.features.connectors.connectors.services.connector_service import ConnectorService
-from app.features.connectors.connectors.models import (
-    ConnectorCreate,
-    ConnectorUpdate,
-    ConnectorStatus,
-)
+from app.features.connectors.connectors.models import ConnectorStatus
+from app.features.connectors.connectors.schemas import ConnectorCreate, ConnectorUpdate
 
 logger = get_logger(__name__)
 

@@ -14,13 +14,13 @@ from app.main import app
 from app.features.core.database import get_db
 from app.features.auth.services import AuthService
 from app.features.administration.tenants.services import TenantManagementService
-from app.features.administration.tenants.models import TenantCreate, TenantTier, TenantStatus
+from app.features.administration.tenants.schemas import TenantCreate, TenantTier, TenantStatus
 from app.features.administration.users.services import UserManagementService
-from app.features.administration.users.models import UserCreate, UserStatus, UserRole
+from app.features.administration.users.schemas import UserCreate, UserStatus, UserRole
 from app.features.administration.secrets.services import SecretsManagementService
-from app.features.administration.secrets.models import SecretCreate
+from app.features.administration.secrets.schemas import SecretCreate
 from app.features.administration.smtp.services import SMTPManagementService
-from app.features.administration.smtp.models import SMTPConfigurationCreate
+from app.features.administration.smtp.schemas import SMTPConfigurationCreate
 from tests.conftest import TestDatabase
 import json
 

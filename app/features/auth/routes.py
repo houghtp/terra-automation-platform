@@ -54,6 +54,10 @@ router = APIRouter(tags=["auth"])
 from .mfa_routes import router as mfa_router
 router.include_router(mfa_router)
 
+# Include Tenant Switch routes
+from app.features.auth.tenant_switch_routes.tenant_switch_routes import router as tenant_switch_router
+router.include_router(tenant_switch_router)
+
 
 # API Endpoints (JSON)
 

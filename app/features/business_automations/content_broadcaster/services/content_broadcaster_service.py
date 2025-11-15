@@ -652,11 +652,10 @@ class ContentBroadcasterService(BaseService[ContentItem]):
             recent_result = await self.db.execute(recent_query)
             recent_content = [item.to_dict() for item in recent_result.scalars().all()]
 
-            # Pending approvals count
+            # Pending approvals count - any content with pending approval status
             pending_count_query = select(func.count(ContentItem.id)).filter(
                 and_(
                     ContentItem.tenant_id == self.tenant_id,
-                    ContentItem.state == ContentState.IN_REVIEW.value,
                     ContentItem.approval_status == ApprovalStatus.PENDING.value
                 )
             )

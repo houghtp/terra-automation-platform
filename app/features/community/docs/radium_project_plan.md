@@ -13,3 +13,12 @@ Sprint-level rollout plan for the Radium Financial Advisor Community Platform (m
 | Sprint 6 | Tools & Resources | Valuation calculator, transition checklist, reviews, compliance links. | Sprint 5 |
 | Sprint 7 | Engagement & Gamification | Badges, notifications, feedback dashboard. | Sprint 6 |
 | Sprint 8 | Premium Expansion | Mastermind groups, marketplace, AMA sessions. | Sprint 7 |
+
+---
+
+### Sprint 3 — Community & Events (Implementation Snapshot)
+
+- **Groups & Forums**: CRUD for groups, memberships, posts, and comments with tenant scoping.
+- **Messaging**: Thread creation, participant management, and direct message APIs + inbox shell.
+- **Events**: Calendar CRUD, HTMX modal forms, and Tabulator list view.
+- **Polls**: Poll/options/voting services, REST endpoints, and UI scaffold for results.

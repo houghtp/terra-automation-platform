@@ -1,0 +1,140 @@
+<div class="modal-header">
+    <h5 class="modal-title">
+        {{ "Edit Member" if member else "Add Member" }}
+    </h5>
+</div>
+
+<form
+    id="member-form"
+    {% if member %}
+        hx-put="/features/community/members/{{ member.id }}"
+    {% else %}
+        hx-post="/features/community/members"
+    {% endif %}
+    hx-target="#modal-body"
+    hx-swap="innerHTML"
+    hx-disabled-elt="fieldset"
+    autocomplete="off"
+>
+    <div class="modal-body">
+        <fieldset class="form-fieldset">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">Name</label>
+                    <input
+                        type="text"
+                        name="name"
+                        value="{{ form_data.name if form_data and form_data.name is not none else (member.name if member else '') }}"
+                        class="form-control {{ 'is-invalid' if errors and errors.get('name') }}"
+                        maxlength="255"
+                        required
+                    >
+                    {% if errors and errors.get('name') %}
+                        <div class="invalid-feedback d-block">{{ errors['name'][0] }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">Email</label>
+                    <input
+                        type="email"
+                        name="email"
+                        value="{{ form_data.email if form_data and form_data.email is not none else (member.email if member else '') }}"
+                        class="form-control {{ 'is-invalid' if errors and errors.get('email') }}"
+                        maxlength="255"
+                        required
+                    >
+                    {% if errors and errors.get('email') %}
+                        <div class="invalid-feedback d-block">{{ errors['email'][0] }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Firm</label>
+                    <input
+                        type="text"
+                        name="firm"
+                        value="{{ form_data.firm if form_data and form_data.firm is not none else (member.firm if member else '') }}"
+                        class="form-control"
+                        maxlength="255"
+                    >
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Location</label>
+                    <input
+                        type="text"
+                        name="location"
+                        value="{{ form_data.location if form_data and form_data.location is not none else (member.location if member else '') }}"
+                        class="form-control"
+                        maxlength="255"
+                    >
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">AUM Range</label>
+                    <input
+                        type="text"
+                        name="aum_range"
+                        value="{{ form_data.aum_range if form_data and form_data.aum_range is not none else (member.aum_range if member else '') }}"
+                        class="form-control"
+                        maxlength="100"
+                        placeholder="e.g. $100M - $250M"
+                    >
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Linked User ID</label>
+                    <input
+                        type="text"
+                        name="user_id"
+                        value="{{ form_data.user_id if form_data and form_data.user_id is not none else (member.user_id if member else '') }}"
+                        class="form-control"
+                        maxlength="36"
+                        placeholder="Optional auth user link"
+                    >
+                    <div class="form-text">Map this member to an existing auth user (optional).</div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Specialties</label>
+                    <input
+                        type="text"
+                        name="specialties"
+                        value="{{ specialties_text }}"
+                        class="form-control"
+                        placeholder="Comma separated (e.g. succession, tax)"
+                    >
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Tags</label>
+                    <input
+                        type="text"
+                        name="tags"
+                        value="{{ tags_text }}"
+                        class="form-control"
+                        placeholder="Comma separated labels"
+                    >
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Bio</label>
+                    <textarea
+                        name="bio"
+                        class="form-control"
+                        rows="3"
+                    >{{ form_data.bio if form_data and form_data.bio is not none else (member.bio if member else '') }}</textarea>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            Cancel
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <span class="htmx-indicator spinner-border spinner-border-sm me-2" role="status"></span>
+            {{ "Save Changes" if member else "Create Member" }}
+        </button>
+    </div>
+</form>

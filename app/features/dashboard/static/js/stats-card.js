@@ -24,7 +24,6 @@
 class StatsCard extends HTMLElement {
     constructor() {
         super();
-        this.shadow = this.attachShadow({ mode: 'open' });
         this.refreshInterval = null;
     }
 
@@ -36,6 +35,7 @@ class StatsCard extends HTMLElement {
     }
 
     connectedCallback() {
+        StatsCard.ensureStyles();
         this.render();
         this.setupDataFetching();
         this.setupAutoRefresh();
@@ -68,169 +68,24 @@ class StatsCard extends HTMLElement {
 
     render() {
         const colorClass = `text-${this.color}`;
-        const loadingClass = this.isLoading ? 'loading' : '';
-        const displayValue = this.isLoading ? 'Loading stats...' : this.value;
+        const loadingClass = this.isLoading ? 'card-loading' : '';
+        const displayValue = this.isLoading ? 'Loading…' : (this.value || '0');
 
-        this.shadow.innerHTML = `
-            <style>
-                :host {
-                    display: block;
-                }
-
-                .card {
-                    background: white;
-                    border: 1px solid #e6e7e9;
-                    border-radius: 0.375rem;
-                    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-                    transition: all 0.2s ease;
-                }
-
-                .card:hover {
-                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                }
-
-                .card-body {
-                    padding: 1.5rem;
-                }
-
-                .d-flex {
-                    display: flex;
-                }
-
-                .align-items-center {
-                    align-items: center;
-                }
-
-                .ms-auto {
-                    margin-left: auto;
-                }
-
-                .me-1 {
-                    margin-right: 0.25rem;
-                }
-
-                .mb-2 {
-                    margin-bottom: 0.5rem;
-                }
-
-                .mb-3 {
-                    margin-bottom: 1rem;
-                }
-
-                .subheader {
-                    font-size: 0.875rem;
-                    font-weight: 500;
-                    color: #6c757d;
-                }
-
-                .h1 {
-                    font-size: 2.5rem;
-                    font-weight: 700;
-                    line-height: 1.2;
-                    color: #1a202c;
-                    margin: 0;
-                }
-
-                .description {
-                    font-size: 0.875rem;
-                    color: #6c757d;
-                }
-
-                .icon {
-                    width: 1.5rem;
-                    height: 1.5rem;
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-
-                .text-blue { color: #0066cc; }
-                .text-green { color: #28a745; }
-                .text-red { color: #dc3545; }
-                .text-orange { color: #fd7e14; }
-                .text-purple { color: #6f42c1; }
-                .text-primary { color: #0d6efd; }
-                .text-gray { color: #6c757d; }
-
-                .loading .h1 {
-                    opacity: 0.7;
-                    animation: pulse 1.5s ease-in-out infinite;
-                }
-
-                /* Loading overlay for stats cards - matches chart loader style */
-                .loading .card-body {
-                    position: relative;
-                }
-
-                .loading .card-body::before {
-                    content: 'Loading stats...';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(255, 255, 255, 0.9);
-                    backdrop-filter: blur(2px);
-                    z-index: 1000;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    flex-direction: column;
-                    color: #6b7280;
-                    font-size: 14px;
-                    font-weight: 500;
-                    border-radius: 0.375rem;
-                }
-
-                .loading .card-body::after {
-                    content: '';
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    width: 40px;
-                    height: 40px;
-                    margin: -30px 0 0 -20px; /* Adjusted to center above text */
-                    border: 3px solid #e5e7eb;
-                    border-top: 3px solid #3b82f6;
-                    border-radius: 50%;
-                    animation: spin 1s linear infinite;
-                    z-index: 1001;
-                }
-
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
-                }
-
-                @keyframes pulse {
-                    0%, 100% { opacity: 0.7; }
-                    50% { opacity: 0.4; }
-                }
-
-                .lh-1 {
-                    line-height: 1;
-                }
-
-                .d-inline-flex {
-                    display: inline-flex;
-                }
-            </style>
-
+        this.innerHTML = `
             <div class="card ${loadingClass}">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="subheader">${this.title}</div>
-                        <div class="ms-auto">
-                            <span class="${colorClass} d-inline-flex align-items-center lh-1">
-                                <i class="icon ${this.icon} me-1"></i>
-                            </span>
+                <div class="card-body d-flex flex-column gap-2">
+                    <div class="d-flex align-items-start">
+                        <div>
+                            <div class="text-secondary text-uppercase fs-6 fw-semibold">${this.title}</div>
+                            <div class="fs-2 fw-bold text-body">${displayValue}</div>
+                            ${this.description ? `<div class="text-secondary">${this.description}</div>` : ''}
+                        </div>
+                        <div class="ms-auto lh-1 text-2xl ${colorClass}">
+                            <i class="${this.icon}"></i>
                         </div>
                     </div>
-                    <div class="h1 mb-3">${displayValue}</div>
-                    <div class="d-flex mb-2">
-                        <div class="description">${this.description}</div>
-                    </div>
                 </div>
+                ${this.isLoading ? StatsCard.loadingTemplate() : ''}
             </div>
         `;
     }
@@ -313,6 +168,52 @@ class StatsCard extends HTMLElement {
         }
     }
 }
+
+StatsCard.ensureStyles = function () {
+    if (document.getElementById('stats-card-styles')) {
+        return;
+    }
+
+    const style = document.createElement('style');
+    style.id = 'stats-card-styles';
+    style.textContent = `
+        stats-card {
+            display: block;
+        }
+
+        stats-card .card {
+            position: relative;
+        }
+
+        stats-card .card-loading .card-body {
+            opacity: 0.35;
+            transition: opacity 0.2s ease;
+        }
+
+        stats-card .card-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            background-color: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(2px);
+            z-index: 5;
+        }
+    `;
+
+    document.head.appendChild(style);
+};
+
+StatsCard.loadingTemplate = function () {
+    return `
+        <div class="card-overlay">
+            <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+            <span class="text-secondary fw-semibold">Loading</span>
+        </div>
+    `;
+};
 
 // Register the custom element
 customElements.define('stats-card', StatsCard);

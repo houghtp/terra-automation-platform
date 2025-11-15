@@ -214,7 +214,7 @@ class SecretsManager:
 
         return {
             "secret_key": jwt_secrets["JWT_SECRET_KEY"] or "dev-secret-key-change-in-production",
-            "algorithm": jwt_secrets["JWT_ALGORITHM"] or "HS256",
+            "algorithm": jwt_secrets["JWT_ALGORITHM"] or "HS512",
             "access_token_expire_minutes": int(jwt_secrets["JWT_ACCESS_TOKEN_EXPIRE_MINUTES"] or "30"),
             "refresh_token_expire_days": int(jwt_secrets["JWT_REFRESH_TOKEN_EXPIRE_DAYS"] or "7")
         }

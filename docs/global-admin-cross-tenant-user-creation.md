@@ -166,7 +166,7 @@ async def get_available_tenants_for_user_forms(self) -> List[dict]:
     try:
         # Import here to avoid circular imports
         from app.features.administration.tenants.services import TenantManagementService
-        from app.features.administration.tenants.models import TenantSearchFilter
+        from app.features.administration.tenants.schemas import TenantSearchFilter
         
         tenant_service = TenantManagementService(self.db)
         filters = TenantSearchFilter(status="active")  # Only active tenants

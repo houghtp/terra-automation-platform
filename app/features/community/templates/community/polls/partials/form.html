@@ -1,0 +1,75 @@
+<div class="modal-header">
+  <h5 class="modal-title">{{ "Edit Poll" if poll else "Create Poll" }}</h5>
+</div>
+
+<form
+  id="poll-form"
+  {% if poll %}
+    hx-put="/features/community/polls/{{ poll.id }}"
+  {% else %}
+    hx-post="/features/community/polls"
+  {% endif %}
+  hx-target="#modal-body"
+  hx-swap="innerHTML"
+  hx-disabled-elt="fieldset"
+  autocomplete="off"
+>
+  <div class="modal-body">
+    <fieldset class="form-fieldset">
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label required">Question</label>
+          <input
+            type="text"
+            name="question"
+            value="{{ form_data.question if form_data and form_data.question is not none else (poll.question if poll else '') }}"
+            class="form-control {{ 'is-invalid' if errors and errors.get('question') }}"
+            required
+          >
+          {% if errors and errors.get('question') %}
+            <div class="invalid-feedback d-block">{{ errors['question'][0] }}</div>
+          {% endif %}
+        </div>
+        <div class="col-12">
+          <label class="form-label">Expires At</label>
+          <input
+            type="datetime-local"
+            name="expires_at"
+            value="{{ form_data.expires_at if form_data and form_data.expires_at is not none else (poll.expires_at if poll else '') }}"
+            class="form-control"
+          >
+        </div>
+        <div class="col-12">
+          <label class="form-label required">Options <span class="form-help">One per line</span></label>
+          <textarea
+            name="options"
+            rows="6"
+            class="form-control {{ 'is-invalid' if errors and errors.get('options') }}"
+            {% if not poll %}required{% endif %}
+          >{% if form_data and form_data.options_text is not none %}{{ form_data.options_text }}{% elif poll %}{{ poll.options | map(attribute='text') | join('\n') }}{% endif %}</textarea>
+          {% if errors and errors.get('options') %}
+            <div class="invalid-feedback d-block">{{ errors['options'][0] }}</div>
+          {% endif %}
+        </div>
+        {% if poll %}
+        <div class="col-md-6">
+          <label class="form-label">Status</label>
+          <select name="status" class="form-select">
+            {% set status_value = form_data.status if form_data and form_data.status is not none else poll.status %}
+            <option value="draft" {% if status_value == 'draft' %}selected{% endif %}>Draft</option>
+            <option value="active" {% if status_value == 'active' %}selected{% endif %}>Active</option>
+            <option value="closed" {% if status_value == 'closed' %}selected{% endif %}>Closed</option>
+          </select>
+        </div>
+        {% endif %}
+      </div>
+    </fieldset>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+    <button type="submit" class="btn btn-primary">
+      <span class="htmx-indicator spinner-border spinner-border-sm me-2" role="status"></span>
+      {{ "Save Changes" if poll else "Create Poll" }}
+    </button>
+  </div>
+</form>

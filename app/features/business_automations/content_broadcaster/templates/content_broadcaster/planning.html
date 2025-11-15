@@ -9,20 +9,8 @@
 
 {% block content %}
 <!-- Navigation Tabs -->
-<ul class="nav nav-tabs mb-3" role="tablist">
-    <li class="nav-item" role="presentation">
-        <a class="nav-link active" href="/features/content-broadcaster/planning" role="tab">
-            <i class="ti ti-bulb me-2"></i>
-            Content Ideas
-        </a>
-    </li>
-    <li class="nav-item" role="presentation">
-        <a class="nav-link" href="/features/content-broadcaster" role="tab">
-            <i class="ti ti-file-text me-2"></i>
-            Content Library
-        </a>
-    </li>
-</ul>
+{% set active_tab = 'ideas' %}
+{% include 'content_broadcaster/partials/nav_tabs.html' %}
 
 <div class="card">
     <div class="card-header">

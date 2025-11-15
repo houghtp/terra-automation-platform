@@ -11,7 +11,8 @@ This demonstrates how to:
 import asyncio
 from app.features.connectors.connectors.services import ConnectorService
 from app.features.administration.secrets.services import SecretsService
-from app.features.administration.secrets.models import SecretCreate, SecretType
+from app.features.administration.secrets.models import SecretType
+from app.features.administration.secrets.schemas import SecretCreate
 
 
 async def example_connector_with_secrets(db_session, tenant_id: str):

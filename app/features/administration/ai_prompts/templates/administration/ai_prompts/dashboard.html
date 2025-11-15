@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}AI Prompt Management{% endblock %}
+
+{% block head %}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="page-title mb-1">AI Prompt Library</h2>
+        <p class="text-muted mb-0">
+            Manage system prompts and tenant overrides with live template validation.
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <button
+            class="btn btn-primary"
+            data-bs-toggle="modal"
+            data-bs-target="#prompt-form-modal"
+            hx-get="/features/administration/ai-prompts/forms/create"
+            hx-target="#prompt-form-modal-content"
+            hx-swap="innerHTML">
+            <i class="ti ti-plus me-1"></i> New Prompt
+        </button>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form id="prompt-filter-form" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Category</label>
+                <select class="form-select" name="category" id="prompt-filter-category">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category }}">{{ category|replace('_', ' ')|title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Include</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="prompt-include-system" name="include_system" checked>
+                    <label class="form-check-label" for="prompt-include-system">
+                        Include system prompts
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="prompt-include-inactive" name="include_inactive">
+                    <label class="form-check-label" for="prompt-include-inactive">
+                        Include inactive prompts
+                    </label>
+                </div>
+            </div>
+            {% if is_global_admin %}
+            <div class="col-md-3">
+                <label class="form-label">Tenant Scope</label>
+                <select class="form-select" id="prompt-tenant-scope" name="scope_tenant_id">
+                    <option value="">System library</option>
+                    {% for tenant in available_tenants %}
+                    <option value="{{ tenant.id }}">{{ tenant.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            <div class="col-md-3">
+                <button type="button" class="btn btn-outline-secondary me-2" id="prompt-filter-reset">
+                    <i class="ti ti-rotate-ccw me-1"></i> Reset
+                </button>
+                <button type="button" class="btn btn-primary" id="prompt-filter-apply">
+                    <i class="ti ti-filter me-1"></i> Apply
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="prompt-table-container"
+     hx-get="/features/administration/ai-prompts/partials/table"
+     hx-trigger="promptFiltersChanged from:body"
+     hx-target="#prompt-table-container"
+     hx-swap="outerHTML"
+     hx-include="#prompt-filter-form">
+    {% include "administration/ai_prompts/partials/prompt_table.html" %}
+</div>
+
+<!-- Prompt Form Modal -->
+<div class="modal fade" id="prompt-form-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content" id="prompt-form-modal-content">
+            <div class="modal-body py-5 text-center text-muted">
+                <div class="spinner-border text-primary mb-3" role="status"></div>
+                <p class="mb-0">Loading prompt form...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Prompt Details Modal -->
+<div class="modal fade" id="prompt-details-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" id="prompt-details-modal-content">
+            <div class="modal-body py-5 text-center text-muted">
+                <div class="spinner-border text-primary mb-3" role="status"></div>
+                <p class="mb-0">Loading prompt details...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/features/administration/ai_prompts/static/js/prompt-management.js"></script>
+{% endblock %}

@@ -7,7 +7,7 @@ from app.features.core.route_imports import (
 from app.features.administration.tenants.services import TenantManagementService
 from app.features.auth.dependencies import get_global_admin_user
 from app.features.auth.models import User
-from app.features.administration.tenants.models import TenantCreate, TenantUpdate
+from app.features.administration.tenants.schemas import TenantCreate, TenantUpdate
 
 logger = get_logger(__name__)
 

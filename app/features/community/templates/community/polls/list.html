@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Community Polls{% endblock %}
+
+{% block head %}
+<script src="/features/core/static/js/table-base.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-pretitle">Community</div>
+            <h2 class="page-title">{{ page_title }}</h2>
+            <div class="text-muted mt-1">{{ page_description }}</div>
+        </div>
+        <div class="col-auto ms-auto">
+            <button class="btn btn-primary" hx-get="/features/community/polls/partials/form" hx-target="#modal-body" hx-swap="innerHTML">
+                <i class="ti ti-chart-arcs me-1"></i> New Poll
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-12 col-xl-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h3 class="card-title mb-0"><i class="ti ti-forms me-2"></i>Polls</h3>
+            </div>
+            <div class="card-body p-0">
+                <div id="polls-table"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="card-title mb-0"><i class="ti ti-chart-pie me-2"></i>Results</h3>
+                    <p class="text-muted mb-0">Choose a poll to see live voting results.</p>
+                </div>
+                <button class="btn btn-outline-primary btn-sm" id="refresh-poll-results" disabled>
+                    <i class="ti ti-refresh"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="poll-results" style="height: 320px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal modal-blur fade" id="modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div id="modal-body"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/features/community/static/js/polls-table.js"></script>
+{% endblock %}

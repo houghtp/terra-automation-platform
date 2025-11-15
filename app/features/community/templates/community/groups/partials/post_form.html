@@ -1,0 +1,54 @@
+<div class="modal-header">
+  <h5 class="modal-title">{{ "Edit Post" if post else "New Post" }}</h5>
+</div>
+
+<form
+  id="group-post-form"
+  {% if post %}
+    hx-put="/features/community/groups/posts/{{ post.id }}"
+  {% else %}
+    hx-post="/features/community/groups/{{ group_id }}/posts"
+  {% endif %}
+  hx-target="#modal-body"
+  hx-swap="innerHTML"
+  hx-disabled-elt="fieldset"
+  autocomplete="off"
+>
+  <div class="modal-body">
+    <fieldset class="form-fieldset">
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label">Title</label>
+          <input
+            type="text"
+            name="title"
+            value="{{ form_data.title if form_data and form_data.title is not none else (post.title if post else '') }}"
+            class="form-control"
+            maxlength="255"
+          >
+        </div>
+        <div class="col-12">
+          <label class="form-label required">Content</label>
+          <textarea
+            name="content"
+            rows="6"
+            required
+            class="form-control {{ 'is-invalid' if errors and errors.get('content') }}"
+          >{{ form_data.content if form_data and form_data.content is not none else (post.content if post else '') }}</textarea>
+          {% if errors and errors.get('content') %}
+            <div class="invalid-feedback d-block">{{ errors['content'][0] }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </fieldset>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+      Cancel
+    </button>
+    <button type="submit" class="btn btn-primary">
+      <span class="htmx-indicator spinner-border spinner-border-sm me-2" role="status"></span>
+      {{ "Save Changes" if post else "Publish Post" }}
+    </button>
+  </div>
+</form>

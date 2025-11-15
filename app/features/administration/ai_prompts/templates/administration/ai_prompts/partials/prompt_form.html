@@ -1,0 +1,208 @@
+{% macro field_errors(field_name) -%}
+    {% if errors.get(field_name) %}
+    <div class="text-danger small mt-1">
+        {% for message in errors[field_name] %}
+        <div>{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+{%- endmacro %}
+
+{% set target_action = "/features/administration/ai-prompts/forms" %}
+{% if form_mode == "edit" and prompt %}
+    {% set target_action = target_action + "/" + prompt.id|string %}
+{% endif %}
+{% set is_active_checked = form_data.is_active is not defined or form_data.is_active in [true, 'true', 'on', '1', 1] %}
+{% set current_scope = form_data.target_tenant_id or form_data.tenant_id %}
+
+<div class="modal-header">
+    <h5 class="modal-title">
+        {% if form_mode == "edit" %}Edit Prompt{% else %}Create Prompt{% endif %}
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<form
+    id="ai-prompt-form"
+    hx-post="{{ target_action }}"
+    hx-target="#prompt-form-modal-content"
+    hx-swap="innerHTML"
+    class="modal-body">
+
+    {% if errors.get("general") %}
+    <div class="alert alert-danger">
+        {{ errors.get("general")[0] }}
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="mb-3">
+                <label class="form-label">Prompt Name</label>
+                <input type="text" name="name" class="form-control"
+                       placeholder="SEO Blog Post Generator"
+                       value="{{ form_data.name or '' }}">
+                {{ field_errors("name") }}
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Prompt Key</label>
+                <input type="text" name="prompt_key" class="form-control"
+                       placeholder="seo_blog_generation"
+                       value="{{ form_data.prompt_key or '' }}"
+                       {% if form_mode == "edit" %}readonly{% endif %}>
+                <small class="form-hint">Used by services to reference this prompt. Cannot be changed after creation.</small>
+                {{ field_errors("prompt_key") }}
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea name="description" class="form-control" rows="2"
+                          placeholder="Explain what this prompt does">{{ form_data.description or '' }}</textarea>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Category</label>
+                    <input type="text" name="category" class="form-control"
+                           placeholder="content_generation"
+                           value="{{ form_data.category or '' }}">
+                    <small class="form-hint">Examples: content_generation, channel_adaptation, refinement</small>
+                    {{ field_errors("category") }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Model</label>
+                    <input type="text" name="ai_model" class="form-control"
+                           placeholder="gpt-4o-mini"
+                           value="{{ form_data.ai_model or '' }}">
+                </div>
+            </div>
+
+            <div class="row g-3 mt-0">
+                <div class="col-md-3">
+                    <label class="form-label">Temperature</label>
+                    <input type="number" step="0.1" min="0" max="2" name="temperature"
+                           class="form-control"
+                           value="{{ form_data.temperature }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Max Tokens</label>
+                    <input type="number" step="1" name="max_tokens"
+                           class="form-control"
+                           value="{{ form_data.max_tokens }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Top P</label>
+                    <input type="number" step="0.05" min="0" max="1" name="top_p"
+                           class="form-control"
+                           value="{{ form_data.top_p }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Presence Penalty</label>
+                    <input type="number" step="0.1" min="-2" max="2" name="presence_penalty"
+                           class="form-control"
+                           value="{{ form_data.presence_penalty }}">
+                </div>
+            </div>
+
+            <div class="row g-3 mt-0">
+                <div class="col-md-3">
+                    <label class="form-label">Frequency Penalty</label>
+                    <input type="number" step="0.1" min="-2" max="2" name="frequency_penalty"
+                           class="form-control"
+                           value="{{ form_data.frequency_penalty }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Is Active</label>
+                    <div class="form-check form-switch mt-1">
+                        <input type="hidden" name="is_active" value="false">
+                        <input class="form-check-input" type="checkbox" id="prompt-is-active" name="is_active"
+                               {% if is_active_checked %}checked{% endif %}>
+                        <label class="form-check-label" for="prompt-is-active">
+                            Prompt can be used by generation services
+                        </label>
+                    </div>
+                </div>
+                {% if is_global_admin %}
+                <div class="col-md-6">
+                    <label class="form-label">Tenant Scope</label>
+                    <select class="form-select" name="target_tenant_id">
+                        <option value="system" {% if not current_scope %}selected{% endif %}>System default (all tenants)</option>
+                        {% for tenant in available_tenants %}
+                        <option value="{{ tenant.id }}"
+                            {% if current_scope and tenant.id|string == current_scope|string %}selected{% endif %}>
+                            {{ tenant.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-hint">Set tenant to create an override. Choose System to update the global default.</small>
+                </div>
+                {% else %}
+                <input type="hidden" name="target_tenant_id" value="{{ current_tenant }}">
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="mb-3">
+                <label class="form-label d-flex justify-content-between align-items-center">
+                    <span>Prompt Template</span>
+                    <a href="#"
+                       class="small text-decoration-none"
+                       hx-post="/features/administration/ai-prompts/partials/validate-template"
+                       hx-trigger="click"
+                       hx-target="#template-validation-result"
+                       hx-include="#ai-prompt-form">
+                        <i class="ti ti-wand me-1"></i>Validate Now
+                    </a>
+                </label>
+                <textarea
+                    class="form-control font-monospace"
+                    name="prompt_template"
+                    rows="12"
+                    hx-post="/features/administration/ai-prompts/partials/validate-template"
+                    hx-trigger="change delay:600ms, keyup changed delay:1s"
+                    hx-target="#template-validation-result"
+                    hx-include="#ai-prompt-form"
+                    placeholder="Write the instruction template using {{ variable }} syntax">{{ form_data.prompt_template or '' }}</textarea>
+                {{ field_errors("prompt_template") }}
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">
+                    Required Variables (JSON)
+                </label>
+                <textarea name="required_variables"
+                          class="form-control font-monospace"
+                          rows="5"
+                          placeholder='{"title": {"type": "string", "description": "Content title"}}'>{{ form_data.required_variables_json or form_data.required_variables or '{}' }}</textarea>
+                {{ field_errors("required_variables") }}
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">
+                    Optional Variables (JSON)
+                </label>
+                <textarea name="optional_variables"
+                          class="form-control font-monospace"
+                          rows="4"
+                          placeholder='{"tone": {"type": "string", "default": "professional"}}'>{{ form_data.optional_variables_json or form_data.optional_variables or '{}' }}</textarea>
+            </div>
+
+            <div id="template-validation-result" class="border rounded p-3 bg-light">
+                {% set validation = {'valid': true, 'variables': detected_variables, 'syntax_errors': []} %}
+                {% include "administration/ai_prompts/partials/template_validation_result.html" %}
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+        Cancel
+    </button>
+    <button type="submit" class="btn btn-primary" form="ai-prompt-form">
+        <i class="ti ti-device-floppy me-1"></i>
+        {% if form_mode == "edit" %}Save Changes{% else %}Create Prompt{% endif %}
+    </button>
+</div>

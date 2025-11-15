@@ -29,9 +29,13 @@ class UserManagementService:
         self._dashboard_service = UserDashboardService(db_session, tenant_id)
 
     # --- CRUD Operations ---
-    async def create_user(self, user_data, target_tenant_id=None):
+    async def create_user(self, user_data, target_tenant_id=None, created_by_user=None):
         """Create a new user."""
-        return await self._crud_service.create_user(user_data, target_tenant_id)
+        return await self._crud_service.create_user(
+            user_data,
+            created_by_user=created_by_user,
+            target_tenant_id=target_tenant_id
+        )
 
     async def get_user_by_id(self, user_id):
         """Get user by ID."""

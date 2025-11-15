@@ -5,10 +5,10 @@ These routes handle the content planning workflow where users submit
 content ideas that get processed by AI to generate draft content.
 """
 
-from typing import Optional, List, Union
+from datetime import datetime
+from typing import Optional, List, Union, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Form
-from fastapi.responses import Response
-from pydantic import BaseModel, Field
+from fastapi.responses import Response, HTMLResponse, JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,46 +18,65 @@ from app.features.core.database import get_db
 from app.features.core.sqlalchemy_imports import get_logger
 from app.features.core.templates import templates
 from app.features.administration.secrets.services import SecretsManagementService
+from app.features.administration.ai_prompts.services import AIPromptService
+from app.features.core.route_imports import is_global_admin
+from app.features.core.audit_mixin import AuditContext
+from app.features.core.task_manager import process_content_plan_async as enqueue_content_plan_task
 
-from ..models import ContentItem
+from ..models import ContentItem, ContentPlanStatus
+from ..schemas import ContentPlanCreate, ProcessPlanRequest
 from ..services.content_planning_service import ContentPlanningService
 from ..services.content_orchestrator_service import ContentOrchestratorService
+from ..services.prompt_templates import PROMPT_DEFAULTS
 
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/planning", tags=["Content Planning"])
 
-
-# ==================== Request Models ====================
-
-class ContentPlanCreate(BaseModel):
-    """Request model for creating a content plan."""
-
-    title: str = Field(..., min_length=3, max_length=500, description="Content topic or idea")
-    description: Optional[str] = Field(None, description="Additional context or instructions")
-    target_channels: Optional[List[str]] = Field(
-        default=None,
-        description="Target channels (e.g., ['wordpress', 'twitter'])"
-    )
-    target_audience: Optional[str] = Field(None, description="Target audience description")
-    tone: Optional[str] = Field("professional", description="Writing tone")
-    seo_keywords: Optional[List[str]] = Field(default=None, description="SEO keywords")
-    competitor_urls: Optional[List[str]] = Field(
-        default=None,
-        description="Competitor URLs to analyze"
-    )
-    min_seo_score: int = Field(95, ge=80, le=100, description="Target SEO score")
-    max_iterations: int = Field(3, ge=1, le=5, description="Max refinement iterations")
+CONTENT_PROMPT_DEFINITIONS: List[Dict[str, Any]] = [
+    {"key": "seo_blog_generation", "label": "SEO Blog Draft Generation"},
+    {"key": "seo_competitor_analysis", "label": "Competitor Analysis"},
+    {"key": "seo_content_validation", "label": "SEO Content Validation"},
+    {"key": "channel_variant_linkedin", "label": "LinkedIn Variant"},
+    {"key": "channel_variant_twitter", "label": "Twitter/X Variant"},
+    {"key": "channel_variant_wordpress", "label": "WordPress Variant"},
+    {"key": "channel_variant_medium", "label": "Medium Variant"},
+    {"key": "channel_variant_facebook", "label": "Facebook Variant"},
+]
 
 
-class ProcessPlanRequest(BaseModel):
-    """Request model for processing a content plan with AI."""
-
-    use_research: bool = Field(
-        default=True,
-        description="Whether to perform competitor research"
+async def _get_prompt_entries(db: AsyncSession, tenant_id: str) -> List[Dict[str, Any]]:
+    prompt_service = AIPromptService(db)
+    for definition in CONTENT_PROMPT_DEFINITIONS:
+        defaults = PROMPT_DEFAULTS.get(definition["key"])
+        if defaults:
+            await prompt_service.ensure_system_prompt(definition["key"], defaults)
+    available_prompts = await prompt_service.list_prompts(
+        tenant_id=tenant_id,
+        include_system=True
     )
 
+    prompt_entries: List[Dict[str, Any]] = []
+    for prompt_def in CONTENT_PROMPT_DEFINITIONS:
+        key = prompt_def["key"]
+        tenant_prompt = next(
+            (p for p in available_prompts if p.prompt_key == key and p.tenant_id == tenant_id),
+            None
+        )
+        system_prompt = next(
+            (p for p in available_prompts if p.prompt_key == key and (p.tenant_id is None or p.is_system)),
+            None
+        )
+        active_prompt = tenant_prompt or system_prompt
+
+        prompt_entries.append({
+            "definition": prompt_def,
+            "active_prompt": active_prompt,
+            "tenant_prompt": tenant_prompt,
+            "system_prompt": system_prompt
+        })
+
+    return prompt_entries
 
 # ==================== Routes ====================
 
@@ -88,7 +107,8 @@ async def create_content_plan(
             competitor_urls=plan_data.competitor_urls,
             min_seo_score=plan_data.min_seo_score,
             max_iterations=plan_data.max_iterations,
-            created_by=current_user  # Pass user object for better audit trail
+            prompt_settings=plan_data.prompt_settings,
+            created_by_user=current_user  # Pass user object for better audit trail
         )
 
         await db.commit()
@@ -106,7 +126,7 @@ async def create_content_plan(
             "plan_id": plan.id,
             "title": plan.title,
             "status": plan.status,
-            "message": "Content plan created successfully. Use /planning/{plan_id}/process to generate content."
+            "message": "Content plan created successfully. Use /planning/{plan_id}/process-async to generate content."
         }
 
     except ValueError as e:
@@ -129,6 +149,11 @@ async def create_plan_from_form(
     competitor_urls: Optional[str] = Form(None),
     min_seo_score: int = Form(95),
     max_iterations: int = Form(3),
+    professionalism_level: int = Form(4),
+    creativity_level: int = Form(3),
+    humor_level: int = Form(1),
+    analysis_depth: int = Form(4),
+    strictness_level: int = Form(4),
     skip_research: Optional[str] = Form(None),
     tenant_id: str = Depends(tenant_dependency),
     current_user = Depends(get_current_user),
@@ -151,20 +176,18 @@ async def create_plan_from_form(
         # Parse skip_research checkbox (checkbox sends "true" string or None)
         skip_research_bool = skip_research == "true"
 
-        # Validation: If skipping research, ensure sufficient information is provided
         if skip_research_bool:
-            if not description or len(description.strip()) < 20:
-                return templates.TemplateResponse(
-                    "components/ui/error_message.html",
-                    {
-                        "request": request,
-                        "message": "When skipping research, please provide a detailed description (at least 20 characters) to help AI generate quality content."
-                    },
-                    status_code=400
-                )
+            sufficient_description = description and len(description.strip()) >= 20
+            sufficient_keywords = keywords and len(keywords) >= 2
+            sufficient_competitors = urls and len(urls) > 0
 
-            # Recommend keywords for better results
-            if not keywords or len(keywords) < 2:
+            if not (sufficient_description or sufficient_keywords or sufficient_competitors):
+                logger.warning(
+                    "Skip research enabled without additional guidance",
+                    plan_title=title,
+                    tenant_id=tenant_id
+                )
+            elif not sufficient_keywords:
                 logger.warning(
                     "Direct generation without keywords",
                     plan_title=title,
@@ -172,6 +195,14 @@ async def create_plan_from_form(
                 )
 
         service = ContentPlanningService(db, tenant_id)
+
+        prompt_settings = {
+            "professionalism_level": professionalism_level,
+            "creativity_level": creativity_level,
+            "humor_level": humor_level,
+            "analysis_depth": analysis_depth,
+            "strictness_level": strictness_level,
+        }
 
         plan = await service.create_plan(
             title=title,
@@ -184,7 +215,8 @@ async def create_plan_from_form(
             min_seo_score=min_seo_score,
             max_iterations=max_iterations,
             skip_research=skip_research_bool,
-            created_by=current_user  # Pass user object for better audit trail
+            prompt_settings=prompt_settings,
+            created_by_user=current_user  # Pass user object for better audit trail
         )
 
         await db.commit()
@@ -198,6 +230,12 @@ async def create_plan_from_form(
         return response
 
     except ValueError as e:
+        logger.warning(
+            "Validation error updating content plan",
+            plan_id=plan_id,
+            tenant_id=tenant_id,
+            error=str(e)
+        )
         return templates.TemplateResponse(
             "components/ui/error_message.html",
             {
@@ -248,7 +286,7 @@ async def list_content_plans(
 
 
 @router.get("/api/list")
-async def get_plans_for_table(
+async def list_plans_api(
     tenant_id: str = Depends(tenant_dependency),
     current_user = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -256,7 +294,7 @@ async def get_plans_for_table(
     offset: int = 0
 ):
     """
-    Get content plans list for Tabulator table.
+    Get content plans list for Tabulator table (standardized pattern).
     """
     try:
         service = ContentPlanningService(db, tenant_id)
@@ -268,7 +306,7 @@ async def get_plans_for_table(
 
     except Exception as e:
         logger.exception("Failed to get plans for table", tenant_id=tenant_id)
-        return []
+        raise HTTPException(status_code=500, detail="Failed to load content plans")
 
 
 @router.get("/{plan_id}")
@@ -283,9 +321,9 @@ async def get_content_plan(
     """
     try:
         service = ContentPlanningService(db, tenant_id)
-        plan = await service.get_plan(plan_id)
-
-        if not plan:
+        try:
+            plan = await service.get_plan(plan_id)
+        except ValueError:
             raise HTTPException(status_code=404, detail="Content plan not found")
 
         return plan.to_dict()
@@ -310,9 +348,9 @@ async def get_edit_plan_modal(
     """
     try:
         service = ContentPlanningService(db, tenant_id)
-        plan = await service.get_plan(plan_id)
-
-        if not plan:
+        try:
+            plan = await service.get_plan(plan_id)
+        except ValueError:
             raise HTTPException(status_code=404, detail="Content plan not found")
 
         return templates.TemplateResponse(
@@ -343,6 +381,11 @@ async def update_content_plan(
     competitor_urls: Optional[str] = Form(None),
     min_seo_score: int = Form(95),
     max_iterations: int = Form(3),
+    professionalism_level: int = Form(4),
+    creativity_level: int = Form(3),
+    humor_level: int = Form(1),
+    analysis_depth: int = Form(4),
+    strictness_level: int = Form(4),
     skip_research: Optional[str] = Form(None),
     tenant_id: str = Depends(tenant_dependency),
     current_user = Depends(get_current_user),
@@ -352,6 +395,12 @@ async def update_content_plan(
     Update content plan from form submission.
     """
     try:
+        service = ContentPlanningService(db, tenant_id)
+        existing_plan = await service.get_plan(plan_id)
+
+        if not existing_plan:
+            raise HTTPException(status_code=404, detail="Content plan not found")
+
         # Normalize channel selections (support single checkbox submission)
         if isinstance(target_channels, str):
             target_channel_values = [target_channels]
@@ -373,43 +422,64 @@ async def update_content_plan(
         # Parse skip_research checkbox
         skip_research_bool = skip_research == "true"
 
-        # Validation: If skipping research, ensure sufficient information is provided
-        if skip_research_bool:
-            if not description or len(description.strip()) < 20:
-                return templates.TemplateResponse(
-                    "components/ui/error_message.html",
-                    {
-                        "request": request,
-                        "message": "When skipping research, please provide a detailed description (at least 20 characters) to help AI generate quality content."
-                    },
-                    status_code=400
-                )
+        # Use existing values when fields are not supplied
+        combined_description = description.strip() if description else (existing_plan.description or "")
+        combined_keywords = keywords if keywords is not None else (existing_plan.seo_keywords or [])
+        combined_urls = urls if urls is not None else (existing_plan.competitor_urls or [])
 
-            # Recommend keywords for better results
-            if not keywords or len(keywords) < 2:
+        # Guidance if skipping research
+        if skip_research_bool:
+            has_sufficient_description = len(combined_description.strip()) >= 20
+            has_keyword_guidance = combined_keywords and len(combined_keywords) >= 2
+            has_competitor_context = combined_urls and len(combined_urls) > 0
+
+            if not (has_sufficient_description or has_keyword_guidance or has_competitor_context):
+                logger.warning(
+                    "Skip research enabled without additional guidance",
+                    plan_id=plan_id,
+                    tenant_id=tenant_id
+                )
+            elif not has_keyword_guidance:
                 logger.warning(
                     "Direct generation without keywords",
                     plan_id=plan_id,
                     tenant_id=tenant_id
                 )
 
-        service = ContentPlanningService(db, tenant_id)
-
-        # Update plan
-        plan = await service.get_plan(plan_id)
-        if not plan:
-            raise HTTPException(status_code=404, detail="Content plan not found")
-
+        plan = existing_plan
         plan.title = title.strip()
-        plan.description = description.strip() if description else None
+        plan.description = combined_description or None
         plan.tone = tone
         plan.target_audience = target_audience
         plan.target_channels = target_channel_values
-        plan.seo_keywords = keywords if keywords else []
-        plan.competitor_urls = urls if urls else []
+        plan.seo_keywords = combined_keywords
+        plan.competitor_urls = combined_urls
         plan.min_seo_score = min_seo_score
         plan.max_iterations = max_iterations
         plan.skip_research = skip_research_bool
+        plan.prompt_settings = service._normalise_prompt_settings({
+            "professionalism_level": professionalism_level,
+            "creativity_level": creativity_level,
+            "humor_level": humor_level,
+            "analysis_depth": analysis_depth,
+            "strictness_level": strictness_level,
+        })
+
+        if current_user:
+            audit_ctx = AuditContext.from_user(current_user)
+            plan.set_updated_by(audit_ctx.user_email, audit_ctx.user_name)
+        plan.updated_at = datetime.now()
+
+        await db.flush()
+
+        service.log_operation("content_plan_updated", {
+            "plan_id": plan.id,
+            "updates": [
+                "title", "description", "tone", "target_audience",
+                "target_channels", "seo_keywords", "competitor_urls",
+                "min_seo_score", "max_iterations", "skip_research", "prompt_settings"
+            ]
+        })
 
         await db.commit()
 
@@ -471,13 +541,20 @@ async def view_content_plan(
             result = await db.execute(stmt)
             content_item = result.scalar_one_or_none()
 
+        # Gather AI prompts relevant to Content Broadcaster
+        prompt_entries = await _get_prompt_entries(db, tenant_id)
+
         return templates.TemplateResponse(
             "content_broadcaster/view_plan.html",
             {
                 "request": request,
                 "plan": plan,
                 "content": content_item,
-                "current_user": current_user
+                "current_user": current_user,
+                "prompt_entries": prompt_entries,
+                "has_tenant_prompt_access": is_global_admin(current_user) or plan.tenant_id == tenant_id,
+                "is_global_admin_user": is_global_admin(current_user),
+                "tenant_id": tenant_id
             }
         )
 
@@ -486,6 +563,42 @@ async def view_content_plan(
     except Exception as e:
         logger.exception("Failed to load plan view", plan_id=plan_id, tenant_id=tenant_id)
         raise HTTPException(status_code=500, detail="Failed to load plan view")
+
+
+@router.get("/{plan_id}/partials/prompts", response_class=HTMLResponse)
+async def get_plan_prompts_partial(
+    request: Request,
+    plan_id: str,
+    tenant_id: str = Depends(tenant_dependency),
+    current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Return AI prompts panel partial for a content plan."""
+    try:
+        service = ContentPlanningService(db, tenant_id)
+        plan = await service.get_plan(plan_id)
+
+        if not plan:
+            raise HTTPException(status_code=404, detail="Content plan not found")
+
+        prompt_entries = await _get_prompt_entries(db, tenant_id)
+
+        return templates.TemplateResponse(
+            "content_broadcaster/partials/ai_prompts_tab.html",
+            {
+                "request": request,
+                "plan": plan,
+                "prompt_entries": prompt_entries,
+                "has_tenant_prompt_access": is_global_admin(current_user) or plan.tenant_id == tenant_id,
+                "is_global_admin_user": is_global_admin(current_user),
+                "tenant_id": tenant_id
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Failed to load prompts partial", plan_id=plan_id, tenant_id=tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to load prompts") from exc
 
 
 @router.get("/{plan_id}/partials/view_draft")
@@ -535,6 +648,100 @@ async def get_view_draft_modal(
     except Exception as e:
         logger.exception("Failed to load draft view", plan_id=plan_id, tenant_id=tenant_id)
         raise HTTPException(status_code=500, detail="Failed to load draft")
+
+@router.delete("/{plan_id}/prompts/{prompt_id}")
+async def delete_prompt_override(
+    plan_id: str,
+    prompt_id: int,
+    tenant_id: str = Depends(tenant_dependency),
+    current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Remove a tenant-specific prompt override for the Content Broadcaster prompts."""
+    plan_service = ContentPlanningService(db, tenant_id)
+    try:
+        plan = await plan_service.get_plan(plan_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Content plan not found")
+
+    prompt_service = AIPromptService(db)
+    prompt = await prompt_service.get_prompt_by_id(prompt_id)
+
+    if not prompt:
+        raise HTTPException(status_code=404, detail="Prompt not found")
+
+    if prompt.tenant_id != tenant_id:
+        raise HTTPException(status_code=403, detail="Cannot modify prompt for another tenant")
+
+    if prompt.is_system:
+        raise HTTPException(status_code=400, detail="System prompts cannot be removed from this view")
+
+    success = await prompt_service.delete_prompt(prompt_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to deactivate prompt")
+
+    response = Response(status_code=204)
+    response.headers["HX-Trigger"] = "refreshPromptTable"
+    return response
+
+
+@router.post("/{plan_id}/process-async")
+async def enqueue_content_plan_processing(
+    plan_id: str,
+    tenant_id: str = Depends(tenant_dependency),
+    current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Queue content plan processing via Celery so the UI remains responsive.
+    """
+    service = ContentPlanningService(db, tenant_id)
+
+    try:
+        plan = await service.get_plan(plan_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Content plan not found")
+
+    if plan.status not in {
+        ContentPlanStatus.PLANNED.value,
+        ContentPlanStatus.FAILED.value,
+    }:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Plan is already being processed (current status: {plan.status})"
+        )
+
+    # Optimistically move to researching so the table reflects background work.
+    await service.update_plan_status(
+        plan_id,
+        ContentPlanStatus.RESEARCHING.value,
+        {"error_log": None}
+    )
+    await db.commit()
+
+    triggered_by = {
+        "id": getattr(current_user, "id", None),
+        "email": getattr(current_user, "email", None),
+        "name": getattr(current_user, "name", None),
+    }
+
+    task_id = enqueue_content_plan_task(
+        plan_id=plan_id,
+        tenant_id=tenant_id,
+        triggered_by=triggered_by
+    )
+
+    headers = {"HX-Trigger": "refreshTable, showSuccess"}
+    return JSONResponse(
+        status_code=202,
+        content={
+            "success": True,
+            "plan_id": plan_id,
+            "task_id": task_id,
+            "message": "Content plan queued for AI processing.",
+        },
+        headers=headers
+    )
 
 
 @router.post("/{plan_id}/process")
@@ -650,7 +857,7 @@ async def retry_content_plan(
             "plan_id": plan.id,
             "status": plan.status,
             "retry_count": plan.retry_count,
-            "message": "Content plan reset for retry. Use /planning/{plan_id}/process to regenerate."
+            "message": "Content plan reset for retry. Use /planning/{plan_id}/process-async to regenerate."
         }
 
     except ValueError as e:

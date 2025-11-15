@@ -25,7 +25,7 @@ function standardAjaxResponse(url, params, response) {
  * @param {string} badgeClass - CSS class for badges (default: 'type-badge')
  * @param {string} emptyText - Text to show when no values (default: 'No items')
  */
-function formatBadges(cell, badgeClass = 'type-badge', emptyText = 'No items') {
+function formatBadges(cell, badgeClass = 'app-badge app-badge-neutral', emptyText = 'No items') {
     const value = cell.getValue();
 
     // Handle empty/null values
@@ -43,11 +43,51 @@ function formatBadges(cell, badgeClass = 'type-badge', emptyText = 'No items') {
 }
 window.formatBadges = formatBadges;
 
-// Convenience functions for common badge types
-window.formatStatusBadge = (cell) => formatBadges(cell, 'status-badge', '-');
-window.formatPriorityBadge = (cell) => formatBadges(cell, 'priority-badge', '-');
-window.formatTypeBadge = (cell) => formatBadges(cell, 'type-badge', '-');
-window.formatTags = (cell) => formatBadges(cell, 'type-badge', '');
+const statusVariantMap = {
+    active: 'success',
+    enabled: 'success',
+    approved: 'success',
+    completed: 'success',
+    inactive: 'neutral',
+    disabled: 'neutral',
+    pending: 'warning',
+    planned: 'warning',
+    researching: 'info',
+    generating: 'info',
+    draft: 'info',
+    failed: 'danger',
+    error: 'danger'
+};
+
+window.formatStatusBadge = (cell) => {
+    const value = cell.getValue();
+    if (!value) {
+        return `<span class="app-badge app-badge-neutral">-</span>`;
+    }
+
+    const values = Array.isArray(value) ? value : [value];
+    return values.map(item => {
+        const normalized = item.toString().toLowerCase();
+        const variant = statusVariantMap[normalized] || 'neutral';
+        return `<span class="app-badge app-badge-${variant}">${item}</span>`;
+    }).join(' ');
+};
+
+window.formatPriorityBadge = (cell) => {
+    const value = cell.getValue();
+    if (!value) {
+        return `<span class="app-badge app-badge-neutral">-</span>`;
+    }
+    const normalized = value.toString().toLowerCase();
+    const variant = normalized === 'high' ? 'danger'
+        : normalized === 'medium' ? 'warning'
+        : normalized === 'low' ? 'success'
+        : 'neutral';
+    return `<span class="app-badge app-badge-${variant}">${value}</span>`;
+};
+
+window.formatTypeBadge = (cell) => formatBadges(cell, 'app-badge app-badge-info', '-');
+window.formatTags = (cell) => formatBadges(cell, 'app-badge app-badge-neutral', '');
 
 /**
  * Reusable header filter functions
@@ -107,13 +147,14 @@ window.formatTimestamp = formatTimestamp;
 function formatCategoryBadge(cell) {
     const value = cell.getValue();
     const colors = {
-        "AUTH": "bg-green-lt",
-        "DATA": "bg-blue-lt",
-        "ADMIN": "bg-purple-lt",
-        "API": "bg-orange-lt",
-        "SYSTEM": "bg-gray-lt"
+        "AUTH": "success",
+        "DATA": "info",
+        "ADMIN": "purple",
+        "API": "teal",
+        "SYSTEM": "neutral"
     };
-    return `<span class="badge ${colors[value] || 'bg-gray-lt'}">${value}</span>`;
+    const variant = colors[value] || 'neutral';
+    return `<span class="app-badge app-badge-${variant}">${value}</span>`;
 }
 window.formatCategoryBadge = formatCategoryBadge;
 
@@ -123,12 +164,13 @@ window.formatCategoryBadge = formatCategoryBadge;
 function formatSeverityBadge(cell) {
     const value = cell.getValue();
     const colors = {
-        "INFO": "bg-blue-lt",
-        "WARNING": "bg-yellow-lt",
-        "ERROR": "bg-red-lt",
-        "CRITICAL": "bg-dark"
+        "INFO": "info",
+        "WARNING": "warning",
+        "ERROR": "danger",
+        "CRITICAL": "danger"
     };
-    return `<span class="badge ${colors[value] || 'bg-gray-lt'}">${value}</span>`;
+    const variant = colors[value] || 'neutral';
+    return `<span class="app-badge app-badge-${variant}">${value}</span>`;
 }
 window.formatSeverityBadge = formatSeverityBadge;
 
@@ -156,7 +198,7 @@ window.formatDescription = formatDescription;
  */
 function formatActionBadge(cell) {
     const value = cell.getValue();
-    return `<span class="badge bg-blue-lt">${value}</span>`;
+    return `<span class="app-badge app-badge-info">${value}</span>`;
 }
 window.formatActionBadge = formatActionBadge;
 
@@ -351,6 +393,25 @@ const tableConfig = {
     paginationCounter: "rows",
     columnDefaults: {
         vertAlign: "middle",
+        headerFilter: "input",
+        headerFilterPlaceholder: "Filter...",
+        headerFilterLiveFilter: true,
+        editor: "input",
+        editable: function (cell) {
+            const column = cell.getColumn();
+            const def = column.getDefinition() || {};
+
+            if (!def.field) return false;
+            if (def.field === "actions") return false;
+            if (def.editor === false || def.editable === false) return false;
+
+            const title = (def.title || "").toLowerCase();
+            if (title.includes("actions") || title.includes("status icon")) {
+                return false;
+            }
+
+            return true;
+        },
     },
 
     // Grouping configuration
@@ -400,7 +461,6 @@ const tableConfig = {
     },
 
     // Advanced features
-    headerFilterPlaceholder: "",
     sortMode: "local",
     downloadConfig: {
         columnHeaders: true,
@@ -459,14 +519,29 @@ function refreshTable(tableId) {
         container.classList.add('loading');
 
         // Refresh data and hide loader when complete
-        table.replaceData().then(() => {
+        return table.replaceData().then(() => {
             container.classList.remove('loading');
-        }).catch(() => {
+        }).catch((err) => {
             container.classList.remove('loading');
+            throw err;
         });
     }
+    return Promise.resolve();
 }
 window.refreshTable = refreshTable;
+
+function refreshTableAction(buttonEl, tableId) {
+    if (buttonEl) {
+        buttonEl.dataset.loading = 'true';
+    }
+
+    return refreshTable(tableId).finally(() => {
+        if (buttonEl) {
+            delete buttonEl.dataset.loading;
+        }
+    });
+}
+window.refreshTableAction = refreshTableAction;
 
 /**
  * Bind row action buttons (edit/delete) using delegation - updated for icon-based buttons
@@ -614,10 +689,121 @@ function editTabulatorRow(editUrl, targetSelector = "#modal-body", swapMethod = 
 window.editTabulatorRow = editTabulatorRow;
 
 /**
+ * Load modal content using Fetch (HX-compatible headers)
+ */
+function loadModalContent(url, options = {}) {
+    const method = options.method || 'GET';
+    const targetSelector = options.targetSelector || '#modal-body';
+    const modalId = options.modalId || 'modal';
+    const targetElement = typeof targetSelector === 'string'
+        ? document.querySelector(targetSelector)
+        : targetSelector;
+
+    if (!targetElement) {
+        console.warn('Modal target element not found:', targetSelector);
+        if (typeof options.onError === 'function') {
+            options.onError(new Error('modal_target_not_found'));
+        }
+        return;
+    }
+
+    if (window.htmx) {
+        const ajaxOptions = {
+            target: targetSelector,
+            swap: options.swap || 'innerHTML',
+        };
+
+        if (options.values) {
+            ajaxOptions.values = options.values;
+        }
+
+        if (options.headers) {
+            ajaxOptions.headers = options.headers;
+        }
+
+        htmx.ajax(method, url, ajaxOptions);
+        return;
+    }
+
+    const headers = Object.assign(
+        { 'HX-Request': 'true', 'X-Requested-With': 'XMLHttpRequest' },
+        options.headers || {}
+    );
+
+    const fetchOptions = {
+        method,
+        headers,
+        credentials: options.credentials || 'same-origin',
+    };
+
+    let requestUrl = url;
+
+    if (options.values) {
+        if (method.toUpperCase() === 'GET') {
+            const params = new URLSearchParams(options.values);
+            requestUrl += (requestUrl.includes('?') ? '&' : '?') + params.toString();
+        } else if (options.values instanceof FormData) {
+            fetchOptions.body = options.values;
+        } else if (typeof options.values === 'string') {
+            fetchOptions.body = options.values;
+            if (!fetchOptions.headers['Content-Type']) {
+                fetchOptions.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+            }
+        } else if (typeof options.values === 'object') {
+            fetchOptions.body = JSON.stringify(options.values);
+            if (!fetchOptions.headers['Content-Type']) {
+                fetchOptions.headers['Content-Type'] = 'application/json';
+            }
+        }
+    }
+
+    return fetch(requestUrl, fetchOptions)
+        .then(async (response) => {
+            if (!response.ok) {
+                const errorText = await response.text();
+                const error = new Error(`Request failed with status ${response.status}`);
+                error.status = response.status;
+                error.responseText = errorText;
+                throw error;
+            }
+            return response.text();
+        })
+        .then((html) => {
+            targetElement.innerHTML = html;
+
+            if (typeof options.onSuccess === 'function') {
+                options.onSuccess(html);
+            }
+
+            if (typeof window.showModal === 'function') {
+                window.showModal();
+                return;
+            }
+
+            const modalEl = document.getElementById(modalId);
+            if (modalEl && window.bootstrap) {
+                window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            }
+        })
+        .catch((error) => {
+            console.error('Failed to load modal content:', error);
+
+            if (typeof options.onError === 'function') {
+                options.onError(error);
+            }
+
+            if (typeof window.showToast === 'function') {
+                window.showToast('Failed to load details. Please try again.', 'error');
+            }
+        });
+}
+window.loadModalContent = loadModalContent;
+
+/**
  * Create CRUD action buttons for table rows - CSP-compliant with delegation
  */
 function createRowCrudButtons(data, options = {}) {
-    console.log('createRowCrudButtons called with data:', data, 'options:', options);
+
     const { onEdit, onDelete, showEdit = true, showDelete = true } = options;
 
     let buttons = '';
@@ -997,7 +1183,7 @@ function formatGroupHeader(value, count, data, group) {
         <div class="group-header-content">
             <i class="${icon}"></i>
             <span class="group-title">${displayValue}</span>
-            <span class="group-count badge bg-secondary ms-2">${count}</span>
+            <span class="group-count app-badge app-badge-neutral ms-2">${count}</span>
         </div>
     `;
 }
@@ -1189,7 +1375,9 @@ function initializeGlobalFormHandler() {
                     window.closeModal();
                 }
 
-                // Refresh the table after a short delay
+                // Refresh the table after focus restoration completes
+                // Focus restoration can take up to: 50ms initial delay + (10 retries × 100ms) = ~1150ms max
+                // Using 1200ms ensures table refresh happens after focus is fully restored
                 setTimeout(() => {
                     // Try to find the associated table by common naming patterns
                     const possibleTableIds = [
@@ -1220,7 +1408,7 @@ function initializeGlobalFormHandler() {
                             }
                         }
                     }
-                }, 100);
+                }, 1200);
             }
         }
     });

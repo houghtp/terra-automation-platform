@@ -9,7 +9,7 @@
   {% else %}
   hx-put="/features/administration/users/{{ user.id }}/"
   {% endif %}
-  hx-disabled-elt="this"
+  hx-disabled-elt="button[type='submit']"
   hx-indicator="#submit-spinner"
   autocomplete="off"
 >
@@ -188,18 +188,16 @@
     </div>
   </div>
 
-  <div class="modal-footer">
-    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-      <i class="ti ti-x icon"></i>
-      Cancel
+  <div class="modal-footer d-flex justify-content-between align-items-center">
+    <button type="button" class="btn btn-outline-secondary app-btn" data-bs-dismiss="modal">
+      <span class="app-btn-icon"><i class="ti ti-x"></i></span>
+      <span class="app-btn-label">Cancel</span>
+      <span class="app-btn-spinner spinner-border spinner-border-sm" aria-hidden="true"></span>
     </button>
-    <button type="submit" class="btn btn-outline-primary">
-      <i class="ti ti-check icon"></i>
-      <span id="submit-spinner" class="htmx-indicator spinner-border spinner-border-sm me-2" role="status"></span>
-      {{ 'Update' if user else 'Create' }}
+    <button type="submit" class="btn btn-outline-primary app-btn" hx-on::beforeRequest="this.dataset.loading='true'" hx-on::afterRequest="delete this.dataset.loading" hx-on::responseError="delete this.dataset.loading">
+      <span class="app-btn-icon"><i class="ti ti-check"></i></span>
+      <span class="app-btn-label">{{ 'Update' if user else 'Create' }}</span>
+      <span class="app-btn-spinner spinner-border spinner-border-sm" aria-hidden="true"></span>
     </button>
   </div>
 </form>
-
-
-

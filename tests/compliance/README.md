@@ -56,6 +56,24 @@ These tests serve as **automated code reviews** that:
 - Checks auth pattern consistency
 - **Validates our new gold standard route architecture**
 
+### 6. `test_route_structure_compliance.py` ⭐ **NEW - Critical Patterns**
+**Route organization and API structure compliance**
+- Validates proper separation: `crud_routes.py` vs `form_routes.py`
+- Enforces simple array returns for Tabulator (not wrapped in pagination)
+- Checks form routes use `TemplateResponse` for UI
+- Validates Tabulator table integration patterns
+- Ensures no database operations in form routes
+- **Prevents common integration failures**
+
+### 7. `test_global_admin_compliance.py` ⭐ **NEW - Security Patterns**
+**Global admin and tenant isolation compliance**
+- Validates use of `is_global_admin()` helper (not inline checks)
+- Enforces `get_global_admin_user` dependency on protected routes
+- Checks cross-tenant operation security
+- Validates proper `tenant_id="global"` handling in services
+- Ensures tenant isolation for global vs tenant admins
+- **Prevents security vulnerabilities and tenant data leaks**
+
 ## Running Compliance Tests
 
 ### Individual Tests

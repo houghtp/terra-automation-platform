@@ -1,0 +1,1611 @@
+[
+  {
+    "StartTime": "2025-09-25T19:31:46.3670596Z",
+    "Duration": 0.9887155,
+    "Category": "L1",
+    "CheckId": "1.1.1_ensure_administrative_accounts_are_cloud-only",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:31:47.3557751Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:47.3900948Z",
+    "Duration": 0.1578428,
+    "Category": "L1",
+    "CheckId": "1.1.2_ensure_two_emergency_access_accounts_have_been",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:31:47.5479376Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:47.5856269Z",
+    "Duration": 0.9283009,
+    "Category": "L1",
+    "CheckId": "1.1.3_ensure_that_between_two_and_four_global_admins_are",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "DisplayName": "admin",
+        "UserPrincipalName": "admin@terrait.co.uk",
+        "IsCompliant": true
+      },
+      {
+        "DisplayName": "Sam Hufton",
+        "UserPrincipalName": "sam.hufton@terrait.co.uk",
+        "IsCompliant": true
+      },
+      {
+        "DisplayName": "Paul Houghton",
+        "UserPrincipalName": "paul.houghton@terrait.co.uk",
+        "IsCompliant": true
+      }
+    ],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:31:48.5139278Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:48.5564408Z",
+    "Duration": 0.6121111,
+    "Category": "L1",
+    "CheckId": "1.1.4_ensure_administrative_accounts_use_licenses_with_a",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:31:49.1685519Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:49.215942Z",
+    "Duration": 0.4096223,
+    "Category": "L1",
+    "CheckId": "1.2.2_ensure_sign-in_to_shared_mailboxes_is_blocked",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "AccountEnabled": true,
+        "DisplayName": "support",
+        "UserPrincipalName": "support@terrait.co.uk",
+        "IsCompliant": false
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:31:49.6255643Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:49.6711031Z",
+    "Duration": 0.1192476,
+    "Category": "L1",
+    "CheckId": "1.3.1_ensure_the_'password_expiration_policy'_is_set_to_'set",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "DomainId": "NETORGFT16254533.onmicrosoft.com",
+        "PasswordValidityPeriodInDays": 2147483647,
+        "IsCompliant": true
+      },
+      {
+        "DomainId": "terrait.co.uk",
+        "PasswordValidityPeriodInDays": null,
+        "IsCompliant": false
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:31:49.7903507Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:49.82643Z",
+    "Duration": 0.0975974,
+    "Category": "L1",
+    "CheckId": "1.3.4_ensure_'user_owned_apps_and_services'_is_restricted",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: Response status code does not indicate success: InternalServerError (Internal Server Error).",
+    "EndTime": "2025-09-25T19:31:49.9240274Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:49.9528638Z",
+    "Duration": 0.1092303,
+    "Category": "L1",
+    "CheckId": "1.3.5_ensure_internal_phishing_protection_for_forms_is",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: Response status code does not indicate success: InternalServerError (Internal Server Error).",
+    "EndTime": "2025-09-25T19:31:50.0620941Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:50.0922288Z",
+    "Duration": 1.1674182,
+    "Category": "L1",
+    "CheckId": "2.1.10_ensure_dmarc_records_for_all_exchange_online",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "ResourceName": "terrait.co.uk",
+        "IsCompliant": false,
+        "CurrentValue": "No DMARC record found"
+      },
+      {
+        "ResourceName": "NETORGFT16254533.onmicrosoft.com",
+        "IsCompliant": false,
+        "CurrentValue": "No DMARC record found"
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:31:51.259647Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:51.299851Z",
+    "Duration": 0.2397127,
+    "Category": "L1",
+    "CheckId": "2.1.12_ensure_the_connection_filter_ip_allow_list_is_not_used",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "IPAllowList": [],
+        "IsCompliant": true,
+        "PolicyName": "Default"
+      }
+    ],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:31:51.5395637Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:51.5725091Z",
+    "Duration": 0.1971451,
+    "Category": "L1",
+    "CheckId": "2.1.13_ensure_the_connection_filter_safe_list_is_off",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "Name": "Connection Filter Safe List",
+        "ExpectedValue": false,
+        "Details": "Safe List is disabled",
+        "IsCompliant": true,
+        "CurrentValue": false
+      }
+    ],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:31:51.7696542Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:51.8034556Z",
+    "Duration": 0.2179046,
+    "Category": "L1",
+    "CheckId": "2.1.14_ensure_inbound_anti-spam_policies_do_not_contain",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "Identity": "Default",
+        "IsCompliant": true,
+        "AllowedSenderDomains": []
+      }
+    ],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:31:52.0213602Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:52.0940728Z",
+    "Duration": 0.1999039,
+    "Category": "L1",
+    "CheckId": "2.1.2_ensure_the_common_attachment_types_filter_is",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "IsCompliant": true,
+        "EnableFileFilter": true,
+        "PolicyName": "Default"
+      }
+    ],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:31:52.2939767Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:52.3271058Z",
+    "Duration": 0.2177265,
+    "Category": "L1",
+    "CheckId": "2.1.3_ensure_notifications_for_internal_users_sending_malware",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "InternalSenderAdminAddress": "",
+        "Identity": "Default",
+        "IsCompliant": false,
+        "EnableInternalSenderAdminNotifications": false
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:31:52.5448323Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:52.5878556Z",
+    "Duration": 0.2296506,
+    "Category": "L1",
+    "CheckId": "2.1.6_ensure_exchange_online_spam_policies_are_set_to",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "BccSuspiciousOutboundMail": false,
+        "BccRecipients": "",
+        "IsCompliant": false,
+        "NotifyRecipients": "",
+        "NotifyOutboundSpam": false,
+        "PolicyName": "Default"
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:31:52.8175062Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:52.9624238Z",
+    "Duration": 0.2377611,
+    "Category": "L1",
+    "CheckId": "2.1.8_ensure_that_spf_records_are_published_for_all_exchange",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: domain1.com : DNS server failure.",
+    "EndTime": "2025-09-25T19:31:53.2001849Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:53.2858856Z",
+    "Duration": 0.353193,
+    "Category": "L1",
+    "CheckId": "2.1.9_ensure_that_dkim_is_enabled_for_all_exchange_online",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:31:53.6390786Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:53.6845515Z",
+    "Duration": 0.518893,
+    "Category": "L1",
+    "CheckId": "2.2.1_ensure_emergency_access_account_activity_is_monitored",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "ResourceName": "emergency1@domain.com",
+        "IsCompliant": false,
+        "CurrentValue": "No Policy"
+      },
+      {
+        "ResourceName": "emergency2@domain.com",
+        "IsCompliant": false,
+        "CurrentValue": "No Policy"
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:31:54.2034445Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:54.2423923Z",
+    "Duration": 3.5822301,
+    "Category": "L1",
+    "CheckId": "2.4.1_ensure_priority_account_protection_is_enabled_and",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "ResourceName": "Priority Account Protection",
+        "IsCompliant": false,
+        "CurrentValue": "Disabled"
+      },
+      {
+        "ResourceName": "Priority Accounts Tagging",
+        "IsCompliant": false,
+        "CurrentValue": ""
+      },
+      {
+        "ResourceName": "Alert Policies",
+        "IsCompliant": true,
+        "CurrentValue": ", , , , , , , , , , "
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:31:57.8246224Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:57.8564129Z",
+    "Duration": 0.041726,
+    "Category": "L1",
+    "CheckId": "2.4.2_ensure_priority_accounts_have_'strict_protection'_presets",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: A parameter cannot be found that matches parameter name 'IncludePresetSecurityPolicies'.",
+    "EndTime": "2025-09-25T19:31:57.8981389Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:57.9294509Z",
+    "Duration": 0.3244407,
+    "Category": "L1",
+    "CheckId": "2.4.4_ensure_zero-hour_auto_purge_for_microsoft_teams_is_on",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "ZapEnabled": true,
+        "IsCompliant": true,
+        "PolicyName": "Default"
+      }
+    ],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:31:58.2538916Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:31:58.2846032Z",
+    "Duration": 1.8841238,
+    "Category": "L1",
+    "CheckId": "3.1.1_ensure_microsoft_365_audit_log_search_is_enabled",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "Name": "UnifiedAuditLogIngestionEnabled",
+        "ExpectedValue": true,
+        "IsCompliant": false,
+        "CurrentValue": false
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:00.168727Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:00.2002854Z",
+    "Duration": 3.1234081,
+    "Category": "L1",
+    "CheckId": "3.2.1_ensure_dlp_policies_are_enabled",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:03.3236935Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:03.34875Z",
+    "Duration": 3.415393,
+    "Category": "L1",
+    "CheckId": "3.2.2_ensure_dlp_policies_are_enabled_for_microsoft_teams",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:06.764143Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:06.7951782Z",
+    "Duration": 3.1707859,
+    "Category": "L1",
+    "CheckId": "3.3.1_ensure_information_protection_sensitivity_label_policies",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:09.9659641Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:09.9985096Z",
+    "Duration": 0.0862848,
+    "Category": "L1",
+    "CheckId": "5.1.2.1_ensure_'per-user_mfa'_is_disabled",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: The term 'Get-MgBetaIdentityConditionalAccessPolicy' is not recognized as a name of a cmdlet, function, script file, or executable program.\r\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+    "EndTime": "2025-09-25T19:32:10.0847944Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:10.1141938Z",
+    "Duration": 0.1418967,
+    "Category": "L1",
+    "CheckId": "5.1.2.3_ensure_'restrict_non-admin_users_from_creating",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "Name": "DefaultUserRolePermissions",
+        "Value": true,
+        "Setting": "AllowedToCreateTenants",
+        "IsCompliant": false
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:10.2560905Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:10.2905507Z",
+    "Duration": 0.1067003,
+    "Category": "L1",
+    "CheckId": "5.1.2.4_ensure_access_to_the_entra_admin_center_is_restricted",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: User settings for Entra admin center access restriction not found.",
+    "EndTime": "2025-09-25T19:32:10.397251Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:10.4265295Z",
+    "Duration": 0.1204098,
+    "Category": "L1",
+    "CheckId": "5.1.3.1_ensure_a_dynamic_group_for_guest_users_is_created",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "MembershipRule": "All Users",
+        "IsCompliant": false,
+        "DisplayName": "All Users",
+        "GroupTypes": [
+          "DynamicMembership"
+        ]
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:10.5469393Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:10.5773448Z",
+    "Duration": 0.3138664,
+    "Category": "L1",
+    "CheckId": "5.1.5.2_ensure_the_admin_consent_workflow_is_enabled",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "NotifyReviewers": false,
+        "IsEnabled": false,
+        "RemindersEnabled": false,
+        "IsCompliant": false,
+        "PolicyName": "Admin Consent Request Policy"
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:10.8912112Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:10.9304641Z",
+    "Duration": 0.1149967,
+    "Category": "L1",
+    "CheckId": "5.1.6.2_ensure_that_guest_user_access_is_restricted",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "Name": "Guest User Role ID",
+        "ExpectedValue": "2af84b1e-32c8-42b7-82bc-daa82404023b",
+        "Value": "10dae51f-b6af-4016-8d66-8c2a99b929b3",
+        "IsCompliant": false
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:11.0454608Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:11.0741392Z",
+    "Duration": 0.1166754,
+    "Category": "L1",
+    "CheckId": "5.1.8.1_ensure_that_password_hash_sync_is_enabled_for_hybrid",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "FeatureName": "Directory Synchronization",
+        "IsCompliant": true,
+        "Details": "Cloud-only environment - Password Hash Sync not applicable"
+      }
+    ],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:11.1908146Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:11.2180862Z",
+    "Duration": 0.3796647,
+    "Category": "L1",
+    "CheckId": "5.2.2.1_ensure_multifactor_authentication_is_enabled_for_all",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:11.5977509Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:11.6315886Z",
+    "Duration": 0.1634373,
+    "Category": "L1",
+    "CheckId": "5.2.2.10_ensure_a_managed_device_is_required_to_register",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:11.7950259Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:11.8278079Z",
+    "Duration": 0.2225301,
+    "Category": "L1",
+    "CheckId": "5.2.2.11_ensure_sign-in_frequency_for_intune_enrollment_is_set",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:12.050338Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:12.0786383Z",
+    "Duration": 0.2140123,
+    "Category": "L1",
+    "CheckId": "5.2.2.12_ensure_the_device_code_sign-in_flow_is_blocked",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:12.2926506Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:12.3232556Z",
+    "Duration": 0.194486,
+    "Category": "L1",
+    "CheckId": "5.2.2.2_ensure_multifactor_authentication_is_enabled_for_all",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:12.5177416Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:12.5691638Z",
+    "Duration": 0.2389174,
+    "Category": "L1",
+    "CheckId": "5.2.2.3_enable_conditional_access_policies_to_block_legacy",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:12.8080812Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:12.8425739Z",
+    "Duration": 0.1659252,
+    "Category": "L1",
+    "CheckId": "5.2.2.4_ensure_sign-in_frequency_is_enabled_and_browser",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:13.0084991Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:13.0470814Z",
+    "Duration": 0.1783704,
+    "Category": "L1",
+    "CheckId": "5.2.2.6_enable_identity_protection_user_risk_policies",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:13.2254518Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:13.256443Z",
+    "Duration": 0.1832454,
+    "Category": "L1",
+    "CheckId": "5.2.2.7_enable_identity_protection_sign-in_risk_policies",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:13.4396884Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:13.4754993Z",
+    "Duration": 0.1913527,
+    "Category": "L1",
+    "CheckId": "5.2.2.9_ensure_a_managed_device_is_required_for",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:13.666852Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:13.6967712Z",
+    "Duration": 0.359872,
+    "Category": "L1",
+    "CheckId": "5.2.3.1_ensure_microsoft_authenticator_is_configured_to",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "Setting": "Microsoft Authenticator Enabled",
+        "IsCompliant": false,
+        "CurrentValue": null
+      },
+      {
+        "Setting": "Require Number Matching",
+        "IsCompliant": false,
+        "CurrentValue": null
+      },
+      {
+        "Setting": "Show Application Name",
+        "IsCompliant": false,
+        "CurrentValue": null
+      },
+      {
+        "Setting": "Show Geographic Location",
+        "IsCompliant": false,
+        "CurrentValue": null
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:14.0566432Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:14.0864045Z",
+    "Duration": 0.1013119,
+    "Category": "L1",
+    "CheckId": "5.2.3.2_ensure_custom_banned_passwords_lists_are_used",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "SettingId": "None",
+        "EnableBannedPasswordCheck": "Not configured",
+        "BannedPasswordList": 0,
+        "IsCompliant": false
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:14.1877164Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:14.2146694Z",
+    "Duration": 0.2209791,
+    "Category": "L1",
+    "CheckId": "5.2.3.3_ensure_password_protection_is_enabled_for_on-prem",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "ResourceName": "Password Protection Settings",
+        "Mode": "Not Found",
+        "EnablePasswordProtection": "Not Found",
+        "IsCompliant": false
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:14.4356485Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:14.466047Z",
+    "Duration": 0.5222067,
+    "Category": "L1",
+    "CheckId": "5.2.3.4_ensure_all_member_users_are_'mfa_capable'",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "UserPrincipalName": "cisbenchmarks@terrait.co.uk",
+        "IsMfaCapable": false,
+        "IsCompliant": false,
+        "IsAdmin": true
+      },
+      {
+        "UserPrincipalName": "admin@terrait.co.uk",
+        "IsMfaCapable": false,
+        "IsCompliant": false,
+        "IsAdmin": true
+      },
+      {
+        "UserPrincipalName": "support@terrait.co.uk",
+        "IsMfaCapable": false,
+        "IsCompliant": false,
+        "IsAdmin": false
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:14.9882537Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:15.0189937Z",
+    "Duration": 0.3332703,
+    "Category": "L1",
+    "CheckId": "5.2.3.5_ensure_weak_authentication_methods_are_disabled",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "MethodType": null,
+        "IsCompliant": true
+      },
+      {
+        "MethodType": null,
+        "IsCompliant": true
+      },
+      {
+        "MethodType": null,
+        "IsCompliant": true
+      },
+      {
+        "MethodType": null,
+        "IsCompliant": true
+      },
+      {
+        "MethodType": null,
+        "IsCompliant": true
+      },
+      {
+        "MethodType": null,
+        "IsCompliant": true
+      },
+      {
+        "MethodType": null,
+        "IsCompliant": true
+      },
+      {
+        "MethodType": null,
+        "IsCompliant": true
+      }
+    ],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:15.352264Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:15.3898402Z",
+    "Duration": 0.3432296,
+    "Category": "L1",
+    "CheckId": "5.2.3.6_ensure_system-preferred_multifactor_authentication_is",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "ResourceName": "System-Preferred MFA",
+        "IsCompliant": false,
+        "CurrentValue": {
+          "IncludedUsers": null,
+          "IsEnabled": null
+        }
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:15.7330698Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:15.7656665Z",
+    "Duration": 0.4576955,
+    "Category": "L1",
+    "CheckId": "5.2.4.1_ensure_'self_service_password_reset_enabled'_is_set_to",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "ResourceName": "Self Service Password Reset",
+        "IsCompliant": false,
+        "CurrentValue": "Not Enabled for All"
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:16.223362Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:16.2589774Z",
+    "Duration": 2.8033095,
+    "Category": "L1",
+    "CheckId": "5.3.2_ensure_'access_reviews'_for_guest_users_are_configured",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: Response status code does not indicate success: Forbidden (Forbidden).",
+    "EndTime": "2025-09-25T19:32:19.0622869Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:19.0854787Z",
+    "Duration": 10.6763432,
+    "Category": "L1",
+    "CheckId": "5.3.3_ensure_'access_reviews'_for_privileged_roles_are",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:29.7618219Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:29.8031079Z",
+    "Duration": 0.2775017,
+    "Category": "L1",
+    "CheckId": "5.3.4_ensure_approval_is_required_for_global_administrator",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: A parameter cannot be found that matches parameter name 'RoleDefinitionId'.",
+    "EndTime": "2025-09-25T19:32:30.0806096Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:30.1196926Z",
+    "Duration": 0.1798372,
+    "Category": "L1",
+    "CheckId": "5.3.5_ensure_approval_is_required_for_privileged_role",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:30.2995298Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:30.3403873Z",
+    "Duration": 0.5847932,
+    "Category": "L1",
+    "CheckId": "6.1.1_ensure_'auditdisabled'_organizationally_is_set_to_'false'",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "Name": "AuditDisabled",
+        "Value": false,
+        "IsCompliant": true
+      }
+    ],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:30.9251805Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:30.9562317Z",
+    "Duration": 0.233724,
+    "Category": "L1",
+    "CheckId": "6.1.2_ensure_mailbox_audit_actions_are_configured",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "MailboxName": "paul.houghton@terrait.co.uk",
+        "MissingActions": [
+          "Failure: Audit action 'Copy' missing from Admin",
+          "Failure: Audit action 'FolderBind' missing from Admin",
+          "Failure: Audit action 'Move' missing from Admin"
+        ],
+        "IsCompliant": false,
+        "Type": "Admin"
+      },
+      {
+        "MailboxName": "paul.houghton@terrait.co.uk",
+        "MissingActions": [
+          "Failure: Audit action 'FolderBind' missing from Delegate",
+          "Failure: Audit action 'Move' missing from Delegate"
+        ],
+        "IsCompliant": false,
+        "Type": "Delegate"
+      },
+      {
+        "MailboxName": "paul.houghton@terrait.co.uk",
+        "MissingActions": [
+          "Failure: Audit action 'Create' missing from Owner",
+          "Failure: Audit action 'MailboxLogin' missing from Owner",
+          "Failure: Audit action 'Move' missing from Owner"
+        ],
+        "IsCompliant": false,
+        "Type": "Owner"
+      },
+      {
+        "MailboxName": "sam.hufton@terrait.co.uk",
+        "MissingActions": [
+          "Failure: Audit action 'Copy' missing from Admin",
+          "Failure: Audit action 'FolderBind' missing from Admin",
+          "Failure: Audit action 'Move' missing from Admin"
+        ],
+        "IsCompliant": false,
+        "Type": "Admin"
+      },
+      {
+        "MailboxName": "sam.hufton@terrait.co.uk",
+        "MissingActions": [
+          "Failure: Audit action 'FolderBind' missing from Delegate",
+          "Failure: Audit action 'Move' missing from Delegate"
+        ],
+        "IsCompliant": false,
+        "Type": "Delegate"
+      },
+      {
+        "MailboxName": "sam.hufton@terrait.co.uk",
+        "MissingActions": [
+          "Failure: Audit action 'Create' missing from Owner",
+          "Failure: Audit action 'MailboxLogin' missing from Owner",
+          "Failure: Audit action 'Move' missing from Owner"
+        ],
+        "IsCompliant": false,
+        "Type": "Owner"
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:31.1899557Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:31.2229266Z",
+    "Duration": 1.005255,
+    "Category": "L1",
+    "CheckId": "6.1.3_ensure_'auditbypassenabled'_is_not_enabled_on",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:32.2281816Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:32.2589946Z",
+    "Duration": 0.2160471,
+    "Category": "L1",
+    "CheckId": "6.2.1_ensure_all_forms_of_mail_forwarding_are_blocked_andor",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:32.4750417Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:32.518519Z",
+    "Duration": 0.1840316,
+    "Category": "L1",
+    "CheckId": "6.2.2_ensure_mail_transport_rules_do_not_whitelist_specific",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:32.7025506Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:32.7429687Z",
+    "Duration": 0.360902,
+    "Category": "L1",
+    "CheckId": "6.2.3_ensure_email_from_external_senders_is_identified",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "AllowedSenders": null,
+        "SettingName": null,
+        "IsCompliant": true
+      }
+    ],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:33.1038707Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:33.1430462Z",
+    "Duration": 0.3131288,
+    "Category": "L1",
+    "CheckId": "6.5.1_ensure_modern_authentication_for_exchange_online_is",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "Name": "NETORGFT16254533.onmicrosoft.com",
+        "OAuth2ClientProfileEnabled": true,
+        "IsCompliant": true
+      }
+    ],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:33.456175Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:33.4978107Z",
+    "Duration": 0.3387243,
+    "Category": "L1",
+    "CheckId": "6.5.2_ensure_mailtips_are_enabled_for_end_users",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "Name": "MailTipsAllTipsEnabled",
+        "ExpectedValue": true,
+        "IsCompliant": true,
+        "CurrentValue": true
+      }
+    ],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:33.836535Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:33.8669719Z",
+    "Duration": 0.1980702,
+    "Category": "L1",
+    "CheckId": "6.5.4_ensure_smtp_auth_is_disabled",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "Resource": "SMTP Client Authentication",
+        "IsCompliant": true,
+        "Details": "SMTP Client Authentication is disabled"
+      }
+    ],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:34.0650421Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:34.1074201Z",
+    "Duration": 0.0464141,
+    "Category": "L1",
+    "CheckId": "7.2.1_ensure_modern_authentication_for_sharepoint",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: No connection available. Use Connect-SPOService before running this CmdLet.",
+    "EndTime": "2025-09-25T19:32:34.1538342Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:34.1849797Z",
+    "Duration": 0.0581034,
+    "Category": "L1",
+    "CheckId": "7.2.10_ensure_reauthentication_with_verification_code_is",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: No connection available. Use Connect-SPOService before running this CmdLet.",
+    "EndTime": "2025-09-25T19:32:34.2430831Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:34.2876063Z",
+    "Duration": 0.0613095,
+    "Category": "L1",
+    "CheckId": "7.2.11_ensure_the_sharepoint_default_sharing_link_permission",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: No connection available. Use Connect-SPOService before running this CmdLet.",
+    "EndTime": "2025-09-25T19:32:34.3489158Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:34.3934199Z",
+    "Duration": 0.0618055,
+    "Category": "L1",
+    "CheckId": "7.2.2_ensure_sharepoint_and_onedrive_integration_with",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: No connection available. Use Connect-SPOService before running this CmdLet.",
+    "EndTime": "2025-09-25T19:32:34.4552254Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:34.5054166Z",
+    "Duration": 0.0572133,
+    "Category": "L1",
+    "CheckId": "7.2.3_ensure_external_content_sharing_is_restricted",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: No connection available. Use Connect-SPOService before running this CmdLet.",
+    "EndTime": "2025-09-25T19:32:34.5626299Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:34.6073911Z",
+    "Duration": 0.072215,
+    "Category": "L1",
+    "CheckId": "7.2.7_ensure_link_sharing_is_restricted_in_sharepoint_and",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: No connection available. Use Connect-SPOService before running this CmdLet.",
+    "EndTime": "2025-09-25T19:32:34.6796061Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:34.7216736Z",
+    "Duration": 0.0615734,
+    "Category": "L1",
+    "CheckId": "7.2.9_ensure_guest_access_to_a_site_or_onedrive_will_expire",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: No connection available. Use Connect-SPOService before running this CmdLet.",
+    "EndTime": "2025-09-25T19:32:34.783247Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:34.8300608Z",
+    "Duration": 0.1519362,
+    "Category": "L1",
+    "CheckId": "7.3.3_ensure_custom_script_execution_is_restricted_on",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: The term 'Get-SPOSiteScriptSetting' is not recognized as a name of a cmdlet, function, script file, or executable program.\r\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+    "EndTime": "2025-09-25T19:32:34.981997Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:35.0176962Z",
+    "Duration": 0.0654496,
+    "Category": "L1",
+    "CheckId": "7.3.4_ensure_custom_script_execution_is_restricted_on_site",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: No connection available. Use Connect-SPOService before running this CmdLet.",
+    "EndTime": "2025-09-25T19:32:35.0831458Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:35.1271315Z",
+    "Duration": 0.7317374,
+    "Category": "L1",
+    "CheckId": "8.1.2_ensure_users_can't_send_emails_to_a_channel_email",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "Name": "AllowEmailIntoChannel",
+        "Setting": true,
+        "IsCompliant": false,
+        "Details": "AllowEmailIntoChannel is set to True"
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:35.8588689Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:35.8935416Z",
+    "Duration": 0.4642144,
+    "Category": "L1",
+    "CheckId": "8.2.2_ensure_communication_with_unmanaged_teams_users",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "Name": "Global External Access Policy",
+        "IsCompliant": null,
+        "Details": {
+          "Identity": "Global",
+          "AllowedExternalDomains": [],
+          "BlockedExternalDomains": [],
+          "Description": null,
+          "EnableFederationAccess": true,
+          "EnableXmppAccess": false,
+          "EnablePublicCloudAudioVideoAccess": true,
+          "EnableTeamsSmsAccess": true,
+          "EnableOutsideAccess": true,
+          "EnableAcsFederationAccess": true,
+          "EnableTeamsConsumerAccess": true,
+          "EnableTeamsConsumerInbound": true,
+          "RestrictTeamsConsumerAccessToExternalUserProfiles": false,
+          "FederatedBilateralChats": false,
+          "CommunicationWithExternalOrgs": 0
+        }
+      },
+      {
+        "Name": "Tenant Federation Configuration",
+        "IsCompliant": true,
+        "AllowTeamsConsumer": true
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:36.357756Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:36.384148Z",
+    "Duration": 0.4098539,
+    "Category": "L1",
+    "CheckId": "8.2.3_ensure_external_teams_users_cannot_initiate",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "Name": "External Access Policy",
+        "IsCompliant": true,
+        "Details": "External Access Policy is configured."
+      },
+      {
+        "Name": "Tenant Federation Configuration",
+        "IsCompliant": false,
+        "Details": "Teams Consumer Inbound is allowed."
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:36.7940019Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:36.8297635Z",
+    "Duration": 0.264367,
+    "Category": "L1",
+    "CheckId": "8.2.4_ensure_communication_with_skype_users_is_disabled",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "Name": "AllowPublicUsers",
+        "ExpectedValue": false,
+        "IsCompliant": true,
+        "CurrentValue": null
+      }
+    ],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:37.0941305Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:37.1256317Z",
+    "Duration": 0.1819333,
+    "Category": "L1",
+    "CheckId": "8.4.1_ensure_app_permission_policies_are_configured",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "ResourceName": "Microsoft Apps",
+        "IsCompliant": false,
+        "CurrentValue": null
+      },
+      {
+        "ResourceName": "Third-party Apps",
+        "IsCompliant": false,
+        "CurrentValue": null
+      },
+      {
+        "ResourceName": "Custom Apps",
+        "IsCompliant": false,
+        "CurrentValue": null
+      },
+      {
+        "ResourceName": "Custom Apps Preview",
+        "IsCompliant": false,
+        "CurrentValue": null
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:37.307565Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:37.3405625Z",
+    "Duration": 0.1789009,
+    "Category": "L1",
+    "CheckId": "8.5.2_ensure_anonymous_users_and_dial-in_callers_can't_start",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "AllowDialInUsersToBypassLobby": null,
+        "AllowAnonymousUsersToStartMeeting": false,
+        "IsCompliant": true,
+        "PolicyName": "Global"
+      }
+    ],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:37.5194634Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:37.5604086Z",
+    "Duration": 0.1796806,
+    "Category": "L1",
+    "CheckId": "8.5.3_ensure_only_people_in_my_org_can_bypass_the_lobby",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "AutoAdmittedUsers": "EveryoneInCompany",
+        "IsCompliant": true,
+        "PolicyName": "Global"
+      }
+    ],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:37.7400892Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:37.7729557Z",
+    "Duration": 0.185278,
+    "Category": "L1",
+    "CheckId": "8.5.4_ensure_users_dialing_in_can't_bypass_the_lobby",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "AllowPSTNUsersToBypassLobby": false,
+        "IsCompliant": true,
+        "PolicyName": "Global"
+      }
+    ],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:37.9582337Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:37.9855178Z",
+    "Duration": 0.1953286,
+    "Category": "L1",
+    "CheckId": "8.5.7_ensure_external_participants_can't_give_or_request",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "AllowExternalParticipantsToGiveRequestControl": null,
+        "IsCompliant": true,
+        "PolicyName": "Global"
+      }
+    ],
+    "Status": "Pass",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:38.1808464Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:38.2110695Z",
+    "Duration": 0.3796465,
+    "Category": "L1",
+    "CheckId": "8.6.1_ensure_users_can_report_security_concerns_in_teams",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "ResourceName": "TeamsMessagingPolicy",
+        "IsCompliant": true,
+        "Details": {
+          "Identity": "Global",
+          "Description": null,
+          "AllowUrlPreviews": true,
+          "AllowOwnerDeleteMessage": false,
+          "AllowUserEditMessage": true,
+          "AllowUserDeleteMessage": true,
+          "UsersCanDeleteBotMessages": false,
+          "AllowUserDeleteChat": true,
+          "AllowUserChat": true,
+          "AllowRemoveUser": true,
+          "AllowGiphy": true,
+          "GiphyRatingType": "Moderate",
+          "AllowGiphyDisplay": true,
+          "AllowPasteInternetImage": true,
+          "AllowMemes": true,
+          "AllowImmersiveReader": true,
+          "AllowStickers": true,
+          "AllowUserTranslation": true,
+          "ReadReceiptsEnabledType": "UserPreference",
+          "AllowPriorityMessages": true,
+          "AllowSmartReply": true,
+          "AllowSmartCompose": true,
+          "ChannelsInChatListEnabledType": "DisabledUserOverride",
+          "AudioMessageEnabledType": "ChatsAndChannels",
+          "ChatPermissionRole": "Restricted",
+          "AllowFullChatPermissionUserToDeleteAnyMessage": false,
+          "AllowFluidCollaborate": false,
+          "AllowVideoMessages": true,
+          "AllowCommunicationComplianceEndUserReporting": true,
+          "AllowChatWithGroup": true,
+          "AllowSecurityEndUserReporting": true,
+          "InOrganizationChatControl": "BlockingDisallowed",
+          "AllowGroupChatJoinLinks": true,
+          "CreateCustomEmojis": true,
+          "UseB2BInvitesToAddExternalUsers": true,
+          "DeleteCustomEmojis": false,
+          "AutoShareFilesInExternalChats": "Enabled",
+          "DesignerForBackgroundsAndImages": "Enabled",
+          "AllowCustomGroupChatAvatars": true
+        }
+      },
+      {
+        "ResourceName": "ReportSubmissionPolicy",
+        "IsCompliant": false,
+        "Details": null
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:38.590716Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:38.6220762Z",
+    "Duration": 0.1424878,
+    "Category": "L1",
+    "CheckId": "9.1.1_ensure_guest_user_access_is_restricted",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "ResourceName": "Guest users can access Microsoft Fabric",
+        "IsCompliant": false,
+        "CurrentValue": "Not Found"
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:38.764564Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:38.8011597Z",
+    "Duration": 0.1271624,
+    "Category": "L1",
+    "CheckId": "9.1.10_ensure_access_to_apis_by_service_principals_is",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: The term 'Get-PowerBITenantSetting' is not recognized as a name of a cmdlet, function, script file, or executable program.\r\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+    "EndTime": "2025-09-25T19:32:38.9283221Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:38.9638764Z",
+    "Duration": 0.1202,
+    "Category": "L1",
+    "CheckId": "9.1.11_ensure_service_principals_cannot_create_and_use",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: The term 'Get-PowerBITenantSetting' is not recognized as a name of a cmdlet, function, script file, or executable program.\r\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+    "EndTime": "2025-09-25T19:32:39.0840764Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:39.1169943Z",
+    "Duration": 0.1276543,
+    "Category": "L1",
+    "CheckId": "9.1.2_ensure_external_user_invitations_are_restricted",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: The term 'Get-PowerBITenantSetting' is not recognized as a name of a cmdlet, function, script file, or executable program.\r\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+    "EndTime": "2025-09-25T19:32:39.2446486Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:39.2861258Z",
+    "Duration": 0.126269,
+    "Category": "L1",
+    "CheckId": "9.1.3_ensure_guest_access_to_content_is_restricted",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [
+      {
+        "ResourceName": "Guest Access to Fabric Content",
+        "IsCompliant": false,
+        "CurrentValue": null
+      }
+    ],
+    "Status": "Fail",
+    "Error": null,
+    "EndTime": "2025-09-25T19:32:39.4123948Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:39.4569598Z",
+    "Duration": 0.1299572,
+    "Category": "L1",
+    "CheckId": "9.1.4_ensure_'publish_to_web'_is_restricted",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: The term 'Get-PowerBITenantSetting' is not recognized as a name of a cmdlet, function, script file, or executable program.\r\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+    "EndTime": "2025-09-25T19:32:39.586917Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:39.6209505Z",
+    "Duration": 0.1195796,
+    "Category": "L1",
+    "CheckId": "9.1.6_ensure_'allow_users_to_apply_sensitivity_labels_for",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: The term 'Get-PowerBITenantSetting' is not recognized as a name of a cmdlet, function, script file, or executable program.\r\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+    "EndTime": "2025-09-25T19:32:39.7405301Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:39.7798392Z",
+    "Duration": 0.1515151,
+    "Category": "L1",
+    "CheckId": "9.1.7_ensure_shareable_links_are_restricted",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: The term 'Get-PowerBITenantSetting' is not recognized as a name of a cmdlet, function, script file, or executable program.\r\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+    "EndTime": "2025-09-25T19:32:39.9313543Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:39.9778107Z",
+    "Duration": 0.1294,
+    "Category": "L1",
+    "CheckId": "9.1.8_ensure_enabling_of_external_data_sharing_is_restricted",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: The term 'Get-PowerBITenantSetting' is not recognized as a name of a cmdlet, function, script file, or executable program.\r\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+    "EndTime": "2025-09-25T19:32:40.1072107Z"
+  },
+  {
+    "StartTime": "2025-09-25T19:32:40.1458358Z",
+    "Duration": 0.1269789,
+    "Category": "L1",
+    "CheckId": "9.1.9_ensure_'block_resourcekey_authentication'_is_'enabled'",
+    "TechType": "M365",
+    "TenantId": "660636d5-cb4e-4816-b1b8-f5afc446f583",
+    "Details": [],
+    "Status": "Error",
+    "Error": "Script execution failed: The term 'Get-PowerBITenantSetting' is not recognized as a name of a cmdlet, function, script file, or executable program.\r\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+    "EndTime": "2025-09-25T19:32:40.2728147Z"
+  }
+]

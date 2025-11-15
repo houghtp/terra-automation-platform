@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Members Directory{% endblock %}
+
+{% block head %}
+<script src="/features/core/static/js/table-base.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-pretitle">Community</div>
+            <h2 class="page-title">{{ page_title }}</h2>
+            <div class="text-muted mt-1">{{ page_description }}</div>
+        </div>
+        <div class="col-auto ms-auto">
+            <span class="badge bg-blue-lt" id="member-total-badge">
+                {{ member_total }} total
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        {% set title = "Member Directory" %}
+        {% set description = "Manage community members, update details, and track specialties." %}
+        {% set icon = "ti ti-users" %}
+        {% set add_url = "/features/community/members/partials/form" %}
+        {% set entity_name = "Member" %}
+        {% set table_id = "members-table" %}
+        {% include 'components/ui/table_actions.html' with context %}
+    </div>
+    <div class="card-body p-0">
+        <div id="members-table"></div>
+    </div>
+</div>
+
+<div class="modal modal-blur fade" id="modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div id="modal-body">
+                <!-- Modal content injected via HTMX -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/features/community/static/js/members-table.js"></script>
+{% endblock %}

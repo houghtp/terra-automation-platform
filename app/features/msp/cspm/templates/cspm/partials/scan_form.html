@@ -1,0 +1,137 @@
+<div class="modal-header">
+  <h5 class="modal-title">
+    <i class="ti ti-shield-check me-2"></i>
+    Start Compliance Scan
+  </h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+{% set selected_tenant_id = form_data.m365_tenant_id if form_data and form_data.m365_tenant_id is not none else '' %}
+{% set selected_scan_level = form_data.scan_level if form_data and form_data.scan_level is not none else 'all' %}
+
+<form id="scan-form"
+  hx-post="/msp/cspm/scans/start-form"
+  hx-target="this"
+  hx-swap="outerHTML"
+  class="needs-validation"
+  novalidate>
+
+  <div class="modal-body">
+    {% if error_message %}
+    <div class="alert alert-danger">
+      <i class="ti ti-alert-circle me-2"></i>{{ error_message }}
+    </div>
+    {% endif %}
+
+    {% if m365_tenants %}
+    <div class="mb-3">
+      <label class="form-label required">M365 Tenant</label>
+      <select class="form-select" name="m365_tenant_id" id="m365-tenant-select" required>
+        <option value="">Select a tenant...</option>
+        {% for tenant in m365_tenants %}
+        <option value="{{ tenant.id }}"
+                data-tenant-benchmark-id="{{ tenant.tenant_benchmark_id }}"
+                data-assignment-name="{{ tenant.tenant_benchmark_display_name or tenant.m365_tenant_name }}"
+                data-benchmark-name="{{ tenant.benchmark_display_name or '' }}"
+                data-benchmark-key="{{ tenant.benchmark_key or '' }}"
+                data-tech="{{ tenant.tech_type or 'M365' }}"
+                data-status="{{ tenant.tenant_benchmark_status or 'active' }}"
+                {% if tenant.id == selected_tenant_id %}selected{% endif %}>
+          {{ tenant.tenant_benchmark_display_name or tenant.m365_tenant_name }} ({{ tenant.tech_type or 'M365' }})
+        </option>
+        {% endfor %}
+      </select>
+      <div class="form-text">Choose the Microsoft 365 tenant to scan.</div>
+    </div>
+    <input type="hidden" name="tenant_benchmark_id" id="tenant-benchmark-id-field" value="{{ form_data.tenant_benchmark_id if form_data and form_data.tenant_benchmark_id is not none else '' }}">
+    <div id="assignment-info" class="alert alert-secondary mt-3" style="display:none;">
+      <div class="d-flex flex-column gap-1">
+        <div><strong>Assignment:</strong> <span data-field="assignment">-</span></div>
+        <div><strong>Benchmark:</strong> <span data-field="benchmark">-</span></div>
+        <div><strong>Status:</strong> <span data-field="status">-</span></div>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Scan Level</label>
+      <div class="form-selectgroup">
+        <label class="form-selectgroup-item">
+          <input type="radio" name="scan_level" value="all" class="form-selectgroup-input" {% if selected_scan_level != 'l1' %}checked{% endif %}>
+          <span class="form-selectgroup-label">
+            <i class="ti ti-shield-check me-2"></i>
+            All Checks (L1 + L2)
+            <small class="text-muted d-block">~75 compliance checks</small>
+          </span>
+        </label>
+        <label class="form-selectgroup-item">
+          <input type="radio" name="scan_level" value="l1" class="form-selectgroup-input" {% if selected_scan_level == 'l1' %}checked{% endif %}>
+          <span class="form-selectgroup-label">
+            <i class="ti ti-shield me-2"></i>
+            L1 Only
+            <small class="text-muted d-block">~50 baseline checks</small>
+          </span>
+        </label>
+      </div>
+    </div>
+
+    <div class="alert alert-info">
+      <i class="ti ti-info-circle me-2"></i>
+      Scans run asynchronously. You can monitor progress or view results from the scans table once the job starts.
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+      <i class="ti ti-alert-triangle me-2"></i>
+      <strong>No M365 tenants configured.</strong>
+      Add a tenant before starting a scan.
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+      <i class="ti ti-x me-2"></i>Cancel
+    </button>
+    {% if m365_tenants %}
+    <button type="submit" class="btn btn-outline-primary">
+      <i class="ti ti-play me-2"></i>Start Scan
+    </button>
+    {% endif %}
+  </div>
+</form>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const tenantSelect = document.getElementById("m365-tenant-select");
+    const benchmarkField = document.getElementById("tenant-benchmark-id-field");
+    const infoBox = document.getElementById("assignment-info");
+    const infoAssignment = infoBox ? infoBox.querySelector('[data-field="assignment"]') : null;
+    const infoBenchmark = infoBox ? infoBox.querySelector('[data-field="benchmark"]') : null;
+    const infoStatus = infoBox ? infoBox.querySelector('[data-field="status"]') : null;
+    if (!tenantSelect || !benchmarkField) return;
+
+    function syncTenantBenchmark() {
+      const option = tenantSelect.options[tenantSelect.selectedIndex];
+      benchmarkField.value = option ? (option.dataset.tenantBenchmarkId || "") : "";
+      if (!infoBox || !infoAssignment || !infoBenchmark || !infoStatus) {
+        return;
+      }
+      if (!option || !option.value) {
+        infoBox.style.display = "none";
+        return;
+      }
+      const assignmentName = option.dataset.assignmentName || option.textContent.trim();
+      const benchmarkName = option.dataset.benchmarkName || "Default assignment";
+      const benchmarkKey = option.dataset.benchmarkKey || "";
+      const tech = option.dataset.tech || "";
+      const status = option.dataset.status || "active";
+      infoAssignment.textContent = assignmentName;
+      const benchmarkDetails = benchmarkKey ? `${benchmarkName} (${benchmarkKey})` : benchmarkName;
+      infoBenchmark.textContent = `${benchmarkDetails}${tech ? ` • ${tech}` : ""}`;
+      infoStatus.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+      infoBox.style.display = "block";
+    }
+
+    tenantSelect.addEventListener("change", syncTenantBenchmark);
+    syncTenantBenchmark();
+  });
+</script>

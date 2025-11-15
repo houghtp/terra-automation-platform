@@ -12,12 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
 from app.features.administration.secrets.services import SecretsService
-from app.features.administration.secrets.models import (
-    TenantSecret,
-    SecretType,
+from app.features.administration.secrets.models import TenantSecret, SecretType
+from app.features.administration.secrets.schemas import (
     SecretCreate,
+    SecretResponse,
     SecretUpdate,
-    SecretResponse
 )
 
 

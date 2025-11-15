@@ -4,13 +4,10 @@
 {% block page_title %}Analytics Dashboard{% endblock %}
 
 {% block head %}
-    <!-- Chart Widget CSS -->
-    <link href="/static/css/chart-widgets.css" rel="stylesheet">
-
     <!-- Chart Widget Web Component -->
-    <script src="/dashboard/static/js/chart-widget.js"></script>
+    <script src="/dashboard/static/js/chart-widget.js?v=tabler"></script>
     <!-- Stats Card Web Component -->
-    <script src="/dashboard/static/js/stats-card.js"></script>
+    <script src="/dashboard/static/js/stats-card.js?v=tabler"></script>
 {% endblock %}
 
 {% block content %}
@@ -77,42 +74,43 @@
     </div>
 
     <!-- Charts Grid -->
-    <div class="dashboard-grid">
-        <!-- Status Breakdown Bar Chart -->
-                    <chart-widget
-                        id="status-chart"
-                        type="bar"
-                        title="Status Breakdown"
-                        data-url="/dashboard/api/status-breakdown"
-                        description="Distribution of items by status"
-                        class="chart-widget">
-                    </chart-widget>        <!-- Enabled/Disabled Donut Chart -->
-                    <chart-widget
-                        id="enabled-chart"
-                        type="pie"
-                        title="Enabled Status"
-                        data-url="/dashboard/api/enabled-breakdown"
-                        description="Distribution of enabled vs disabled items"
-                        class="chart-widget">
-                    </chart-widget>        <!-- Items Over Time Line Chart -->
-                    <chart-widget
-                        id="timeline-chart"
-                        type="line"
-                        title="Items Timeline"
-                        data-url="/dashboard/api/items-timeline"
-                        description="Timeline of item creation over time"
-                        class="chart-widget">
-                    </chart-widget>
-                </div>
-                <div class="col-md-6">
-                <chart-widget
-                    id="tags-chart"
-                    type="donut"
-                    title="Tags Distribution"
-                    data-url="/dashboard/api/tags-distribution"
-                    description="Most common tags used in items"
-                    class="chart-widget">
-                </chart-widget>
+    <div class="row g-4">
+        <div class="col-sm-6 col-lg-3">
+            <chart-widget
+                id="status-chart"
+                type="bar"
+                title="Status Breakdown"
+                data-url="/dashboard/api/status-breakdown"
+                description="Distribution of items by status">
+            </chart-widget>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <chart-widget
+                id="enabled-chart"
+                type="pie"
+                title="Enabled Status"
+                data-url="/dashboard/api/enabled-breakdown"
+                description="Distribution of enabled vs disabled items">
+            </chart-widget>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <chart-widget
+                id="timeline-chart"
+                type="line"
+                title="Items Timeline"
+                data-url="/dashboard/api/items-timeline"
+                description="Timeline of item creation over time">
+            </chart-widget>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <chart-widget
+                id="tags-chart"
+                type="donut"
+                title="Tags Distribution"
+                data-url="/dashboard/api/tags-distribution"
+                description="Most common tags used in items">
+            </chart-widget>
+        </div>
     </div>
 
     <!-- Action Items Section -->

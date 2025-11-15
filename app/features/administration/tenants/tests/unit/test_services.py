@@ -11,7 +11,7 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.administration.tenants.services import TenantManagementService
-from app.features.administration.tenants.models import (
+from app.features.administration.tenants.schemas import (
     TenantCreate, TenantUpdate, TenantResponse, TenantSearchFilter,
     TenantStatus, TenantTier, TenantDashboardStats, TenantUserResponse
 )

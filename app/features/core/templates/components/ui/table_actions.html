@@ -7,6 +7,44 @@ Parameters:
 - add_url: URL for add button
 - entity_name: Name for buttons (e.g. "Item", "User")
 -->
+{# Determine ID prefix for control elements to allow multiple tables per page #}
+{% set resolved_prefix = id_prefix | default('') %}
+{% if resolved_prefix %}
+  {% set default_search_id = resolved_prefix ~ '-quick-search' %}
+  {% set default_clear_id = resolved_prefix ~ '-clear-search' %}
+  {% set default_refresh_id = resolved_prefix ~ '-refresh-btn' %}
+  {% set default_add_id = resolved_prefix ~ '-add-btn' %}
+  {% set default_edit_id = resolved_prefix ~ '-edit-btn' %}
+  {% set default_delete_id = resolved_prefix ~ '-delete-btn' %}
+  {% set default_group_dropdown_id = resolved_prefix ~ '-group-dropdown' %}
+  {% set default_export_dropdown_id = resolved_prefix ~ '-export-dropdown' %}
+{% else %}
+  {% set default_search_id = 'table-quick-search' %}
+  {% set default_clear_id = 'clear-search-btn' %}
+  {% set default_refresh_id = 'refresh-table-btn' %}
+  {% set default_add_id = 'add-record-btn' %}
+  {% set default_edit_id = 'edit-selected-btn' %}
+  {% set default_delete_id = 'delete-selected-btn' %}
+  {% set default_group_dropdown_id = 'group-dropdown' %}
+  {% set default_export_dropdown_id = 'export-dropdown' %}
+{% endif %}
+
+{% set search_input_id = search_input_id | default(default_search_id) %}
+{% set clear_button_id = clear_button_id | default(default_clear_id) %}
+{% set refresh_button_id = refresh_button_id | default(default_refresh_id) %}
+{% set add_button_id = add_button_id | default(default_add_id) %}
+{% set edit_button_id = edit_button_id | default(default_edit_id) %}
+{% set delete_button_id = delete_button_id | default(default_delete_id) %}
+{% set group_dropdown_id = group_dropdown_id | default(default_group_dropdown_id) %}
+{% set export_dropdown_id = export_dropdown_id | default(default_export_dropdown_id) %}
+{% set add_label = add_label | default('Add') %}
+{% set show_bulk_actions = show_bulk_actions if show_bulk_actions is defined else True %}
+{% set show_refresh = show_refresh if show_refresh is defined else True %}
+{% set show_grouping = show_grouping if show_grouping is defined else True %}
+{% set show_export = show_export if show_export is defined else True %}
+{% set search_placeholder = search_placeholder | default('Search across all columns...') %}
+{% set refresh_handler = refresh_handler | default("refreshTableAction(this, '" ~ (table_id | default('demo-table')) ~ "')") %}
+
 <div class="table-actions-header">
   <div class="table-header-content">
     <div class="table-title-section">
@@ -28,13 +66,13 @@ Parameters:
               <i class="ti ti-search"></i>
             </span>
             <input type="text"
-                   id="table-quick-search"
+                   id="{{ search_input_id }}"
                    class="form-control"
-                   placeholder="Search across all columns..."
+                   placeholder="{{ search_placeholder }}"
                    autocomplete="off">
           </div>
           <button type="button"
-                  id="clear-search-btn"
+                  id="{{ clear_button_id }}"
                   class="btn btn-outline-secondary ms-1"
                   title="Clear search"
                   style="display: none;">
@@ -42,67 +80,96 @@ Parameters:
           </button>
         </div>
 
-        <!-- Refresh button -->
+        {% if show_refresh %}
+          <!-- Refresh button -->
         <button type="button"
-                id="refresh-table-btn"
-                class="table-action-btn table-action-refresh"
-                onclick="refreshTable('{{ table_id | default('demo-table') }}')"
+                id="{{ refresh_button_id }}"
+                class="table-action-btn table-action-refresh app-btn"
+                onclick="{{ refresh_handler }}"
                 title="Refresh table data">
-          <i class="ti ti-refresh"></i>
-          <span>Refresh</span>
+          <span class="app-btn-icon"><i class="ti ti-refresh"></i></span>
+          <span class="app-btn-label">Refresh</span>
+          <span class="app-btn-spinner spinner-border spinner-border-sm" aria-hidden="true"></span>
         </button>
+        {% endif %}
 
-        <a class="table-action-btn table-action-add"
-          hx-get="{{ add_url | default('/partials/form') }}"
-          hx-target="#modal-body"
-          hx-swap="innerHTML">
-          <i class="ti ti-plus"></i>
-          <span>Add</span>
-        </a>
-        <a id="edit-selected-btn" class="table-action-btn table-action-edit">
-          <i class="ti ti-edit"></i>
-          <span>Edit</span>
-        </a>
-        <a id="delete-selected-btn" class="table-action-btn table-action-delete">
-          <i class="ti ti-trash"></i>
-          <span>Delete</span>
+        <a id="{{ add_button_id }}"
+           class="table-action-btn table-action-add app-btn{% if add_disabled %} disabled{% endif %}"
+           data-default-focus
+           role="button"
+           {% if add_disabled %}
+           href="javascript:void(0)"
+           aria-disabled="true"
+           {% else %}
+           href="#"
+           hx-get="{{ add_url | default('/partials/form') }}"
+           hx-target="#modal-body"
+           hx-swap="innerHTML"
+           hx-on::beforeRequest="this.dataset.loading='true'"
+           hx-on::afterRequest="delete this.dataset.loading"
+           hx-on::responseError="delete this.dataset.loading"
+           data-bs-toggle="modal"
+           data-bs-target="#modal"
+           {% endif %}>
+          <span class="app-btn-icon"><i class="ti ti-plus"></i></span>
+          <span class="app-btn-label">{{ add_label }}</span>
+          <span class="app-btn-spinner spinner-border spinner-border-sm" aria-hidden="true"></span>
         </a>
 
-        <!-- Group By dropdown -->
-        <div class="dropdown">
-          <a class="table-action-btn table-action-group dropdown-toggle"
-             href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="ti ti-layout-grid"></i>
-            <span>Group By</span>
+        {% if show_bulk_actions %}
+          <a id="{{ edit_button_id }}" class="table-action-btn table-action-edit app-btn">
+            <span class="app-btn-icon"><i class="ti ti-edit"></i></span>
+            <span class="app-btn-label">Edit</span>
+            <span class="app-btn-spinner spinner-border spinner-border-sm" aria-hidden="true"></span>
           </a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="#" onclick="setTableGrouping('none', '{{ table_id | default('demo-table') }}')">
-              <i class="ti ti-layout-list me-2"></i>No Grouping</a></li>
-            <li><a class="dropdown-item" href="#" onclick="setTableGrouping('status', '{{ table_id | default('demo-table') }}')">
-              <i class="ti ti-circle-dot me-2"></i>Group by Status</a></li>
-            <li><a class="dropdown-item" href="#" onclick="setTableGrouping('assignee', '{{ table_id | default('demo-table') }}')">
-              <i class="ti ti-user me-2"></i>Group by Assignee</a></li>
-            <li><a class="dropdown-item" href="#" onclick="setTableGrouping('enabled', '{{ table_id | default('demo-table') }}')">
-              <i class="ti ti-toggle-left me-2"></i>Group by Enabled</a></li>
-          </ul>
-        </div>
-
-        <!-- Export dropdown -->
-        <div class="dropdown">
-          <a class="table-action-btn table-action-export dropdown-toggle"
-             href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="ti ti-download"></i>
-            <span>Export</span>
+          <a id="{{ delete_button_id }}" class="table-action-btn table-action-delete app-btn">
+            <span class="app-btn-icon"><i class="ti ti-trash"></i></span>
+            <span class="app-btn-label">Delete</span>
+            <span class="app-btn-spinner spinner-border spinner-border-sm" aria-hidden="true"></span>
           </a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="#" onclick="exportTable('csv')">
-              <i class="ti ti-file-text me-2"></i>Export as CSV</a></li>
-            <li><a class="dropdown-item" href="#" onclick="exportTable('xlsx')">
-              <i class="ti ti-file-excel me-2"></i>Export as Excel</a></li>
-            <li><a class="dropdown-item" href="#" onclick="exportTable('json')">
-              <i class="ti ti-code me-2"></i>Export as JSON</a></li>
-          </ul>
-        </div>
+        {% endif %}
+
+        {% if show_grouping %}
+          <!-- Group By dropdown -->
+          <div class="dropdown" id="{{ group_dropdown_id }}">
+            <a class="table-action-btn table-action-group dropdown-toggle app-btn"
+               href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <span class="app-btn-icon"><i class="ti ti-layout-grid"></i></span>
+              <span class="app-btn-label">Group By</span>
+              <span class="app-btn-spinner spinner-border spinner-border-sm" aria-hidden="true"></span>
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="#" onclick="setTableGrouping('none', '{{ table_id | default('demo-table') }}')">
+                <i class="ti ti-layout-list me-2"></i>No Grouping</a></li>
+              <li><a class="dropdown-item" href="#" onclick="setTableGrouping('status', '{{ table_id | default('demo-table') }}')">
+                <i class="ti ti-circle-dot me-2"></i>Group by Status</a></li>
+              <li><a class="dropdown-item" href="#" onclick="setTableGrouping('assignee', '{{ table_id | default('demo-table') }}')">
+                <i class="ti ti-user me-2"></i>Group by Assignee</a></li>
+              <li><a class="dropdown-item" href="#" onclick="setTableGrouping('enabled', '{{ table_id | default('demo-table') }}')">
+                <i class="ti ti-toggle-left me-2"></i>Group by Enabled</a></li>
+            </ul>
+          </div>
+        {% endif %}
+
+        {% if show_export %}
+          <!-- Export dropdown -->
+          <div class="dropdown" id="{{ export_dropdown_id }}">
+            <a class="table-action-btn table-action-export dropdown-toggle app-btn"
+               href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <span class="app-btn-icon"><i class="ti ti-download"></i></span>
+              <span class="app-btn-label">Export</span>
+              <span class="app-btn-spinner spinner-border spinner-border-sm" aria-hidden="true"></span>
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="#" onclick="exportTable('csv')">
+                <i class="ti ti-file-text me-2"></i>Export as CSV</a></li>
+              <li><a class="dropdown-item" href="#" onclick="exportTable('xlsx')">
+                <i class="ti ti-file-excel me-2"></i>Export as Excel</a></li>
+              <li><a class="dropdown-item" href="#" onclick="exportTable('json')">
+                <i class="ti ti-code me-2"></i>Export as JSON</a></li>
+            </ul>
+          </div>
+        {% endif %}
       </div>
     </div>
   </div>

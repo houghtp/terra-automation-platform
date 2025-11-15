@@ -5,79 +5,26 @@ Provides admin interface for managing customer/tenant API keys.
 """
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.database import get_db
 from app.features.core.api_security import APIKeyScope
 from app.features.auth.dependencies import get_current_user
 from app.features.auth.models import User
+from app.features.administration.api_keys.schemas import (
+    APIKeyCreateRequest,
+    APIKeyListResponse,
+    APIKeyResponse,
+    APIKeyStatsResponse,
+)
 from app.features.administration.api_keys.services import APIKeyCrudService
 from app.deps.tenant import tenant_dependency
 from app.features.core.sqlalchemy_imports import get_logger
+from app.features.core.route_imports import is_global_admin, JSONResponse, handle_route_error
 
 logger = get_logger(__name__)
 
 router = APIRouter(tags=["admin-api-keys"])
-
-
-# Request/Response Models
-class APIKeyCreateRequest(BaseModel):
-    """Request to create new API key."""
-    name: str = Field(..., min_length=1, max_length=255, description="API key name")
-    description: Optional[str] = Field(None, max_length=1000, description="API key description")
-    tenant_id: str = Field(..., description="Tenant ID for the API key")
-    scopes: List[str] = Field(..., min_items=1, description="List of permission scopes")
-    expires_in_days: Optional[int] = Field(None, ge=1, le=365, description="Days until expiration")
-    rate_limit_per_hour: int = Field(1000, ge=1, le=10000, description="Requests per hour limit")
-    rate_limit_per_day: int = Field(10000, ge=1, le=100000, description="Requests per day limit")
-
-
-class APIKeyResponse(BaseModel):
-    """API key information response."""
-    id: int
-    key_id: str
-    name: str
-    description: Optional[str]
-    tenant_id: str
-    scopes: List[str]
-    status: str
-    is_active: bool
-    rate_limit_per_hour: int
-    rate_limit_per_day: int
-    created_at: str
-    expires_at: Optional[str]
-    last_used_at: Optional[str]
-    usage_count: int
-
-    # Only include secret on creation
-    secret: Optional[str] = None
-
-
-class APIKeyListResponse(BaseModel):
-    """API key list item (without secret)."""
-    id: int
-    key_id: str
-    name: str
-    description: Optional[str]
-    tenant_id: str
-    scopes: List[str]
-    status: str
-    is_active: bool
-    last_used_at: Optional[str]
-    usage_count: int
-    success_rate: float
-    created_at: str
-
-
-class APIKeyStatsResponse(BaseModel):
-    """API key usage statistics."""
-    total_keys: int
-    active_keys: int
-    revoked_keys: int
-    expired_keys: int
-    total_requests_today: int
-    top_tenants: List[dict]
 
 
 # Admin API Key Management
@@ -89,8 +36,7 @@ async def get_api_key_stats(
 ):
     """Get API key usage statistics (admin only)."""
     # Check admin permissions
-    is_global_admin = current_user.role == "global_admin" and current_user.tenant_id == "global"
-    if not is_global_admin and current_user.role != "admin":
+    if not is_global_admin(current_user) and current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
@@ -188,19 +134,19 @@ async def create_api_key(
         )
 
 
-@router.get("/list", response_model=List[APIKeyListResponse])
-async def list_api_keys(
+@router.get("/api/list", response_class=JSONResponse)
+async def list_api_keys_api(
     filter_tenant_id: Optional[str] = Query(None, description="Filter by tenant ID"),
     include_inactive: bool = Query(False, description="Include inactive keys"),
     limit: int = Query(50, ge=1, le=100, description="Number of keys to return"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
-    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user)
 ):
-    """List API keys with optional filtering (admin only)."""
+    """List API keys for Tabulator (standardized pattern)."""
     # Check admin permissions
-    if current_user.role != "admin" and current_user.role != "global_admin":
+    if not is_global_admin(current_user) and current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
@@ -215,26 +161,28 @@ async def list_api_keys(
             offset=offset
         )
 
-        return [
-            APIKeyListResponse(
-                id=key.id,
-                key_id=key.key_id,
-                name=key.name,
-                description=key.description,
-                tenant_id=key.tenant_id,
-                scopes=key.scopes,
-                status=key.status,
-                is_active=key.is_active,
-                last_used_at=key.last_used_at.isoformat() if key.last_used_at else None,
-                usage_count=key.usage_count,
-                success_rate=key.success_rate,
-                created_at=key.created_at.isoformat()
-            )
-            for key in api_keys
-        ]
+        # Standardized response format - simple array with dict conversion
+        result = []
+        for key in api_keys:
+            result.append({
+                "id": key.id,
+                "key_id": key.key_id,
+                "name": key.name,
+                "description": key.description,
+                "tenant_id": key.tenant_id,
+                "scopes": key.scopes,
+                "status": key.status,
+                "is_active": key.is_active,
+                "last_used_at": key.last_used_at.isoformat() if key.last_used_at else None,
+                "usage_count": key.usage_count,
+                "success_rate": key.success_rate,
+                "created_at": key.created_at.isoformat()
+            })
+
+        return result
 
     except Exception as e:
-        logger.error("Failed to list API keys", error=str(e), tenant_id=tenant_id)
+        handle_route_error("list_api_keys_api", e, tenant_id=tenant_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list API keys"

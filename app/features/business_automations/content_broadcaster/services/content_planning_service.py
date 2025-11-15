@@ -30,6 +30,29 @@ class ContentPlanningService(BaseService[ContentPlan]):
     def __init__(self, db_session: AsyncSession, tenant_id: Optional[str] = None):
         super().__init__(db_session, tenant_id)
 
+    def _normalise_prompt_settings(self, settings: Optional[Dict[str, Any]]) -> Dict[str, int]:
+        defaults = {
+            "professionalism_level": 4,
+            "humor_level": 1,
+            "creativity_level": 3,
+            "analysis_depth": 4,
+            "strictness_level": 4,
+        }
+        if not settings:
+            return defaults
+
+        normalised: Dict[str, int] = {}
+        for key, default in defaults.items():
+            try:
+                value = int(settings.get(key, default))
+            except (TypeError, ValueError):
+                value = default
+
+            minimum = 0 if key == "humor_level" else 1
+            normalised[key] = max(minimum, min(5, value))
+
+        return normalised
+
     async def create_plan(
         self,
         title: str,
@@ -42,6 +65,7 @@ class ContentPlanningService(BaseService[ContentPlan]):
         min_seo_score: int = 95,
         max_iterations: int = 3,
         skip_research: bool = False,
+        prompt_settings: Optional[Dict[str, Any]] = None,
         created_by_user=None
     ) -> ContentPlan:
         """
@@ -103,6 +127,7 @@ class ContentPlanningService(BaseService[ContentPlan]):
                 research_data={},
                 generation_metadata={},
                 refinement_history=[],
+                prompt_settings=self._normalise_prompt_settings(prompt_settings),
                 generated_content_item_id=None,
                 error_log=None,
                 retry_count=0
@@ -122,7 +147,8 @@ class ContentPlanningService(BaseService[ContentPlan]):
                 "title": plan.title,
                 "tenant_id": plan.tenant_id,
                 "target_channels": target_channels,
-                "min_seo_score": min_seo_score
+                "min_seo_score": min_seo_score,
+                "prompt_settings": plan.prompt_settings,
             })
 
             logger.info(
@@ -265,12 +291,15 @@ class ContentPlanningService(BaseService[ContentPlan]):
             # Update allowed fields
             allowed_fields = [
                 "title", "description", "target_channels", "target_audience",
-                "tone", "seo_keywords", "competitor_urls", "min_seo_score", "max_iterations"
+                "tone", "seo_keywords", "competitor_urls", "min_seo_score", "max_iterations", "prompt_settings", "skip_research"
             ]
 
             for field, value in updates.items():
                 if field in allowed_fields and hasattr(plan, field):
-                    setattr(plan, field, value)
+                    if field == "prompt_settings":
+                        setattr(plan, field, self._normalise_prompt_settings(value))
+                    else:
+                        setattr(plan, field, value)
 
             # Set audit information with explicit timestamp
             if audit_ctx:

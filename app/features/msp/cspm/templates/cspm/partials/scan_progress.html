@@ -1,0 +1,12 @@
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+  <i class="ti ti-check icon me-2"></i>
+  Scan started successfully! Redirecting to progress page...
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+
+<script>
+  // Redirect to scan detail page after 1 second
+  setTimeout(function() {
+    window.location.href = '/msp/cspm/scans/{{ scan.scan_id }}';
+  }, 1000);
+</script>

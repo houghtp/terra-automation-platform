@@ -10,7 +10,8 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from unittest.mock import patch
 
-from app.features.administration.secrets.models import SecretType, SecretCreate
+from app.features.administration.secrets.models import SecretType
+from app.features.administration.secrets.schemas import SecretCreate
 from app.features.administration.secrets.services import SecretsService
 
 
@@ -257,7 +258,7 @@ class TestSecretsRoutes:
             created_secret = await service.create_secret("default_tenant", secret_data)
 
             if not is_active:
-                from app.features.administration.secrets.models import SecretUpdate
+                from app.features.administration.secrets.schemas import SecretUpdate
                 update_data = SecretUpdate(is_active=False)
                 await service.update_secret("default_tenant", created_secret.id, update_data)
 
@@ -443,7 +444,7 @@ class TestSecretsRoutesIntegration:
             created_secret = await service.create_secret("default_tenant", secret_data)
 
             if not is_active:
-                from app.features.administration.secrets.models import SecretUpdate
+                from app.features.administration.secrets.schemas import SecretUpdate
                 update_data = SecretUpdate(is_active=False)
                 await service.update_secret("default_tenant", created_secret.id, update_data)
 

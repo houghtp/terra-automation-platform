@@ -174,5 +174,19 @@ def cleanup_old_audit_logs_async(days_to_keep: int = 90) -> str:
     return TaskManager.start_task("app.features.tasks.cleanup_tasks.cleanup_old_audit_logs", days_to_keep)
 
 
+def process_content_plan_async(
+    plan_id: str,
+    tenant_id: str,
+    triggered_by: Optional[Dict[str, Any]] = None,
+) -> str:
+    """Process a Content Broadcaster plan via Celery."""
+    return TaskManager.start_task(
+        "app.features.business_automations.content_broadcaster.tasks.process_content_plan_task",
+        plan_id,
+        tenant_id,
+        triggered_by or {},
+    )
+
+
 # Global task manager instance
 task_manager = TaskManager()

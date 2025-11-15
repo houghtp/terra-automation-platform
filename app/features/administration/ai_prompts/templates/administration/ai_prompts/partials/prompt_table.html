@@ -1,0 +1,33 @@
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-vcenter table-hover mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th style="width: 32px;"></th>
+                        <th>Name</th>
+                        <th>Key</th>
+                        <th>Category</th>
+                        <th>Scope</th>
+                        <th>Status</th>
+                        <th class="text-end">Usage</th>
+                        <th style="width: 200px;" class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for prompt in prompts %}
+                        {% include "administration/ai_prompts/partials/prompt_row.html" %}
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-5">
+                            <i class="ti ti-database-search icon-lg d-block mb-2"></i>
+                            <p class="mb-1 fw-semibold">No prompts found for the selected filters.</p>
+                            <p class="mb-0">Try adjusting filters or create a new prompt.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -273,7 +273,7 @@ class SecureHeadersMiddleware(BaseHTTPMiddleware):
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net; "
                 "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
                 "img-src 'self' data: https:; "
-                "connect-src 'self'; "
+                "connect-src 'self' ws://localhost:* wss://localhost:*; "
                 "form-action 'self';"
             )
             security_headers["Content-Security-Policy"] = csp_policy

@@ -2,7 +2,7 @@
 <div class="row row-cards">
     {% for connector in connectors %}
     <div class="col-md-6 col-lg-4">
-        <div class="card connector-card">
+        <div class="card card-hover-lift h-100">
             <div class="card-status-top
                 {% if connector.status == 'active' %}bg-success
                 {% elif connector.status == 'error' %}bg-danger
@@ -11,11 +11,11 @@
             <div class="card-body">
                 <!-- Header with status -->
                 <div class="d-flex align-items-center mb-3">
-                    <div class="connector-icon me-3" style="font-size: 2rem;">
+                    <div class="me-3">
                         {% if connector.catalog_icon %}
-                        <i class="ti ti-{{ connector.catalog_icon }} text-primary"></i>
+                        <i class="ti ti-{{ connector.catalog_icon }} text-primary icon-lg"></i>
                         {% else %}
-                        <i class="ti ti-plug text-muted"></i>
+                        <i class="ti ti-plug text-muted icon-lg"></i>
                         {% endif %}
                     </div>
                     <div class="flex-fill">
@@ -27,20 +27,20 @@
                 <!-- Status Badge -->
                 <div class="mb-3">
                     {% if connector.status == 'active' %}
-                    <span class="badge bg-success status-badge">
+                    <span class="app-badge app-badge-success">
                         <i class="ti ti-circle-check me-1"></i>Active
                     </span>
                     {% elif connector.status == 'error' %}
-                    <span class="badge bg-danger status-badge">
+                    <span class="app-badge app-badge-danger">
                         <i class="ti ti-alert-circle me-1"></i>Error
                     </span>
                     {% else %}
-                    <span class="badge bg-secondary status-badge">
+                    <span class="app-badge app-badge-neutral">
                         <i class="ti ti-circle me-1"></i>Inactive
                     </span>
                     {% endif %}
 
-                    <span class="badge badge-outline text-blue ms-2">
+                    <span class="app-badge app-badge-info ms-2">
                         {{ connector.catalog_category }}
                     </span>
                 </div>
@@ -48,14 +48,14 @@
                 <!-- Auth Configured Indicator -->
                 {% if connector.auth_configured %}
                 <div class="mb-3">
-                    <span class="badge bg-azure-lt">
+                    <span class="app-badge app-badge-info">
                         <i class="ti ti-lock-check me-1"></i>
                         Authenticated
                     </span>
                 </div>
                 {% else %}
                 <div class="mb-3">
-                    <span class="badge bg-yellow-lt">
+                    <span class="app-badge app-badge-warning">
                         <i class="ti ti-lock-open me-1"></i>
                         Auth Required
                     </span>
@@ -66,10 +66,10 @@
                 {% if connector.tags %}
                 <div class="mb-3">
                     {% for tag in connector.tags[:3] %}
-                    <span class="badge bg-blue-lt me-1">{{ tag }}</span>
+                    <span class="app-badge app-badge-info me-1">{{ tag }}</span>
                     {% endfor %}
                     {% if connector.tags|length > 3 %}
-                    <span class="badge bg-blue-lt">+{{ connector.tags|length - 3 }}</span>
+                    <span class="app-badge app-badge-info">+{{ connector.tags|length - 3 }}</span>
                     {% endif %}
                 </div>
                 {% endif %}

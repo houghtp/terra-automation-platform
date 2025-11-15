@@ -1,0 +1,26 @@
+[
+  {
+    "EndTime": "2025-09-25T19:42:16.8199312Z",
+    "Error": "Script execution failed: Response status code does not indicate success: InternalServerError (Internal Server Error).",
+    "TechType": "M365",
+    "StartTime": "2025-09-25T19:42:16.3891989Z",
+    "Category": "L1",
+    "Status": "Error",
+    "Duration": 0.4307323,
+    "TenantId": "terrait.co.uk",
+    "Details": [],
+    "CheckId": "1.3.4_ensure_'user_owned_apps_and_services'_is_restricted"
+  },
+  {
+    "EndTime": "2025-09-25T19:42:17.0295355Z",
+    "Error": "Script execution failed: Response status code does not indicate success: InternalServerError (Internal Server Error).",
+    "TechType": "M365",
+    "StartTime": "2025-09-25T19:42:16.8603558Z",
+    "Category": "L1",
+    "Status": "Error",
+    "Duration": 0.1691797,
+    "TenantId": "terrait.co.uk",
+    "Details": [],
+    "CheckId": "1.3.5_ensure_internal_phishing_protection_for_forms_is"
+  }
+]

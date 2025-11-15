@@ -1,11 +1,11 @@
 # Use centralized imports for consistency
 from app.features.core.route_imports import *
-from app.features.administration.secrets.models import (
+from app.features.administration.secrets.models import SecretType
+from app.features.administration.secrets.schemas import (
     SecretCreate,
-    SecretUpdate,
     SecretResponse,
+    SecretUpdate,
     SecretValue,
-    SecretType
 )
 from ..services import SecretsManagementService
 
@@ -293,7 +293,7 @@ async def update_secret_field(
         raise HTTPException(status_code=500, detail="Failed to update secret field")
 
 
-@router.put("/{secret_id}")
+@router.put("/api/{secret_id}")
 async def update_secret_api(
     secret_id: int,
     update_data: SecretUpdate,
@@ -314,7 +314,7 @@ async def update_secret_api(
             raise HTTPException(status_code=404, detail="Secret not found")
 
         await db.commit()
-        return secret.model_dump()
+        return JSONResponse(secret.model_dump())
 
     except ValueError as e:
         logger.warning("Invalid secret update data", error=str(e))
@@ -326,8 +326,8 @@ async def update_secret_api(
         raise HTTPException(status_code=500, detail=f"Failed to update secret: {str(e)}")
 
 
-@router.delete("/{secret_id}")
-@router.post("/{secret_id}/delete")
+@router.delete("/api/{secret_id}")
+@router.post("/api/{secret_id}/delete")
 async def delete_secret(
     secret_id: int,
     tenant_id: str = Depends(tenant_dependency),

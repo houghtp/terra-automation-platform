@@ -496,13 +496,6 @@ document.body.addEventListener('refreshTable', function () {
     }
 });
 
-document.body.addEventListener('closeModal', function () {
-    const modal = bootstrap.Modal.getInstance(document.getElementById('modal'));
-    if (modal) {
-        modal.hide();
-    }
-});
-
 // === Initialization ===
 
 // Standard initialization pattern

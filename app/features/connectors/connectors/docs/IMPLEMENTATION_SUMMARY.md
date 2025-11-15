@@ -273,9 +273,9 @@ curl -X POST http://localhost:8000/features/connectors/api/connectors \
 
 ## Known Issues
 
-1. **Circular Import Warning**: `content_broadcaster.routes.models` has circular import
-   - Non-blocking, app functions normally
-   - Should be fixed in content_broadcaster slice
+1. **Circular Import Warning**: Previously flagged on `content_broadcaster.routes.models`; addressed by moving schemas to `content_broadcaster/schemas.py`.
+   - Non-blocking, documented for historical reference
+   - No further action required from connectors slice
 
 2. **Authentication Required**: All endpoints require login
    - By design for security

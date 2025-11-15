@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 from pydantic import ValidationError
 
-from app.features.administration.tenants.models import (
+from app.features.administration.tenants.schemas import (
     TenantStatus, TenantTier, TenantCreate, TenantUpdate, TenantResponse,
     TenantStats, TenantSearchFilter, TenantDashboardStats, TenantUserResponse,
     UserTenantAssignment

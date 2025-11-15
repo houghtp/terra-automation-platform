@@ -14,9 +14,13 @@ import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-from app.features.administration.smtp.models import (
-    SMTPConfiguration, SMTPConfigurationCreate, SMTPConfigurationUpdate,
-    SMTPConfigurationResponse, SMTPSearchFilter, SMTPStatus, SMTPTestResult
+from app.features.administration.smtp.models import SMTPConfiguration, SMTPStatus
+from app.features.administration.smtp.schemas import (
+    SMTPConfigurationCreate,
+    SMTPConfigurationResponse,
+    SMTPConfigurationUpdate,
+    SMTPSearchFilter,
+    SMTPTestResult,
 )
 from app.features.core.security import security_manager
 from app.features.core.audit_mixin import AuditContext

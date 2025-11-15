@@ -1,0 +1,227 @@
+<div class="modal-header">
+  <h5 class="modal-title">
+    <i class="ti ti-cloud icon me-2"></i>
+    {% if tenant %}Edit M365 Tenant{% else %}Add M365 Tenant{% endif %}
+  </h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<form
+  hx-post="{% if tenant %}/msp/cspm/m365-tenants/{{ tenant.id }}{% else %}/msp/cspm/m365-tenants{% endif %}"
+  hx-target="#m365-tenant-area"
+  hx-swap="innerHTML"
+  class="needs-validation"
+  novalidate>
+
+  <div class="modal-body">
+    {% if form_error %}
+    <div class="alert alert-danger">
+      <i class="ti ti-alert-circle me-2"></i>{{ form_error }}
+    </div>
+    {% endif %}
+
+    {% if is_global_admin %}
+    <div class="row mb-3">
+      <div class="col-lg-12">
+        <label class="form-label required">Assign to Platform Tenant</label>
+        <select
+          class="form-select"
+          name="target_tenant_id"
+          {% if tenant %}disabled{% endif %}
+          required>
+          <option value="" {% if not tenant and not (form_data and form_data.target_tenant_id) %}selected{% endif %}>Select a tenant</option>
+          {% for option in available_tenants %}
+          <option value="{{ option.id }}"
+            {% if (form_data and form_data.target_tenant_id == option.id) or (tenant and tenant.tenant_id == option.id and not form_data) %}selected{% endif %}>
+            {{ option.name }}
+          </option>
+          {% endfor %}
+        </select>
+        <div class="form-text">
+          Choose which platform tenant will own this Microsoft 365 configuration.
+        </div>
+        {% if tenant %}
+        <input type="hidden" name="target_tenant_id" value="{{ form_data.target_tenant_id if form_data and form_data.target_tenant_id else tenant.tenant_id }}">
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+      <input type="hidden" name="target_tenant_id" value="{{ (form_data.target_tenant_id if form_data and form_data.target_tenant_id else (tenant.tenant_id if tenant else current_tenant_id)) }}">
+    {% endif %}
+
+    <div class="row mb-3">
+      <div class="col-12">
+        <label class="form-label required">M365 Tenant ID</label>
+        <input
+          type="text"
+          class="form-control"
+          name="m365_tenant_id"
+          value="{{ form_data.m365_tenant_id if form_data and form_data.m365_tenant_id is not none else (tenant.m365_tenant_id if tenant else '') }}"
+          placeholder="660636d5-cb4e-4816-b1b8-f5afc446f583"
+          required
+          {% if tenant %}readonly{% endif %}>
+        <div class="form-text">Microsoft 365 tenant GUID (Entra directory ID)</div>
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-lg-12">
+        <label class="form-label">M365 Domain</label>
+        <input
+          type="text"
+          class="form-control"
+          name="m365_domain"
+          value="{{ form_data.m365_domain if form_data and form_data.m365_domain is not none else (tenant.m365_domain if tenant else '') }}"
+          placeholder="contoso.onmicrosoft.com">
+        <div class="form-text">Primary Microsoft 365 domain</div>
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-lg-12">
+        <label class="form-label">Description</label>
+        <textarea
+          class="form-control"
+          name="description"
+          rows="2"
+          placeholder="Production M365 tenant for compliance scanning">{{ form_data.description if form_data and form_data.description is not none else (tenant.description if tenant else '') }}</textarea>
+      </div>
+    </div>
+
+    <hr class="my-4">
+    <h4 class="card-title mb-3">
+      <i class="ti ti-key icon me-2"></i>
+      Authentication Credentials
+    </h4>
+
+    <div class="alert alert-info">
+      <i class="ti ti-info-circle icon me-2"></i>
+      Provide <strong>App Registration</strong> credentials. Use <strong>Certificate PFX</strong> for full access to all services (Teams, Exchange, Security & Compliance) or <strong>Client Secret</strong> for basic access (Graph, SharePoint, Power BI). All credentials are encrypted.
+    </div>
+
+    <!-- App Registration Method -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h5 class="card-title">App Registration (Recommended)</h5>
+      </div>
+      <div class="card-body">
+        <div class="row mb-3">
+          <div class="col-lg-12">
+            <label class="form-label">Client ID (Application ID)</label>
+            <input
+              type="text"
+              class="form-control"
+              name="client_id"
+              value="{{ form_data.client_id if form_data and form_data.client_id is not none else (credentials.client_id if credentials else '') }}"
+              placeholder="12345678-1234-1234-1234-123456789012">
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-lg-12">
+            <label class="form-label">Client Secret</label>
+            <input
+              type="password"
+              class="form-control"
+              name="client_secret"
+              placeholder="Enter client secret (leave blank to keep existing)">
+            <div class="form-text">Will be encrypted in database</div>
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-lg-12">
+            <label class="form-label">Certificate PFX (Base64)</label>
+            <textarea
+              class="form-control font-monospace"
+              name="certificate_pfx"
+              rows="3"
+              placeholder="MIIKcAIBAzCCCi4GCSqGSIb3DQEHAaCCCh8EggoLMIIKBzCCBg...">{{ form_data.certificate_pfx if form_data and form_data.certificate_pfx is not none else (credentials.certificate_pfx if credentials else '') }}</textarea>
+            <div class="form-text">Base64-encoded PFX certificate file (required for Teams, Exchange, Security & Compliance)</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-lg-12">
+            <label class="form-label">Certificate Password</label>
+            <input
+              type="password"
+              class="form-control"
+              name="certificate_password"
+              placeholder="Enter certificate password (leave blank to keep existing)">
+            <div class="form-text">Password for the PFX certificate file</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Username/Password Method -->
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title">Username/Password (Legacy)</h5>
+      </div>
+      <div class="card-body">
+        <div class="row mb-3">
+          <div class="col-lg-12">
+            <label class="form-label">Username</label>
+            <input
+              type="text"
+              class="form-control"
+              name="username"
+              value="{{ form_data.username if form_data and form_data.username is not none else (credentials.username if credentials else '') }}"
+              placeholder="admin@contoso.onmicrosoft.com">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-lg-12">
+            <label class="form-label">Password</label>
+            <input
+              type="password"
+              class="form-control"
+              name="password"
+              placeholder="Enter password (leave blank to keep existing)">
+            <div class="form-text">Will be encrypted in database</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+      <i class="ti ti-x icon"></i>
+      Cancel
+    </button>
+    <button type="submit" class="btn btn-outline-primary">
+      <i class="ti ti-check icon"></i>
+      {% if tenant %}Update Tenant{% else %}Create Tenant{% endif %}
+    </button>
+  </div>
+</form>
+
+<script>
+  // Initialize form validation
+  (function () {
+    'use strict';
+    var forms = document.querySelectorAll('.needs-validation');
+    Array.prototype.slice.call(forms).forEach(function (form) {
+      form.addEventListener('submit', function (event) {
+        if (!form.checkValidity()) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+      }, false);
+    });
+  })();
+
+  // Close modal on successful submission
+  document.body.addEventListener('htmx:afterSwap', function(event) {
+    if (event.detail.target.id === 'm365-tenant-area') {
+      var modal = bootstrap.Modal.getInstance(document.getElementById('modal'));
+      if (modal) {
+        modal.hide();
+      }
+    }
+  });
+</script>

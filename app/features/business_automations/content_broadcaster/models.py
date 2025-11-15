@@ -133,6 +133,8 @@ class ContentPlan(Base, AuditMixin):
     #   ...
     # ]
 
+    prompt_settings = Column(JSONB, nullable=False, default=dict)
+
     # Link to generated content item (one-to-one)
     generated_content_item_id = Column(String(36), ForeignKey("content_items.id"), nullable=True, index=True)
 
@@ -164,6 +166,7 @@ class ContentPlan(Base, AuditMixin):
             "research_data": self.research_data or {},
             "generation_metadata": self.generation_metadata or {},
             "refinement_history": self.refinement_history or [],
+            "prompt_settings": self.prompt_settings or {},
             "generated_content_item_id": self.generated_content_item_id,
             "error_log": self.error_log,
             "retry_count": self.retry_count,

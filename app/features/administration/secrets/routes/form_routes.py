@@ -1,10 +1,7 @@
 # Use centralized imports for consistency
 from app.features.core.route_imports import *
-from app.features.administration.secrets.models import (
-    SecretCreate,
-    SecretUpdate,
-    SecretType
-)
+from app.features.administration.secrets.models import SecretType
+from app.features.administration.secrets.schemas import SecretCreate, SecretUpdate
 from ..services import SecretsManagementService
 
 router = APIRouter(tags=["secrets-forms"])
@@ -234,6 +231,8 @@ async def secret_update(
         secret_type_str = form_handler.form_data.get('secret_type')
         value = form_handler.form_data.get('value')
         is_active = form_handler.form_data.get('is_active')
+        expires_at_str = form_handler.form_data.get('expires_at')
+        rotation_interval_raw = form_handler.form_data.get('rotation_interval_days')
 
         # Convert string to enum if provided
         secret_type = None
@@ -247,13 +246,33 @@ async def secret_update(
         if is_active is not None and isinstance(is_active, str):
             is_active = is_active.lower() in ('true', '1', 'on', 'yes')
 
-        update_data = SecretUpdate(
-            name=name,
-            description=description,
-            secret_type=secret_type,
-            value=value,
-            is_active=is_active
-        )
+        if value is not None and not value.strip():
+            value = None
+
+        update_kwargs = {
+            "name": name,
+            "description": description,
+            "secret_type": secret_type,
+            "value": value,
+            "is_active": is_active
+        }
+
+        if expires_at_str is not None:
+            update_kwargs["expires_at"] = expires_at_str or None
+
+        if rotation_interval_raw is not None:
+            if rotation_interval_raw == "":
+                update_kwargs["rotation_interval_days"] = None
+            else:
+                try:
+                    update_kwargs["rotation_interval_days"] = int(rotation_interval_raw)
+                except (TypeError, ValueError):
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Rotation interval must be a number between 1 and 365."
+                    )
+
+        update_data = SecretUpdate(**update_kwargs)
 
         secret = await secrets_service.update_secret(
             secret_id=secret_id,

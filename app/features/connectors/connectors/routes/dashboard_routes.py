@@ -122,7 +122,8 @@ async def installed_view(
         service = ConnectorService(db, tenant_id)
 
         # Build filters
-        from app.features.connectors.connectors.models import ConnectorSearchFilter, ConnectorStatus
+        from app.features.connectors.connectors.models import ConnectorStatus
+        from app.features.connectors.connectors.schemas import ConnectorSearchFilter
         filters = ConnectorSearchFilter(
             search=search,
             category=category,

@@ -97,6 +97,47 @@
             </div>
         </div>
 
+        {% set settings = plan.prompt_settings or {} %}
+        <!-- Prompt Controls -->
+        <div class="mb-3">
+            <label class="form-label">AI Style Controls</label>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Professionalism <span class="badge bg-primary" id="edit-professionalism-value">{{ settings.get('professionalism_level', 4) }}</span></label>
+                    <input type="range" class="form-range prompt-slider" min="1" max="5" step="1"
+                           name="professionalism_level" value="{{ settings.get('professionalism_level', 4) }}"
+                           data-output="edit-professionalism-value">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Creativity <span class="badge bg-primary" id="edit-creativity-value">{{ settings.get('creativity_level', 3) }}</span></label>
+                    <input type="range" class="form-range prompt-slider" min="1" max="5" step="1"
+                           name="creativity_level" value="{{ settings.get('creativity_level', 3) }}"
+                           data-output="edit-creativity-value">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Humour <span class="badge bg-primary" id="edit-humor-value">{{ settings.get('humor_level', 1) }}</span></label>
+                    <input type="range" class="form-range prompt-slider" min="0" max="5" step="1"
+                           name="humor_level" value="{{ settings.get('humor_level', 1) }}"
+                           data-output="edit-humor-value">
+                </div>
+            </div>
+            <div class="row g-3 mt-1">
+                <div class="col-md-6">
+                    <label class="form-label">Analysis Depth <span class="badge bg-primary" id="edit-analysis-value">{{ settings.get('analysis_depth', 4) }}</span></label>
+                    <input type="range" class="form-range prompt-slider" min="1" max="5" step="1"
+                           name="analysis_depth" value="{{ settings.get('analysis_depth', 4) }}"
+                           data-output="edit-analysis-value">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">SEO Strictness <span class="badge bg-primary" id="edit-strictness-value">{{ settings.get('strictness_level', 4) }}</span></label>
+                    <input type="range" class="form-range prompt-slider" min="1" max="5" step="1"
+                           name="strictness_level" value="{{ settings.get('strictness_level', 4) }}"
+                           data-output="edit-strictness-value">
+                </div>
+            </div>
+            <small class="form-hint">Adjust the sliders to influence tone, creativity, and how strict the validator should be.</small>
+        </div>
+
         <!-- SEO Keywords -->
         <div class="mb-3">
             <label class="form-label">SEO Keywords (Optional)</label>
@@ -168,3 +209,19 @@
         </button>
     </div>
 </form>
+
+<script>
+(function() {
+  const form = document.currentScript.previousElementSibling;
+  if (!form || form.tagName !== 'FORM') return;
+  form.querySelectorAll('.prompt-slider').forEach(function (slider) {
+    const outputId = slider.getAttribute('data-output');
+    if (!outputId) return;
+    const outputEl = form.querySelector('#' + outputId) || document.getElementById(outputId);
+    if (!outputEl) return;
+    const updateValue = () => { outputEl.textContent = slider.value; };
+    slider.addEventListener('input', updateValue);
+    updateValue();
+  });
+})();
+</script>

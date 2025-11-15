@@ -1,0 +1,16 @@
+<div class="card">
+  <div class="card-header">
+    {% set title = "Tenant Benchmarks" %}
+    {% set description = "Assign CIS benchmarks to each platform tenant and manage their configuration." %}
+    {% set icon = "ti ti-list-icons" %}
+    {% set add_url = "/msp/cspm/partials/tenant-benchmark-form" %}
+    {% set entity_name = "Benchmark Assignment" %}
+    {% set table_id = "tenant-benchmarks-table" %}
+    {% set id_prefix = "tenant-benchmarks" %}
+    {% set show_bulk_actions = False %}
+    {% include "components/ui/table_actions.html" with context %}
+  </div>
+  <div class="card-body p-0">
+    <div id="tenant-benchmarks-table" class="tabulator-container"></div>
+  </div>
+</div>

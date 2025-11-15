@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}CSPM Benchmarks{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="ti ti-list-check me-2"></i>
+          Available Benchmarks
+        </h3>
+        <p class="card-subtitle text-muted">
+          Review supported CIS benchmarks that can be enabled for each platform tenant.
+        </p>
+      </div>
+      <div class="table-responsive">
+        <table class="table card-table">
+          <thead>
+            <tr>
+              <th>Technology</th>
+              <th>Benchmark</th>
+              <th>Version</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for benchmark in benchmarks %}
+            <tr>
+              <td><span class="badge bg-blue-lt">{{ benchmark.tech_type }}</span></td>
+              <td>
+                <div class="d-flex flex-column">
+                  <strong>{{ benchmark.display_name }}</strong>
+                  <small class="text-muted">{{ benchmark.benchmark_key }}</small>
+                </div>
+              </td>
+              <td>{{ benchmark.version or '-' }}</td>
+              <td>{{ benchmark.description or '-' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="4" class="text-center text-muted py-4">
+                <i class="ti ti-alert-circle me-2"></i>No benchmarks registered.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

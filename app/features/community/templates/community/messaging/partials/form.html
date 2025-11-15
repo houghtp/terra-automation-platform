@@ -1,0 +1,64 @@
+<div class="modal-header">
+    <h5 class="modal-title">Compose Thread</h5>
+</div>
+
+<form
+    id="thread-form"
+    hx-post="/features/community/messaging/threads"
+    hx-target="#modal-body"
+    hx-swap="innerHTML"
+    hx-disabled-elt="fieldset"
+    autocomplete="off"
+>
+    <div class="modal-body">
+        {% if errors and errors.get('form') %}
+            <div class="alert alert-danger">{{ errors['form'][0] }}</div>
+        {% endif %}
+        <fieldset class="form-fieldset">
+            <div class="mb-3">
+                <label class="form-label">Subject</label>
+                <input
+                    type="text"
+                    name="subject"
+                    value="{{ form_data.subject if form_data and form_data.subject is not none else '' }}"
+                    class="form-control"
+                    maxlength="255"
+                    placeholder="Optional subject"
+                >
+            </div>
+            <div class="mb-3">
+                <label class="form-label required">Participant Member IDs</label>
+                <input
+                    type="text"
+                    name="participant_ids"
+                    value="{{ form_data.participant_ids_raw if form_data and form_data.participant_ids_raw is not none else '' }}"
+                    class="form-control {{ 'is-invalid' if errors and errors.get('participant_ids') }}"
+                    placeholder="Comma-separated member IDs"
+                    required
+                >
+                {% if errors and errors.get('participant_ids') %}
+                    <div class="invalid-feedback d-block">{{ errors['participant_ids'][0] }}</div>
+                {% endif %}
+            </div>
+            <div class="mb-3">
+                <label class="form-label required">Initial Message</label>
+                <textarea
+                    name="content"
+                    rows="3"
+                    class="form-control {{ 'is-invalid' if errors and errors.get('content') }}"
+                    required
+                >{{ form_data.content if form_data and form_data.content is not none else '' }}</textarea>
+                {% if errors and errors.get('content') %}
+                    <div class="invalid-feedback d-block">{{ errors['content'][0] }}</div>
+                {% endif %}
+            </div>
+        </fieldset>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+            <span class="htmx-indicator spinner-border spinner-border-sm me-2" role="status"></span>
+            Start Thread
+        </button>
+    </div>
+</form>

@@ -1,0 +1,16 @@
+<div class="card">
+  <div class="card-header">
+    {% set title = "M365 Tenants" %}
+    {% set description = "Manage Microsoft 365 connections used for CSPM scanning." %}
+    {% set icon = "ti ti-cloud" %}
+    {% set add_url = "/msp/cspm/partials/m365-tenant-form" %}
+    {% set entity_name = "M365 Tenant" %}
+    {% set table_id = "m365-tenants-table" %}
+    {% set id_prefix = "m365-tenants" %}
+    {% set show_bulk_actions = False %}
+    {% include "components/ui/table_actions.html" with context %}
+  </div>
+  <div class="card-body p-0">
+    <div id="m365-tenants-table" class="tabulator-container"></div>
+  </div>
+</div>

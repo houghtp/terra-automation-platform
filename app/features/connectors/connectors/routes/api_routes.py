@@ -7,14 +7,14 @@ Provides REST API for catalog browsing and connector CRUD operations.
 from typing import List, Optional
 from app.features.core.route_imports import *
 from app.features.connectors.connectors.services.connector_service import ConnectorService
-from app.features.connectors.connectors.models import (
-    ConnectorCatalogResponse,
-    ConnectorResponse,
-    ConnectorCreate,
-    ConnectorUpdate,
-    ConnectorSearchFilter,
+from app.features.connectors.connectors.schemas import (
     ConfigValidationRequest,
     ConfigValidationResponse,
+    ConnectorCatalogResponse,
+    ConnectorCreate,
+    ConnectorResponse,
+    ConnectorSearchFilter,
+    ConnectorUpdate,
 )
 
 logger = get_logger(__name__)

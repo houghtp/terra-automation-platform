@@ -7,7 +7,7 @@ Use this module to standardize SQLAlchemy usage across all services.
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import (
     select, insert, update, delete, func, and_, or_, not_,
-    cast, text, String, Integer, Boolean, DateTime, JSON,
+    cast, case, text, String, Integer, Boolean, DateTime, JSON,
     asc, desc, nulls_first, nulls_last
 )
 from sqlalchemy.orm import selectinload, joinedload, aliased, contains_eager
@@ -28,7 +28,7 @@ __all__ = [
     'select', 'insert', 'update', 'delete', 'text',
 
     # Functions
-    'func', 'cast',
+    'func', 'cast', 'case',
 
     # Logical operators
     'and_', 'or_', 'not_',

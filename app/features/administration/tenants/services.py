@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload
 
 from app.features.administration.tenants.db_models import Tenant
 from app.features.auth.models import User
-from app.features.administration.tenants.models import (
+from app.features.administration.tenants.schemas import (
     TenantCreate, TenantUpdate, TenantResponse, TenantStats,
     TenantDashboardStats, TenantSearchFilter, TenantUserResponse
 )

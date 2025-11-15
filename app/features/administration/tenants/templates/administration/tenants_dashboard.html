@@ -35,42 +35,5 @@
     }
   });
 
-  // Handle form submissions for modal close and table refresh
-  document.body.addEventListener("htmx:afterRequest", (e) => {
-    if (e.target.id === "tenant-form") {
-      // Check if request was successful (status 200-299)
-      if (e.detail.xhr.status >= 200 && e.detail.xhr.status < 300) {
-        // Show success toast
-        showToast("Tenant saved successfully", "success");
-
-        // Close the modal with proper focus restoration
-        if (window.closeModal) {
-          window.closeModal();
-        }
-
-        // Refresh the table after a short delay
-        setTimeout(() => {
-          if (window.refreshTable) {
-            window.refreshTable('tenant-table');
-          }
-        }, 100);
-      } else {
-        // Handle specific error cases
-        let errorMessage = "Operation failed. Please try again.";
-
-        if (e.detail.xhr.status === 422) {
-          // Validation error
-          errorMessage = "Please check your input and try again.";
-        } else if (e.detail.xhr.status === 404) {
-          errorMessage = "Tenant not found.";
-        } else if (e.detail.xhr.status >= 500) {
-          errorMessage = "Server error. Please try again later.";
-        }
-
-        // Show error toast
-        showToast(errorMessage, "error");
-      }
-    }
-  });
 </script>
 {% endblock %}

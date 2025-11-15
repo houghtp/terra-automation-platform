@@ -19,17 +19,17 @@ class AuditMixin:
     # Creation audit
     created_by_email = Column(String(255), nullable=True, index=True)
     created_by_name = Column(String(255), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False, index=True)
 
     # Update audit
     updated_by_email = Column(String(255), nullable=True, index=True)
     updated_by_name = Column(String(255), nullable=True)
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now(), server_default=func.now())
 
     # Deletion audit (soft delete support)
     deleted_by_email = Column(String(255), nullable=True, index=True)
     deleted_by_name = Column(String(255), nullable=True)
-    deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    deleted_at = Column(DateTime, nullable=True, index=True)
 
     def get_audit_info(self) -> Dict[str, Any]:
         """Get human-readable audit information for this record."""

@@ -55,36 +55,35 @@ class ChartWidget extends HTMLElement {
         const description = this.getAttribute('description') || '';
 
         this.innerHTML = `
-            <div class="chart-widget-container">
-                <div class="chart-header">
-                    <div class="chart-title-section">
-                        <h4 class="chart-title">${title}</h4>
-                        ${description ? `<p class="chart-description">${description}</p>` : ''}
-                    </div>
-                    <div class="chart-actions">
-                        <button class="btn btn-outline-secondary btn-sm chart-refresh" title="Refresh">
-                            <i class="ti ti-refresh"></i>
-                        </button>
-                        <div class="dropdown">
-                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle"
-                                    type="button" data-bs-toggle="dropdown">
-                                <i class="ti ti-dots"></i>
+            <div class="card chart-widget">
+                <div class="card-header border-0 pb-0">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="flex-grow-1">
+                            <h3 class="card-title mb-1">${title}</h3>
+                            ${description ? `<div class="text-secondary">${description}</div>` : ''}
+                        </div>
+                        <div class="chart-header-toolbar d-flex align-items-center">
+                            <button class="btn btn-icon btn-outline-secondary chart-refresh" title="Refresh">
+                                <i class="ti ti-refresh"></i>
                             </button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item chart-export" href="#" data-format="png">
-                                    <i class="ti ti-photo me-2"></i>Export as PNG</a></li>
-                                <li><a class="dropdown-item chart-export" href="#" data-format="svg">
-                                    <i class="ti ti-vector me-2"></i>Export as SVG</a></li>
-                                <li><a class="dropdown-item chart-fullscreen" href="#">
-                                    <i class="ti ti-maximize me-2"></i>Fullscreen</a></li>
-                            </ul>
+                            <div class="dropdown">
+                                <button class="btn btn-icon btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <i class="ti ti-dots"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item chart-export" href="#" data-format="png">
+                                        <i class="ti ti-photo me-2"></i>Export as PNG</a></li>
+                                    <li><a class="dropdown-item chart-export" href="#" data-format="svg">
+                                        <i class="ti ti-vector me-2"></i>Export as SVG</a></li>
+                                    <li><a class="dropdown-item chart-fullscreen" href="#">
+                                        <i class="ti ti-maximize me-2"></i>Fullscreen</a></li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="chart-content">
-                    <div class="chart-container" id="${this.id}-container"
-                         style="width: 100%; height: ${height}px; position: relative;">
-                        <!-- Unified loader will be injected here -->
+                <div class="card-body">
+                    <div class="chart-container" id="${this.id}-container" style="width: 100%; height: ${height}px;">
                     </div>
                 </div>
             </div>
@@ -351,54 +350,25 @@ class ChartWidget extends HTMLElement {
     }
 
     showLoading() {
-        // Try multiple approaches to find the chart container
-        let container = null;
+        const card = this.querySelector('.chart-widget');
+        if (!card) return;
 
-        // Method 1: Use ID if available
-        if (this.id) {
-            container = document.getElementById(`${this.id}-container`);
-        }
-
-        // Method 2: Find container within this element
-        if (!container) {
-            container = this.querySelector('.chart-container');
-        }
-
-        // Method 3: Use first child with chart-container class
-        if (!container) {
-            container = this.querySelector('[id$="-container"]');
-        }
-
-        if (container) {
-            container.classList.add('loading');
-            console.log(`Loading state added to chart container:`, container.id || 'unnamed');
-        } else {
-            console.warn('Chart container not found for loading state');
+        let overlay = card.querySelector('.chart-widget-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'chart-widget-overlay';
+            overlay.innerHTML = `
+                <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+                <span class="text-secondary fw-semibold">Loading</span>
+            `;
+            card.appendChild(overlay);
         }
     }
 
     hideLoading() {
-        // Try multiple approaches to find the chart container
-        let container = null;
-
-        // Method 1: Use ID if available
-        if (this.id) {
-            container = document.getElementById(`${this.id}-container`);
-        }
-
-        // Method 2: Find container within this element
-        if (!container) {
-            container = this.querySelector('.chart-container');
-        }
-
-        // Method 3: Use first child with chart-container class
-        if (!container) {
-            container = this.querySelector('[id$="-container"]');
-        }
-
-        if (container) {
-            container.classList.remove('loading');
-            console.log(`Loading state removed from chart container:`, container.id || 'unnamed');
+        const overlay = this.querySelector('.chart-widget-overlay');
+        if (overlay) {
+            overlay.remove();
         }
     }
 
@@ -481,14 +451,14 @@ class ChartWidget extends HTMLElement {
     }
 
     toggleFullscreen() {
-        const container = this.querySelector('.chart-widget-container');
+        const container = this.querySelector('.chart-widget');
         if (!container) return;
 
-        if (container.classList.contains('fullscreen')) {
-            container.classList.remove('fullscreen');
+        if (container.classList.contains('chart-widget-fullscreen')) {
+            container.classList.remove('chart-widget-fullscreen');
             document.body.classList.remove('chart-fullscreen-active');
         } else {
-            container.classList.add('fullscreen');
+            container.classList.add('chart-widget-fullscreen');
             document.body.classList.add('chart-fullscreen-active');
         }
 

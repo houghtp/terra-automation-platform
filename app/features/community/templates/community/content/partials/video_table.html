@@ -1,0 +1,68 @@
+<div
+    id="content-videos-wrapper"
+    hx-get="/features/community/content/partials/videos"
+    hx-trigger="refreshContentTables from:body"
+    hx-target="#content-videos-wrapper"
+    hx-swap="outerHTML">
+    {% if videos %}
+    <div class="list-group list-group-flush">
+        {% for video in videos %}
+        <div class="list-group-item">
+            <div class="d-flex align-items-start justify-content-between">
+                <div>
+                    <div class="fw-semibold">{{ video.title }}</div>
+                    <div class="text-muted small">
+                        {% if video.category %}
+                        <span class="text-capitalize">{{ video.category }}</span>
+                        {% else %}
+                        <span>Uncategorized</span>
+                        {% endif %}
+                        {% if video.duration_minutes %}
+                        <span class="ms-2"><i class="ti ti-clock-hour-3 me-1"></i>{{ '%0.1f' | format(video.duration_minutes) }} min</span>
+                        {% endif %}
+                        {% if video.published_at %}
+                        <span class="ms-2"><i class="ti ti-calendar me-1"></i>{{ video.published_at.strftime("%b %d, %Y") }}</span>
+                        {% endif %}
+                    </div>
+                    {% if video.description %}
+                    <div class="text-muted small mt-2">
+                        {{ video.description[:120] }}{% if video.description|length > 120 %}…{% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="btn-list">
+                    <a href="{{ video.embed_url }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+                        <i class="ti ti-external-link"></i>
+                    </a>
+                    <button
+                        class="btn btn-outline-primary btn-sm"
+                        data-bs-toggle="modal"
+                        data-bs-target="#content-form-modal"
+                        hx-get="/features/community/content/partials/video_form?video_id={{ video.id }}"
+                        hx-target="#content-form-modal-body"
+                        hx-swap="innerHTML">
+                        <i class="ti ti-pencil"></i>
+                    </button>
+                    <button
+                        class="btn btn-outline-danger btn-sm"
+                        hx-post="/features/community/content/videos/{{ video.id }}/delete"
+                        hx-target="closest .list-group-item"
+                        hx-swap="none"
+                        hx-confirm="Delete this video?">
+                        <i class="ti ti-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="p-4 text-center text-muted">
+        <div class="mb-2">
+            <i class="ti ti-video-off icon-lg"></i>
+        </div>
+        <p class="mb-1 fw-semibold">No videos published yet.</p>
+        <p class="mb-0">Add your first training video or webinar recording.</p>
+    </div>
+    {% endif %}
+</div>

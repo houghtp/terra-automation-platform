@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Community Hub{% endblock %}
+
+{% block head %}{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-pretitle">Community</div>
+            <h2 class="page-title">{{ page_title }}</h2>
+            <div class="text-muted mt-1">{{ page_description }}</div>
+        </div>
+        <div class="col-auto ms-auto d-print-none">
+            <div class="btn-list">
+                <a href="/features/community/members" class="btn btn-primary">
+                    <i class="ti ti-address-book me-1"></i>
+                    Members
+                </a>
+                <a href="/features/community/partners" class="btn btn-secondary">
+                    <i class="ti ti-affiliate me-1"></i>
+                    Partners
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row row-deck row-cards mt-2">
+    <div class="col-sm-6 col-md-4">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <span class="bg-primary text-white avatar">
+                            <i class="ti ti-users"></i>
+                        </span>
+                    </div>
+                    <div class="col">
+                        <div class="font-weight-medium">Active Members</div>
+                        <div class="text-secondary">{{ member_count }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer py-2">
+                <a href="/features/community/members" class="text-muted">
+                    View member directory
+                    <i class="ti ti-arrow-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-4">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <span class="bg-teal text-white avatar">
+                            <i class="ti ti-affiliate"></i>
+                        </span>
+                    </div>
+                    <div class="col">
+                        <div class="font-weight-medium">Strategic Partners</div>
+                        <div class="text-secondary">{{ partner_count }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer py-2">
+                <a href="/features/community/partners" class="text-muted">
+                    Explore partner offers
+                    <i class="ti ti-arrow-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-12 col-md-4">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <span class="bg-orange text-white avatar">
+                            <i class="ti ti-bulb"></i>
+                        </span>
+                    </div>
+                    <div class="col">
+                        <div class="font-weight-medium">Coming Soon</div>
+                        <div class="text-secondary">Groups, events, polls, and more.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer py-2">
+                <span class="text-muted">
+                    Follow the roadmap in Radium PRD.
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="ti ti-news me-2"></i>
+            Community Highlights
+        </h3>
+    </div>
+    <div class="card-body">
+        {% if announcements and announcements|length > 0 %}
+            <div class="list-group list-group-flush">
+                {% for item in announcements %}
+                    <div class="list-group-item">
+                        <div class="d-flex align-items-start">
+                            <span class="avatar avatar-sm bg-primary text-white me-3">
+                                <i class="{{ item.icon }}"></i>
+                            </span>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="text-uppercase text-muted small">{{ item.label }}</span>
+                                    {% if item.meta %}
+                                        <span class="badge bg-blue-lt">{{ item.meta }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="fw-semibold">{{ item.title }}</div>
+                                {% if item.body %}
+                                    <div class="text-muted small mt-1">{{ item.body }}</div>
+                                {% endif %}
+                                {% if item.link %}
+                                    <a href="{{ item.link }}"
+                                       class="small d-inline-flex align-items-center mt-2"
+                                       {% if item.link.startswith('http') %}target="_blank" rel="noopener"{% endif %}>
+                                        {{ item.link_text or "Learn more" }}
+                                        <i class="ti ti-arrow-right ms-1"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty">
+                <div class="empty-icon">
+                    <i class="ti ti-speakerphone"></i>
+                </div>
+                <p class="empty-title">No announcements yet</p>
+                <p class="empty-subtitle text-muted">
+                    Keep an eye out for product updates, community polls, and spotlight stories.
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

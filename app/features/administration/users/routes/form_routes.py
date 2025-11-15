@@ -1,7 +1,7 @@
 # Use centralized imports for consistency
 from app.features.core.route_imports import *
 from app.features.administration.users.services import UserManagementService
-from app.features.administration.users.models import (
+from app.features.administration.users.schemas import (
     UserCreate, UserUpdate, UserStatus, UserRole
 )
 

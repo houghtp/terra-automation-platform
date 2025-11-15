@@ -1,0 +1,40 @@
+[
+  {
+    "EndTime": "2025-09-25T19:36:38.4752559Z",
+    "Error": null,
+    "TechType": "M365",
+    "StartTime": "2025-09-25T19:36:37.7671089Z",
+    "Category": "L1",
+    "Status": "Manual",
+    "Duration": 0.708147,
+    "TenantId": "terrait.co.uk",
+    "Details": [
+      {
+        "CurrentValue": "Error accessing settings",
+        "IsCompliant": false,
+        "Details": "Unable to access organization settings: The term 'Get-MgDirectorySetting' is not recognized as a name of a cmdlet, function, script file, or executable program.\r\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+        "SettingName": "User Owned Apps and Services"
+      }
+    ],
+    "CheckId": "1.3.4_ensure_'user_owned_apps_and_services'_is_restricted"
+  },
+  {
+    "EndTime": "2025-09-25T19:36:43.499505Z",
+    "Error": null,
+    "TechType": "M365",
+    "StartTime": "2025-09-25T19:36:38.615546Z",
+    "Category": "L1",
+    "Status": "Manual",
+    "Duration": 4.883959,
+    "TenantId": "terrait.co.uk",
+    "Details": [
+      {
+        "CurrentValue": "Manual verification required",
+        "IsCompliant": null,
+        "Name": "Forms Internal Phishing Protection",
+        "Details": "This setting must be verified manually in Microsoft 365 Admin Center > Settings > Org settings > Microsoft Forms. Check that 'Internal phishing protection' is enabled. | Note: Authorization policies found, but Forms-specific settings not accessible via Graph API."
+      }
+    ],
+    "CheckId": "1.3.5_ensure_internal_phishing_protection_for_forms_is"
+  }
+]

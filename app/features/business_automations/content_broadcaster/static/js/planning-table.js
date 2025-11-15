@@ -3,25 +3,86 @@
  * Manages the Tabulator table for content planning/ideas
  */
 
+function escapeHtml(value) {
+    if (value === null || value === undefined) {
+        return "";
+    }
+    return String(value).replace(/[&<>"']/g, function (char) {
+        const ESCAPE_MAP = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        };
+        return ESCAPE_MAP[char] || char;
+    });
+}
+
 // Status badge formatter
 function formatStatus(cell) {
     const status = cell.getValue();
+    const rowData = cell.getRow().getData() || {};
     const statusClass = `status-${status}`;
-    return `<span class="status-badge ${statusClass}">${status.replace('_', ' ')}</span>`;
+    const normalizedLabel = (status || "unknown").replace(/_/g, " ");
+    const displayLabel = normalizedLabel.charAt(0).toUpperCase() + normalizedLabel.slice(1);
+
+    let tooltip = displayLabel;
+    let leadingIcon = "";
+
+    if (status === "failed" && rowData.error_log) {
+        let errorMessage = String(rowData.error_log).trim();
+        if (errorMessage.length > 220) {
+            errorMessage = `${errorMessage.slice(0, 217)}…`;
+        }
+        tooltip = `Failed: ${errorMessage}`;
+        leadingIcon = '<i class="ti ti-alert-triangle me-1"></i>';
+    }
+
+    return `<span class="status-badge ${statusClass}" data-status="${escapeHtml(status)}" title="${escapeHtml(tooltip)}">${leadingIcon}${escapeHtml(displayLabel)}</span>`;
 }
 
-// SEO Score formatter
+// SEO Score formatter with iteration indicator
 function formatSEOScore(cell) {
-    const score = cell.getValue();
-    if (!score) return '<span class="text-muted">-</span>';
+    const rowData = cell.getRow().getData();
+    const score = rowData.latest_seo_score;
+
+    if (!score && score !== 0) return '<span class="text-muted">Pending</span>';
 
     let scoreClass = 'seo-fail';
-    if (score >= 95) scoreClass = 'seo-excellent';
-    else if (score >= 90) scoreClass = 'seo-good';
-    else if (score >= 80) scoreClass = 'seo-fair';
-    else if (score >= 70) scoreClass = 'seo-poor';
+    let scoreLabel = 'Needs Work';
+    let scoreIcon = 'ti-alert-circle';
 
-    return `<span class="seo-score ${scoreClass}">${score}</span>`;
+    if (score >= 95) {
+        scoreClass = 'seo-excellent';
+        scoreLabel = 'Excellent';
+        scoreIcon = 'ti-circle-check';
+    } else if (score >= 90) {
+        scoreClass = 'seo-good';
+        scoreLabel = 'Good';
+        scoreIcon = 'ti-circle-check';
+    } else if (score >= 80) {
+        scoreClass = 'seo-fair';
+        scoreLabel = 'Fair';
+        scoreIcon = 'ti-alert-triangle';
+    } else if (score >= 70) {
+        scoreClass = 'seo-poor';
+        scoreLabel = 'Poor';
+        scoreIcon = 'ti-alert-triangle';
+    }
+
+    // Get iteration count if available
+    const iterations = rowData.refinement_history ? rowData.refinement_history.length : 1;
+    const iterationBadge = iterations > 1 ? `<small class="ms-1 text-muted" style="font-size: 0.75em;">×${iterations}</small>` : '';
+
+    return `
+        <div class="d-flex align-items-center gap-1">
+            <span class="seo-score ${scoreClass}" title="${scoreLabel}: ${score}/100">
+                <i class="ti ${scoreIcon}" style="font-size: 0.9em;"></i> ${score}
+            </span>
+            ${iterationBadge}
+        </div>
+    `;
 }
 
 // Actions formatter - create action buttons based on status
@@ -219,9 +280,20 @@ window.generateContent = function (planId) {
             // Show loading state
             showToast('Starting AI content generation...', 'info');
 
+            if (window.contentPlansTable) {
+                const row = window.contentPlansTable.getRow(planId);
+                if (row) {
+                    const currentData = row.getData() || {};
+                    const skipResearch = currentData.skip_research === true || currentData.skip_research === "true";
+                    row.update({
+                        status: skipResearch ? 'generating' : 'researching',
+                        error_log: null
+                    });
+                }
+            }
+
             // Use HTMX to make the request
-            htmx.ajax('POST', `/features/content-broadcaster/planning/${planId}/process`, {
-                values: { use_research: 'true' },
+            htmx.ajax('POST', `/features/content-broadcaster/planning/${planId}/process-async`, {
                 swap: 'none'
             });
         }
@@ -244,15 +316,51 @@ document.body.addEventListener('refreshTable', function () {
     }
 });
 
-document.body.addEventListener('closeModal', function () {
-    const modalElement = document.getElementById('modal');
-    if (!modalElement || typeof bootstrap === 'undefined') {
+document.body.addEventListener("htmx:afterRequest", function (event) {
+    const xhr = event.detail && event.detail.xhr;
+    if (!xhr) {
         return;
     }
-    const modalInstance = bootstrap.Modal.getInstance(modalElement);
-    if (modalInstance) {
-        modalInstance.hide();
+
+    if (xhr.status >= 400) {
+        let message = "Request failed. Please try again.";
+        const contentType = (xhr.getResponseHeader("content-type") || "").toLowerCase();
+        const responseText = xhr.responseText || "";
+
+        if (contentType.includes("application/json")) {
+            try {
+                const parsed = JSON.parse(responseText);
+                if (parsed?.detail) {
+                    message = parsed.detail;
+                }
+            } catch (jsonError) {
+                // Fall back to default message
+            }
+        } else if (responseText) {
+            const trimmed = responseText.trim();
+            const titleMatch = trimmed.match(/<title>(.*?)<\/title>/i);
+            if (titleMatch && titleMatch[1]) {
+                message = titleMatch[1];
+            } else if (trimmed.length < 300) {
+                message = trimmed;
+            } else if (xhr.statusText) {
+                message = `${xhr.status} ${xhr.statusText}`;
+            }
+        } else if (xhr.statusText) {
+            message = `${xhr.status} ${xhr.statusText}`;
+        }
+
+        if (typeof window.showToast === "function") {
+            window.showToast(message, "error", 7000);
+        }
+
+        if (window.contentPlansTable) {
+            window.contentPlansTable.setData();
+        }
     }
+
+    // Note: Modal close is handled globally by table-base.js
+    // No need for custom closeModal logic here
 });
 
 // Initialize table on page load

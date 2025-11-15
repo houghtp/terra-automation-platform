@@ -11,7 +11,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from unittest.mock import patch
 
-from app.features.administration.users.models import UserStatus, UserRole
+from app.features.administration.users.schemas import UserStatus, UserRole
 from app.features.auth.models import User
 
 

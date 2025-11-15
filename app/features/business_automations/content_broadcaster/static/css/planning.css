@@ -2,50 +2,42 @@
  * Content Planning Table Styles
  */
 
-.status-badge {
-    padding: 4px 12px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.status-planned {
+.status-badge.status-planned {
     background-color: #e3f2fd;
     color: #1976d2;
 }
 
-.status-researching {
+.status-badge.status-researching {
     background-color: #fff3e0;
     color: #f57c00;
 }
 
-.status-generating {
+.status-badge.status-generating {
     background-color: #f3e5f5;
     color: #7b1fa2;
 }
 
-.status-refining {
+.status-badge.status-refining {
     background-color: #fce4ec;
     color: #c2185b;
 }
 
-.status-draft_ready {
+.status-badge.status-draft_ready {
     background-color: #e8f5e9;
     color: #388e3c;
 }
 
-.status-approved {
+.status-badge.status-approved {
     background-color: #c8e6c9;
     color: #2e7d32;
 }
 
-.status-failed {
+.status-badge.status-failed {
     background-color: #ffebee;
     color: #c62828;
 }
 
-.status-archived {
+.status-badge.status-archived {
     background-color: #f5f5f5;
     color: #616161;
 }
@@ -79,4 +71,16 @@
 .seo-fail {
     background-color: #f44336;
     color: white;
+}
+
+.ai-prompts-overview {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-height: calc(100vh - 320px);
+}
+
+.ai-prompts-overview .row {
+    margin-left: 0;
+    margin-right: 0;
 }

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Messaging{% endblock %}
+
+{% block head %}
+<script src="/features/core/static/js/table-base.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-pretitle">Community</div>
+            <h2 class="page-title">Direct Messages</h2>
+            <div class="text-muted mt-1">Review threads and continue conversations with peers.</div>
+        </div>
+        <div class="col-auto ms-auto">
+            <span class="badge bg-blue-lt" id="threads-total-badge">{{ threads_total or 0 }} total</span>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <span class="card-title">Threads</span>
+                    <button class="btn btn-primary btn-sm" onclick="composeThread()">
+                        <i class="ti ti-pencil"></i>
+                        New Thread
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="threads-table"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-header">
+                <div class="card-title" id="thread-subject">Select a thread</div>
+            </div>
+            <div class="card-body" id="message-pane">
+                <div class="text-center text-muted py-5">
+                    <i class="ti ti-messages"></i>
+                    Pick a thread to view messages.
+                </div>
+            </div>
+            <div class="card-footer">
+                <form id="message-form" onsubmit="sendMessage(event)">
+                    <div class="input-group">
+                        <textarea class="form-control" id="message-input" rows="2" placeholder="Type a message..." required></textarea>
+                        <button class="btn btn-primary" type="submit">
+                            <span class="htmx-indicator spinner-border spinner-border-sm me-2" role="status"></span>
+                            Send
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal modal-blur fade" id="modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div id="modal-body"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/features/community/static/js/messaging.js"></script>
+{% endblock %}
