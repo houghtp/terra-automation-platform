@@ -396,7 +396,6 @@ const tableConfig = {
         headerFilter: "input",
         headerFilterPlaceholder: "Filter...",
         headerFilterLiveFilter: true,
-        editor: "input",
         editable: function (cell) {
             const column = cell.getColumn();
             const def = column.getDefinition() || {};
@@ -448,7 +447,8 @@ const tableConfig = {
     },
 
     // Row selection features
-    selectableRows: true,
+    selectableRows: "highlight",
+    rowClickSelection: false,
     rowHeader: {
         formatter: "rowSelection",
         titleFormatter: "rowSelection",
@@ -544,42 +544,55 @@ function refreshTableAction(buttonEl, tableId) {
 window.refreshTableAction = refreshTableAction;
 
 /**
- * Bind row action buttons (edit/delete) using delegation - updated for icon-based buttons
+ * Bind row action buttons (edit/delete) using delegation.
+ * Uses document-level capture so Tabulator's own handlers can't swallow the event.
  */
 function bindRowActionHandlers(tableSelector, { onEdit, onDelete }) {
     const tableEl = document.querySelector(tableSelector);
     if (!tableEl) return;
 
-    tableEl.addEventListener("click", (e) => {
-        // Check if clicked element is an icon with action classes
-        const target = e.target.closest("i.row-action-icon, button");
-        const container = e.target.closest("[data-id]");
-        if (!target || !container) return;
+    const handlerKey = `_rowActionHandler_${tableSelector.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+    if (window[handlerKey]) {
+        document.removeEventListener("click", window[handlerKey], true);
+    }
+
+    const handler = function(e) {
+        const currentTable = document.querySelector(tableSelector);
+        if (!currentTable || !currentTable.contains(e.target)) {
+            return;
+        }
+
+        const target = e.target.closest("i.row-action-icon, button.row-action-icon");
+        if (!target) return;
+
+        const container = target.closest("[data-id]");
+        if (!container?.dataset?.id) return;
 
         const id = container.dataset.id;
-        console.log('Row action clicked:', target.className, 'ID:', id);
+        if (!id) return;
 
-        if (target.classList.contains("edit-btn")) {
-            console.log('Edit button clicked, onEdit:', onEdit);
+        if (target.classList.contains("edit-btn") || target.dataset.action === "edit") {
             if (typeof onEdit === 'function') {
                 onEdit(id);
-            } else if (typeof onEdit === 'string' && window[onEdit]) {
-                console.log('Calling window[' + onEdit + '] with id:', id);
+            } else if (typeof onEdit === 'string' && typeof window[onEdit] === 'function') {
                 window[onEdit](id);
             } else {
-                console.warn('No edit handler found');
+                console.warn('No edit handler found for', tableSelector);
             }
-        } else if (target.classList.contains("delete-btn")) {
-            console.log('Delete button clicked, onDelete:', onDelete);
+        } else if (target.classList.contains("delete-btn") || target.dataset.action === "delete") {
             if (typeof onDelete === 'function') {
                 onDelete(id);
-            } else if (typeof onDelete === 'string' && window[onDelete]) {
+            } else if (typeof onDelete === 'string' && typeof window[onDelete] === 'function') {
                 window[onDelete](id);
             } else {
-                console.warn('No delete handler found');
+                console.warn('No delete handler found for', tableSelector);
             }
         }
-    });
+    };
+
+    window[handlerKey] = handler;
+    document.addEventListener("click", handler, true);
 }
 window.bindRowActionHandlers = bindRowActionHandlers;
 
