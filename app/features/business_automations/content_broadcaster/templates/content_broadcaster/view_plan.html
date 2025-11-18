@@ -88,18 +88,14 @@
                             <span class="nav-text">Generated Content</span>
                         </a>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <a href="#tab-metadata" class="nav-link" data-bs-toggle="tab" aria-selected="false" role="tab" tabindex="-1">
-                            <span class="nav-icon"><i class="ti ti-info-circle"></i></span>
-                            <span class="nav-text">Metadata</span>
-                        </a>
-                    </li>
+                    {% if is_global_admin_user %}
                     <li class="nav-item" role="presentation">
                         <a href="#tab-prompts" class="nav-link" data-bs-toggle="tab" aria-selected="false" role="tab" tabindex="-1">
                             <span class="nav-icon"><i class="ti ti-robot"></i></span>
                             <span class="nav-text">AI Prompts</span>
                         </a>
                     </li>
+                    {% endif %}
                 </ul>
             </div>
             <div class="card-body">
@@ -114,15 +110,12 @@
                         {% include 'content_broadcaster/partials/content_tab.html' %}
                     </div>
 
-                    <!-- Metadata Tab -->
-                    <div class="tab-pane" id="tab-metadata" role="tabpanel">
-                        {% include 'content_broadcaster/partials/metadata_tab.html' %}
-                    </div>
-
                     <!-- AI Prompts Tab -->
-                    <div class="tab-pane" id="tab-prompts" role="tabpanel">
-                        {% include 'content_broadcaster/partials/ai_prompts_tab.html' %}
-                    </div>
+                    {% if is_global_admin_user %}
+                        <div class="tab-pane" id="tab-prompts" role="tabpanel">
+                            {% include 'content_broadcaster/partials/ai_prompts_tab.html' %}
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
