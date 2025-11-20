@@ -391,6 +391,41 @@ class AIGenerationService:
             validation_result.setdefault("issues", [])
             validation_result.setdefault("recommendations", [])
             validation_result.setdefault("strengths", [])
+            sub_scores = validation_result.get("sub_scores") or {}
+            default_sub_keys = [
+                "keyword_coverage",
+                "structure",
+                "readability",
+                "engagement",
+                "technical"
+            ]
+            for key in default_sub_keys:
+                sub_scores.setdefault(key, 0)
+            validation_result["sub_scores"] = sub_scores
+
+            sub_score_details = validation_result.get("sub_score_details") or {}
+            for key in default_sub_keys:
+                sub_score_details.setdefault(key, "")
+            validation_result["sub_score_details"] = sub_score_details
+
+            metadata = validation_result.get("metadata") or {}
+            word_count = len(content.split()) if content else 0
+            metadata.setdefault("word_count", word_count)
+            metadata.setdefault("reading_level", "Unknown")
+            metadata.setdefault("tone_alignment", "")
+            metadata.setdefault("schema_opportunities", "")
+            metadata.setdefault("link_opportunities", "")
+
+            primary_keywords = metadata.get("primary_keywords_used") or []
+            secondary_keywords = metadata.get("secondary_keywords_used") or []
+            if not isinstance(primary_keywords, list):
+                primary_keywords = [primary_keywords]
+            if not isinstance(secondary_keywords, list):
+                secondary_keywords = [secondary_keywords]
+            metadata["primary_keywords_used"] = primary_keywords
+            metadata["secondary_keywords_used"] = secondary_keywords
+
+            validation_result["metadata"] = metadata
 
             logger.info(
                 "Content validation completed",

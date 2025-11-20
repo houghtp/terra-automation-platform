@@ -43,6 +43,36 @@ function formatBadges(cell, badgeClass = 'app-badge app-badge-neutral', emptyTex
 }
 window.formatBadges = formatBadges;
 
+function escapeHtml(value) {
+    if (value === null || value === undefined) {
+        return '';
+    }
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+window.escapeHtml = escapeHtml;
+
+function formatRelativeTime(value) {
+    if (!value && value !== 0) {
+        return '';
+    }
+    const date = value instanceof Date ? value : new Date(value);
+    if (isNaN(date)) {
+        return '';
+    }
+    const diff = Date.now() - date.getTime();
+    if (diff < 1000) return 'just now';
+    if (diff < 60_000) return `${Math.max(1, Math.round(diff / 1000))}s ago`;
+    if (diff < 3_600_000) return `${Math.round(diff / 60000)}m ago`;
+    if (diff < 86_400_000) return `${Math.round(diff / 3_600_000)}h ago`;
+    return date.toLocaleString();
+}
+window.formatRelativeTime = formatRelativeTime;
+
 const statusVariantMap = {
     active: 'success',
     enabled: 'success',
@@ -568,6 +598,11 @@ function bindRowActionHandlers(tableSelector, { onEdit, onDelete }) {
 
         const container = target.closest("[data-id]");
         if (!container?.dataset?.id) return;
+        if (container.classList.contains("row-actions-disabled") ||
+            container.dataset.locked === "true" ||
+            container.getAttribute("aria-disabled") === "true") {
+            return;
+        }
 
         const id = container.dataset.id;
         if (!id) return;

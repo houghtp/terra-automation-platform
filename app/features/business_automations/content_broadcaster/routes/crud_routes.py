@@ -163,6 +163,8 @@ async def update_content(
         raise HTTPException(status_code=500, detail="Failed to update content")
 
 # Delete content (accept both DELETE and POST for compatibility) - STANDARD PATTERN
+@router.delete("/api/{content_id}")
+@router.delete("/api/{content_id}/delete")
 @router.delete("/{content_id}/delete")
 @router.post("/{content_id}/delete")
 async def delete_content(

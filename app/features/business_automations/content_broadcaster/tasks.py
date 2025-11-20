@@ -21,6 +21,10 @@ from app.features.business_automations.content_broadcaster.services.content_plan
     ContentPlanningService,
 )
 from app.features.business_automations.content_broadcaster.models import ContentPlanStatus
+from app.features.business_automations.content_broadcaster.services.progress_stream import (
+    progress_stream_manager,
+    ProgressEvent,
+)
 from app.features.administration.secrets.services import SecretsManagementService
 from app.features.auth.models import User
 from app.features.core.audit_mixin import AuditContext
@@ -65,7 +69,7 @@ async def _load_user(db_session, user_payload: Optional[Dict[str, Any]]):
     }
 
 
-async def _process_plan_async(
+async def run_plan_generation(
     plan_id: str,
     tenant_id: str,
     triggered_by: Optional[Dict[str, Any]] = None,
@@ -73,7 +77,8 @@ async def _process_plan_async(
     """
     Execute the AI content generation workflow for a plan.
     """
-    async with get_async_session() as db:
+    session_factory = get_async_session()
+    async with session_factory() as db:
         planning_service = ContentPlanningService(db, tenant_id)
 
         try:
@@ -82,6 +87,33 @@ async def _process_plan_async(
                 raise ValueError(f"Content plan {plan_id} not found")
 
             trigger_user = await _load_user(db, triggered_by)
+
+            sse_user_id = None
+            if triggered_by and triggered_by.get("id"):
+                sse_user_id = str(triggered_by["id"])
+            elif isinstance(trigger_user, User) and getattr(trigger_user, "id", None):
+                sse_user_id = str(trigger_user.id)
+            elif hasattr(plan, "created_by_user_id") and plan.created_by_user_id:
+                sse_user_id = str(plan.created_by_user_id)
+
+            progress_emitter = None
+            if sse_user_id:
+                async def progress_emitter(stage: str, message: str, status: str = "running", data: Optional[Dict[str, Any]] = None):
+                    payload = dict(data or {})
+                    payload.setdefault("plan_id", plan_id)
+                    payload.setdefault("title", plan.title)
+                    await progress_stream_manager.publish(
+                        tenant_id=tenant_id,
+                        user_id=sse_user_id,
+                        event=ProgressEvent(
+                            job_id=plan_id,
+                            stage=stage,
+                            message=message,
+                            status=status,
+                            data=payload
+                        ),
+                        broadcast=True
+                    )
 
             secrets_service = SecretsManagementService(db, tenant_id)
             openai_secret = await secrets_service.get_secret_by_name("OpenAI API Key")
@@ -99,6 +131,7 @@ async def _process_plan_async(
             result = await orchestrator.process_content_plan(
                 plan_id=plan_id,
                 openai_api_key=secret_value.value,
+                progress_callback=progress_emitter,
             )
 
             await db.commit()
@@ -175,4 +208,4 @@ def process_content_plan_task(
         plan_id=plan_id,
         tenant_id=tenant_id,
     )
-    return _run_async(_process_plan_async(plan_id, tenant_id, triggered_by))
+    return _run_async(run_plan_generation(plan_id, tenant_id, triggered_by))

@@ -3,7 +3,7 @@
  * Manages the Tabulator table for content planning/ideas
  */
 
-function escapeHtml(value) {
+const htmlEscape = window.escapeHtml || function (value) {
     if (value === null || value === undefined) {
         return "";
     }
@@ -17,7 +17,7 @@ function escapeHtml(value) {
         };
         return ESCAPE_MAP[char] || char;
     });
-}
+};
 
 // Status badge formatter
 function formatStatus(cell) {
@@ -29,6 +29,7 @@ function formatStatus(cell) {
 
     let tooltip = displayLabel;
     let leadingIcon = "";
+    const loadingStatuses = new Set(["researching", "generating", "refining"]);
 
     if (status === "failed" && rowData.error_log) {
         let errorMessage = String(rowData.error_log).trim();
@@ -37,9 +38,12 @@ function formatStatus(cell) {
         }
         tooltip = `Failed: ${errorMessage}`;
         leadingIcon = '<i class="ti ti-alert-triangle me-1"></i>';
+    } else if (loadingStatuses.has(status)) {
+        tooltip = `In progress: ${displayLabel}`;
+        leadingIcon = '<i class="ti ti-loader-2 me-1 loading-spinner"></i>';
     }
 
-    return `<span class="status-badge ${statusClass}" data-status="${escapeHtml(status)}" title="${escapeHtml(tooltip)}">${leadingIcon}${escapeHtml(displayLabel)}</span>`;
+    return `<span class="status-badge ${statusClass}" data-status="${htmlEscape(status)}" title="${htmlEscape(tooltip)}">${leadingIcon}${htmlEscape(displayLabel)}</span>`;
 }
 
 // SEO Score formatter with iteration indicator
@@ -90,17 +94,20 @@ function formatActions(cell) {
     const rowData = cell.getRow().getData();
     const status = rowData.status;
     const planId = rowData.id;
+    const lockedStatuses = ['researching', 'generating', 'refining'];
 
     // Build extra action buttons first
     let extraButtons = '';
 
-    // Generate button (only if planned or failed)
-    if (status === 'planned' || status === 'failed') {
-        extraButtons += `
-            <i class="ti ti-robot row-action-icon generate-btn ms-2"
-               title="Generate with AI"
-               onclick="generateContent('${planId}')"></i>`;
-    }
+    const generatingStatuses = ['researching', 'generating', 'refining'];
+    const isGenerating = generatingStatuses.includes(status);
+    const actionsLocked = lockedStatuses.includes(status);
+
+    extraButtons += `
+        <i class="ti ti-robot row-action-icon generate-btn ms-2"
+           title="${isGenerating ? 'Content generation in progress' : 'Generate with AI'}"
+           style="cursor: ${isGenerating ? 'default' : 'pointer'}; font-size: 18px; color: ${isGenerating ? '#94a3b8' : '#0f6efd'}; padding: 4px; border-radius: 4px; transition: all 0.2s; ${isGenerating ? 'opacity: 0.6;' : ''}"
+           ${isGenerating ? '' : `onclick="generateContent('${planId}')"`}></i>`;
 
     // View draft button (only if draft_ready or approved)
     if (status === 'draft_ready' || status === 'approved') {
@@ -111,8 +118,14 @@ function formatActions(cell) {
     }
 
     // Standard edit/delete buttons - pass extra buttons to be included inside the container
+    const containerAttrs = actionsLocked ? 'data-locked="true" aria-disabled="true"' : '';
+
     return `
-        <div class="row-actions" data-id="${rowData.id}" style="display: flex; align-items: center;">
+        <div class="row-actions ${actionsLocked ? 'row-actions-disabled' : ''}"
+             data-id="${rowData.id}"
+             ${containerAttrs}
+             style="display: flex; align-items: center;"
+             ${actionsLocked ? 'title="Generation in progress – actions temporarily disabled"' : ''}>
             <i class="ti ti-edit row-action-icon edit-btn"
                title="Edit"
                style="cursor: pointer; font-size: 18px; color: #0054a6; margin-right: 12px; padding: 4px; border-radius: 4px; transition: all 0.2s;">
@@ -143,6 +156,7 @@ window.initializeContentPlansTable = function () {
                 field: "title",
                 minWidth: 200,
                 headerFilter: "input",
+                cssClass: "tabulator-cell-wrap",
                 formatter: function (cell) {
                     return `<strong>${cell.getValue()}</strong>`;
                 }
@@ -196,18 +210,11 @@ window.initializeContentPlansTable = function () {
                 formatter: function (cell) {
                     const skipped = cell.getValue();
                     if (skipped === true) {
-                        return '<span class="badge bg-info"><i class="ti ti-bolt me-1"></i>Direct Gen</span>';
+                        return '<span class="status-badge status-warning text-normal"><i class="ti ti-bolt me-1"></i>Direct Gen</span>';
                     } else {
-                        return '<span class="badge bg-primary"><i class="ti ti-search me-1"></i>With Research</span>';
+                        return '<span class="status-badge status-info text-normal"><i class="ti ti-search me-1"></i>With Research</span>';
                     }
                 }
-            },
-            {
-                title: "SEO Score",
-                field: "seo_score",
-                width: 100,
-                headerSort: true,
-                formatter: formatSEOScore
             },
             {
                 title: "Created",
@@ -305,15 +312,161 @@ window.viewDraft = function (planId) {
     window.location.href = `/features/content-broadcaster/planning/${planId}/view`;
 };
 
+// === Generation Progress Watcher ===
+const PlanGenerationWatcher = (() => {
+    const endpoint = '/features/content-broadcaster/api/generation-stream';
+    const stageStatusMap = {
+        researching: 'researching',
+        generating: 'generating',
+        refining: 'refining'
+    };
+    let eventSource = null;
+
+    function init() {
+        if (!window.EventSource || eventSource) {
+            return;
+        }
+        eventSource = new EventSource(endpoint);
+        eventSource.addEventListener('generation', (event) => {
+            try {
+                const payload = JSON.parse(event.data);
+                handleEvent(payload);
+            } catch (error) {
+                console.error('[PlanGenerationWatcher] Failed to parse event', error);
+            }
+        });
+        eventSource.onerror = () => {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            setTimeout(init, 5000);
+        };
+    }
+
+    function handleEvent(payload) {
+        if (!payload || !payload.data || !payload.data.plan_id || !window.contentPlansTable) {
+            return;
+        }
+        const table = window.contentPlansTable;
+        const planId = payload.data.plan_id;
+        const stage = payload.stage;
+        const status = (payload.status || '').toLowerCase();
+        const row = table.getRow(planId);
+
+        const applyRowUpdate = (updates) => {
+            if (row) {
+                const result = row.update(updates);
+                if (result && typeof result.then === 'function') {
+                    result.finally(() => row.reformat && row.reformat());
+                } else if (row.reformat) {
+                    row.reformat();
+                }
+            } else {
+                table.setData();
+            }
+        };
+
+        if (status === 'success' || stage === 'completed') {
+            applyRowUpdate({ status: 'draft_ready', latest_seo_score: payload.data.seo_score || undefined });
+            return;
+        }
+
+        if (status === 'error' || stage === 'error') {
+            applyRowUpdate({ status: 'failed' });
+            return;
+        }
+
+        const mappedStatus = stageStatusMap[stage];
+        if (mappedStatus) {
+            applyRowUpdate({ status: mappedStatus });
+        }
+    }
+
+    return { init };
+})();
+
+window.PlanGenerationWatcher = PlanGenerationWatcher;
+
+function extractPlanRefreshPayload(event) {
+    if (!event) return null;
+    if (event.detail && typeof event.detail === "object") {
+        if (event.detail.value && typeof event.detail.value === "object") {
+            return event.detail.value;
+        }
+        return event.detail;
+    }
+    return null;
+}
+
+function applyPlanRowUpdateFromPayload(payload) {
+    if (!payload || !window.contentPlansTable) {
+        return false;
+    }
+
+    const planId = payload.plan_id || payload.id;
+    if (!planId) {
+        return false;
+    }
+
+    const updates = Object.assign({}, payload.updates || {});
+    if (payload.status && !Object.prototype.hasOwnProperty.call(updates, "status")) {
+        updates.status = payload.status;
+    }
+    if (Object.prototype.hasOwnProperty.call(payload, "latest_seo_score") && !Object.prototype.hasOwnProperty.call(updates, "latest_seo_score")) {
+        updates.latest_seo_score = payload.latest_seo_score;
+    }
+    if (Object.prototype.hasOwnProperty.call(payload, "error_log") && !Object.prototype.hasOwnProperty.call(updates, "error_log")) {
+        updates.error_log = payload.error_log;
+    }
+
+    if (Object.keys(updates).length === 0) {
+        return false;
+    }
+
+    updates.id = planId;
+
+    try {
+        const maybePromise = window.contentPlansTable.updateData([updates]);
+        if (maybePromise && typeof maybePromise.then === "function") {
+            maybePromise
+                .then(() => {
+                    const row = window.contentPlansTable.getRow(planId);
+                    if (row && row.reformat) {
+                        row.reformat();
+                    }
+                })
+                .catch((error) => {
+                    console.warn("[ContentPlansTable] Row update failed, refreshing table", error);
+                    window.contentPlansTable.setData();
+                });
+        } else {
+            const row = window.contentPlansTable.getRow(planId);
+            if (row && row.reformat) {
+                row.reformat();
+            }
+        }
+        return true;
+    } catch (error) {
+        console.warn("[ContentPlansTable] Failed to apply row update", error);
+        return false;
+    }
+}
+
 // Listen for HX-Trigger events from the server
 document.body.addEventListener('showSuccess', function () {
     showToast('Action completed successfully', 'success');
 });
 
-document.body.addEventListener('refreshTable', function () {
-    if (window.contentPlansTable) {
-        window.contentPlansTable.setData();
+document.body.addEventListener('refreshTable', function (event) {
+    if (!window.contentPlansTable) {
+        return;
     }
+    const payload = extractPlanRefreshPayload(event);
+    if (payload && applyPlanRowUpdateFromPayload(payload)) {
+        return;
+    }
+    window.contentPlansTable.setData();
 });
 
 document.body.addEventListener("htmx:afterRequest", function (event) {
@@ -375,5 +528,9 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
             initializeQuickSearch('table-quick-search', 'clear-search-btn', 'content-plans-table');
         }, 100);
+    }
+
+    if (window.PlanGenerationWatcher) {
+        window.PlanGenerationWatcher.init();
     }
 });

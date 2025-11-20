@@ -22,3 +22,8 @@ Tracking platform-wide linting and static analysis rules to prevent recurring is
    - **Reason**: Keeps Tabler extensions consistent and prevents divergent badge/loader/table styles across slices.  
    - **Lint idea**: CI check that flags new CSS files outside approved directories (`app/static/css`) or direct `<link>` tags to retired files (e.g., `tabulator-unified.css`, `modal.css`, etc.).  
    - **Shared utilities**: `.status-badge` (+ state modifiers), `.card-hover-lift`, `.icon-xl` / `.icon-lg`, `.tab-content-min-400`, table action button classes.
+
+5. **Tabulator Layout from Global Config Only**  
+   - **Rule**: Do not override table layout/fit settings (e.g., `layout`, column wrapping, action button markup) inside slice-specific JS. All Tabulator instances must rely on `advancedTableConfig` for layout behavior.  
+   - **Reason**: Local overrides cause tables to render inconsistently (e.g., AI Prompts table dropping outside cards) and make global fixes impossible.  
+   - **Lint idea**: Static analysis that flags any `new Tabulator(... { layout:` or column `cssClass` tweaks outside the shared config; encourage contributions to `table-base.js`/theme utilities instead of per-table overrides.

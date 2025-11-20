@@ -480,15 +480,18 @@ class M365TenantService(BaseService[M365Tenant]):
             # No domain stored - this might cause issues, but let PowerShell try to resolve it
             logger.warning("M365 tenant domain not configured", m365_tenant_id=m365_tenant_id)
 
-        # Add SharePointAdminUrl - construct from tenant domain or stored value
-        # SharePoint admin URL format: https://{tenant}-admin.sharepoint.com
-        if m365_tenant.m365_domain:
-            # Extract tenant name from domain (e.g., "contoso" from "contoso.onmicrosoft.com")
-            tenant_name = m365_tenant.m365_domain.split('.')[0]
-            sharepoint_admin_url = f"https://{tenant_name}-admin.sharepoint.com"
-            auth_params["SharePointAdminUrl"] = sharepoint_admin_url
-        else:
-            logger.warning("Cannot construct SharePoint Admin URL - no domain configured", m365_tenant_id=m365_tenant_id)
+        # Add SharePointAdminUrl - TEMPORARILY HARDCODED
+        # TODO: SharePoint URL construction is unreliable (domain doesn't match actual URL)
+        # Example: Domain "terrait.co.uk" but URL is "https://netorgft16254533-admin.sharepoint.com/"
+        # For now, use hardcoded URL for testing - will implement proper solution later
+        # (either manual field in M365Tenant model or API lookup)
+
+        # TEMPORARY: Hardcoded SharePoint Admin URL for testing
+        auth_params["SharePointAdminUrl"] = "https://netorgft16254533-admin.sharepoint.com"
+
+        logger.info("Using hardcoded SharePoint Admin URL for testing",
+                    m365_tenant_id=m365_tenant_id,
+                    sharepoint_url=auth_params["SharePointAdminUrl"])
 
         # Retrieve credentials from secrets
         secret_prefix = f"m365_{m365_tenant.id}"

@@ -1,0 +1,113 @@
+<div id="generation-run-table">
+    {% if run_history %}
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="card-title mb-0">
+                <i class="ti ti-history me-2"></i>
+                Generation Runs
+            </h3>
+            <span class="status-badge status-neutral text-normal">{{ run_history|length }} version(s)</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-vcenter mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 13%;">Run</th>
+                        <th style="width: 18%;">Generated</th>
+                        <th style="width: 12%;">SEO Score</th>
+                        <th style="width: 12%;">Iterations</th>
+                        <th>Parameters</th>
+                        <th class="text-end" style="width: 220px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for run in run_history %}
+                    {% set run_status = (run.status or 'archived') %}
+                    {% set status_variant = 'success' if run_status == 'published' else 'info' if run_status == 'current' else 'neutral' %}
+                    {% set params = run.parameters or {} %}
+                    {% set effective_run_id = run.run_id or run.content_item_id %}
+                    <tr class="{% if selected_run_id and selected_run_id == effective_run_id %}table-active{% endif %}">
+                        <td>
+                            <div class="d-flex flex-column">
+                                <span class="fw-semibold">#{{ run_history|length - loop.index0 }}</span>
+                                <span class="status-badge status-{{ status_variant }} text-normal mt-1">
+                                    {{ run_status.replace('_', ' ').title() }}
+                                </span>
+                            </div>
+                        </td>
+                        <td>{{ run.created_at[:19].replace('T', ' ') if run.created_at else 'Unknown' }}</td>
+                        <td>
+                            <span class="status-badge status-{{ 'success' if (run.seo_score or 0) >= plan.min_seo_score else 'warning' }}">
+                                {{ run.seo_score or '—' }}
+                            </span>
+                        </td>
+                        <td>{{ run.iterations or 0 }}</td>
+                        <td>
+                            <div class="text-muted small">
+                                <div>
+                                    Tone: {{ params.get('tone', plan.tone) or '—' }} |
+                                    Skip Research: {{ 'Yes' if params.get('skip_research') else 'No' }}
+                                </div>
+                                {% if params.get('target_channels') %}
+                                <div>Channels: {{ params.get('target_channels') | join(', ') }}</div>
+                                {% endif %}
+                                {% set prompt_levels = params.get('prompt_settings') %}
+                                {% if prompt_levels %}
+                                <div class="mt-1">
+                                    <span class="badge bg-light text-dark me-1">Prof {{ prompt_levels.professionalism_level }}</span>
+                                    <span class="badge bg-light text-dark me-1">Humor {{ prompt_levels.humor_level }}</span>
+                                    <span class="badge bg-light text-dark me-1">Creat {{ prompt_levels.creativity_level }}</span>
+                                    <span class="badge bg-light text-dark me-1">Analysis {{ prompt_levels.analysis_depth }}</span>
+                                    <span class="badge bg-light text-dark">Strict {{ prompt_levels.strictness_level }}</span>
+                                </div>
+                                {% endif %}
+                                {% if run.human_edited %}
+                                <div class="mt-2">
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="ti ti-user-edit me-1"></i>Human Edited
+                                    </span>
+                                    {% if run.edited_by %}
+                                    <small class="text-muted ms-1">{{ run.edited_by }}</small>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group">
+                                {% if run_status != 'current' %}
+                                <form method="post"
+                                      hx-post="/features/content-broadcaster/planning/{{ plan.id }}/runs/{{ effective_run_id }}/status"
+                                      hx-target="#plan-detail-container"
+                                      hx-swap="innerHTML"
+                                      class="d-inline">
+                                    <input type="hidden" name="status" value="current">
+                                    <input type="hidden" name="selected_run_id" value="{{ effective_run_id }}">
+                                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                                        <i class="ti ti-refresh me-1"></i> Set Current
+                                    </button>
+                                </form>
+                                {% endif %}
+                                {% if run_status != 'published' %}
+                                <form method="post"
+                                      hx-post="/features/content-broadcaster/planning/{{ plan.id }}/runs/{{ effective_run_id }}/status"
+                                      hx-target="#plan-detail-container"
+                                      hx-swap="innerHTML"
+                                      class="d-inline ms-1">
+                                    <input type="hidden" name="status" value="published">
+                                    <input type="hidden" name="selected_run_id" value="{{ effective_run_id }}">
+                                    <button type="submit" class="btn btn-outline-success btn-sm">
+                                        <i class="ti ti-rocket me-1"></i> Publish
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>

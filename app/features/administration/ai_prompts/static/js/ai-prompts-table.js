@@ -3,6 +3,13 @@
  * Tabulator table for managing AI prompt templates
  */
 
+if (typeof window.aiPromptsIsGlobalAdmin === 'undefined') {
+    window.aiPromptsIsGlobalAdmin = false;
+}
+if (typeof window.aiPromptsTenantId === 'undefined') {
+    window.aiPromptsTenantId = null;
+}
+
 window.initializeAIPromptsTable = function () {
     // Make sure appTables exists
     if (!window.appTables) {
@@ -17,7 +24,9 @@ window.initializeAIPromptsTable = function () {
             {
                 title: "Name",
                 field: "name",
-                minWidth: 200,
+                minWidth: 160,
+                widthGrow: 2,
+                cssClass: "tabulator-cell-wrap",
                 headerFilter: "input",
                 formatter: function (cell) {
                     const name = cell.getValue();
@@ -36,7 +45,9 @@ window.initializeAIPromptsTable = function () {
             {
                 title: "Key",
                 field: "prompt_key",
-                minWidth: 150,
+                minWidth: 130,
+                widthGrow: 1,
+                cssClass: "tabulator-cell-wrap",
                 headerFilter: "input",
                 formatter: function (cell) {
                     return `<code class="small">${cell.getValue()}</code>`;
@@ -45,7 +56,7 @@ window.initializeAIPromptsTable = function () {
             {
                 title: "Category",
                 field: "category",
-                width: 130,
+                widthGrow: 1,
                 headerFilter: "list",
                 headerFilterParams: {
                     values: {
@@ -64,7 +75,7 @@ window.initializeAIPromptsTable = function () {
             {
                 title: "AI Model",
                 field: "ai_model",
-                width: 120,
+                widthGrow: 1,
                 headerFilter: "input",
                 formatter: function (cell) {
                     const model = cell.getValue() || 'default';
@@ -74,7 +85,7 @@ window.initializeAIPromptsTable = function () {
             {
                 title: "Type",
                 field: "tenant_id",
-                width: 100,
+                width: 110,
                 headerFilter: "list",
                 headerFilterParams: {
                     values: {
@@ -95,7 +106,7 @@ window.initializeAIPromptsTable = function () {
             {
                 title: "Usage",
                 field: "usage_count",
-                width: 80,
+                width: 90,
                 headerSort: true,
                 formatter: function (cell) {
                     const count = cell.getValue() || 0;
@@ -142,30 +153,25 @@ window.initializeAIPromptsTable = function () {
             {
                 title: "Actions",
                 field: "id",
-                width: 120,
+                width: 110,
                 headerSort: false,
                 formatter: function (cell) {
                     const promptId = cell.getValue();
                     const row = cell.getRow().getData();
-                    const promptName = row.name || '';
+                    const isSystem = !!row.is_system;
+                    const ownedByTenant = !!row.tenant_id && row.tenant_id === window.aiPromptsTenantId;
+                    const canEdit = Boolean(window.aiPromptsIsGlobalAdmin || (ownedByTenant && !isSystem));
 
                     return `
-                        <div class="btn-group" role="group">
-                            <button class="btn btn-sm btn-ghost-secondary"
-                                    onclick="viewPromptDetails(${promptId})"
-                                    title="View Details">
-                                <i class="ti ti-eye row-action-icon"></i>
-                            </button>
-                            <button class="btn btn-sm btn-ghost-secondary"
-                                    onclick="editPrompt(${promptId})"
-                                    title="Edit">
-                                <i class="ti ti-edit row-action-icon"></i>
-                            </button>
-                            <button class="btn btn-sm btn-ghost-secondary"
-                                    onclick="confirmDeletePrompt(${promptId}, '${promptName.replace(/'/g, "\\'")}')"
-                                    title="Delete">
-                                <i class="ti ti-trash row-action-icon text-danger"></i>
-                            </button>
+                        <div class="row-actions" data-id="${promptId}" style="display:flex;align-items:center;">
+                            <i class="ti ti-eye row-action-icon"
+                               title="View Details"
+                               onclick="viewPromptDetails(${promptId})"></i>
+                            ${canEdit ? `
+                            <i class="ti ti-edit row-action-icon"
+                               title="Edit"
+                               onclick="editPrompt(${promptId})"></i>
+                            ` : ''}
                         </div>
                     `;
                 }
@@ -187,54 +193,27 @@ window.exportTable = function (format) {
 
 // View prompt details modal
 window.viewPromptDetails = function (promptId) {
-    htmx.ajax('GET', `/features/administration/ai-prompts/partials/prompt_details?prompt_id=${promptId}`, {
+    htmx.ajax('GET', `/features/administration/ai-prompts/partials/details?prompt_id=${promptId}`, {
         target: '#modal-body',
         swap: 'innerHTML'
     }).then(() => {
-        const modal = new bootstrap.Modal(document.getElementById('modal'));
-        modal.show();
+        if (typeof window.showModal === 'function') {
+            window.showModal();
+        }
     });
 };
 
 // Edit prompt form
 window.editPrompt = function (promptId) {
-    htmx.ajax('GET', `/features/administration/ai-prompts/partials/prompt_form?prompt_id=${promptId}`, {
+    htmx.ajax('GET', `/features/administration/ai-prompts/forms/${promptId}/edit`, {
         target: '#modal-body',
         swap: 'innerHTML'
     }).then(() => {
-        const modal = new bootstrap.Modal(document.getElementById('modal'));
-        modal.show();
+        if (typeof window.showModal === 'function') {
+            window.showModal();
+        }
     });
 };
-
-// Delete confirmation
-window.confirmDeletePrompt = function (promptId, promptName) {
-    showConfirmModal(
-        'Delete AI Prompt?',
-        `Are you sure you want to delete "${promptName}"? This action cannot be undone.`,
-        'Delete',
-        'btn-danger',
-        function () {
-            deletePrompt(promptId);
-        }
-    );
-};
-
-// Delete prompt
-function deletePrompt(promptId) {
-    htmx.ajax('DELETE', `/features/administration/ai-prompts/api/${promptId}`, {
-        swap: 'none'
-    }).then(() => {
-        showToast('AI prompt deleted successfully', 'success');
-        // Refresh table
-        if (window.aiPromptsTable) {
-            window.aiPromptsTable.replaceData();
-        }
-    }).catch((error) => {
-        showToast('Failed to delete AI prompt', 'error');
-        console.error('Delete error:', error);
-    });
-}
 
 // Initialize table on page load
 document.addEventListener("DOMContentLoaded", () => {

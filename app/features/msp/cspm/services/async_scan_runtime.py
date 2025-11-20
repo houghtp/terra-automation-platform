@@ -128,18 +128,14 @@ class AsyncScanRuntime:
                 if not scan_record:
                     raise ValueError(f"Scan {scan_id} not found after status update")
 
-                # STAGE 1 TEST: Force empty auth_params to use PowerShell hardcoded credentials
-                # TODO: Remove this after testing - restore credential retrieval
-                auth_params = {}  # TEMPORARY: Skip database credential lookup
-
-                # ORIGINAL CODE (commented out for testing):
-                # # For testing: If m365_tenant_db_id is None or empty, use empty auth_params
-                # # This allows PowerShell to use hardcoded credentials in Start-Checks.ps1
-                # if m365_tenant_db_id:
-                #     auth_params = await m365_service.get_tenant_credentials(m365_tenant_db_id)
-                # else:
-                #     # Empty auth params - PowerShell will use hardcoded defaults
-                #     auth_params = {}
+                # Retrieve credentials from database
+                # If m365_tenant_db_id is None or empty, use empty auth_params
+                # (allows PowerShell to use hardcoded credentials for testing)
+                if m365_tenant_db_id:
+                    auth_params = await m365_service.get_tenant_credentials(m365_tenant_db_id)
+                else:
+                    # Empty auth params - PowerShell will use hardcoded defaults (if available)
+                    auth_params = {}
 
                 await self._publish(
                     scan_id,

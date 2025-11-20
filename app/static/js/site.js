@@ -658,8 +658,11 @@ document.addEventListener("DOMContentLoaded", function () {
   }, true);
 
   document.body.addEventListener('htmx:beforeRequest', (event) => {
-    const swapTarget = event.detail && event.detail.target;
-    if (swapTarget && swapTarget.id === 'modal-body') {
+    const detail = event.detail || {};
+    const swapTarget = detail.target;
+    const requestVerb = (detail.requestConfig && detail.requestConfig.verb || 'GET').toUpperCase();
+
+    if (swapTarget && swapTarget.id === 'modal-body' && requestVerb === 'GET') {
       swapTarget.innerHTML = `
         <div class="modal-loading-state text-center py-5">
           <div class="spinner-border text-primary mb-3" role="status"></div>
@@ -674,5 +677,24 @@ document.addEventListener("DOMContentLoaded", function () {
         window.lastFocusedElement = active.closest('[data-default-focus]') || active;
       }
     }
+  });
+
+  // Backward-compatible HX-Trigger parsing (comma-delimited fallback)
+  document.body.addEventListener('htmx:afterRequest', (event) => {
+    const xhr = event.detail && event.detail.xhr;
+    if (!xhr) {
+      return;
+    }
+    const triggerHeader = xhr.getResponseHeader && xhr.getResponseHeader('HX-Trigger');
+    if (!triggerHeader) {
+      return;
+    }
+    const trimmed = triggerHeader.trim();
+    if (!trimmed || trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      return;
+    }
+    trimmed.split(',').map((name) => name.trim()).filter(Boolean).forEach((eventName) => {
+      document.body.dispatchEvent(new Event(eventName));
+    });
   });
 });

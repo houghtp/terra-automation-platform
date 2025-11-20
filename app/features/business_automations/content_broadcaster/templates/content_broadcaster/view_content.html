@@ -105,48 +105,10 @@
                             <hr class="my-4">
 
                             <!-- Content Body -->
-                            <div class="content-body" style="line-height: 1.8; font-size: 1rem;">
+                            <div class="content-body markdown-content" style="line-height: 1.8; font-size: 1rem;">
                                 <div class="published-content">
                                     {% if content.body %}
-                                        {% set paragraphs = content.body.split('\n\n') %}
-                                        {% for para in paragraphs %}
-                                            {% if para.strip() %}
-                                                {% if para.strip().startswith('#') %}
-                                                    {# Handle markdown headers #}
-                                                    {% if para.strip().startswith('### ') %}
-                                                        <h3>{{ para.strip()[4:] }}</h3>
-                                                    {% elif para.strip().startswith('## ') %}
-                                                        <h2>{{ para.strip()[3:] }}</h2>
-                                                    {% elif para.strip().startswith('# ') %}
-                                                        <h1>{{ para.strip()[2:] }}</h1>
-                                                    {% else %}
-                                                        <p>{{ para | replace('\n', '<br>') | safe }}</p>
-                                                    {% endif %}
-                                                {% elif para.strip().startswith('- ') or para.strip().startswith('* ') %}
-                                                    {# Handle lists #}
-                                                    <ul>
-                                                    {% set list_items = para.split('\n') %}
-                                                    {% for item in list_items %}
-                                                        {% if item.strip() and (item.strip().startswith('- ') or item.strip().startswith('* ')) %}
-                                                            <li>{{ item.strip()[2:] }}</li>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                    </ul>
-                                                {% elif para.strip()[0].isdigit() and '. ' in para %}
-                                                    {# Handle numbered lists #}
-                                                    <ol>
-                                                    {% set list_items = para.split('\n') %}
-                                                    {% for item in list_items %}
-                                                        {% if item.strip() and item.strip()[0].isdigit() and '. ' in item %}
-                                                            <li>{{ item.split('. ', 1)[1] if '. ' in item else item }}</li>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                    </ol>
-                                                {% else %}
-                                                    <p>{{ para | replace('\n', '<br>') | safe }}</p>
-                                                {% endif %}
-                                            {% endif %}
-                                        {% endfor %}
+                                        {{ content.body | markdown }}
                                     {% else %}
                                         <p class="text-muted">No content available.</p>
                                     {% endif %}

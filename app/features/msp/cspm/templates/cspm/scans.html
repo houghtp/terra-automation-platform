@@ -42,6 +42,7 @@ async function loadOverviewStats() {
         document.getElementById('total-scans-stat').textContent = data.total_scans || 0;
         document.getElementById('completed-scans-stat').textContent = data.completed_scans || 0;
         document.getElementById('failed-scans-stat').textContent = data.failed_scans || 0;
+        document.getElementById('cancelled-scans-stat').textContent = data.cancelled_scans || 0;
         document.getElementById('running-scans-stat').textContent = data.running_scans || 0;
         document.getElementById('avg-pass-rate-stat').textContent = data.avg_pass_rate || '0%';
     } catch (error) {

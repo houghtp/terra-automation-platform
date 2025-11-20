@@ -11,6 +11,37 @@
             These templates drive the blog draft and channel variants generated for every plan. Update them here to tailor
             the AI output for this tenant without touching the global defaults.
         </p>
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <h5 class="mb-2"><i class="ti ti-help-circle me-2"></i>How prompt variables work</h5>
+                <p class="text-muted mb-2">
+                    Each prompt exposes <strong>required variables</strong> that the orchestrator always supplies and
+                    <strong>optional variables</strong> whose defaults you can tweak in the AI Prompt Manager.
+                    Optional variables map directly to the sliders shown when you generate content:
+                </p>
+                <div class="row g-3 small">
+                    <div class="col-md-6">
+                        <ul class="list-unstyled mb-0">
+                            <li><span class="status-badge status-info text-normal me-2">professionalism_level</span> Slider: Professionalism (1-5)</li>
+                            <li><span class="status-badge status-info text-normal me-2">creativity_level</span> Slider: Creativity (1-5)</li>
+                            <li><span class="status-badge status-info text-normal me-2">humor_level</span> Slider: Humour (0-5)</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="list-unstyled mb-0">
+                            <li><span class="status-badge status-info text-normal me-2">analysis_depth</span> Slider: Analysis Depth (1-5)</li>
+                            <li><span class="status-badge status-info text-normal me-2">strictness_level</span> Slider: SEO Strictness (1-5)</li>
+                            <li><span class="status-badge status-info text-normal me-2">target_score</span> Used by the validator to decide PASS/FAIL</li>
+                        </ul>
+                    </div>
+                </div>
+                <p class="text-muted mt-2 mb-0">
+                    Editing the prompt lets you adjust the template text or default values (for example,
+                    change <code>"default": 4</code> for <code>professionalism_level</code>). Tenants inherit the system version unless
+                    you create an override with the buttons below.
+                </p>
+            </div>
+        </div>
         <div class="d-flex flex-wrap gap-2">
             <a href="/features/administration/ai-prompts" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">
                 <i class="ti ti-external-link me-1"></i>

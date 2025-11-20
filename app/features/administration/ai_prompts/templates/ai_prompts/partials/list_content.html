@@ -13,3 +13,8 @@
         <div id="ai-prompts-table"></div>
     </div>
 </div>
+
+<script>
+    window.aiPromptsIsGlobalAdmin = {{ (is_global_admin)|tojson }};
+    window.aiPromptsTenantId = {{ (current_tenant)|tojson }};
+</script>

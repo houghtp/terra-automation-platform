@@ -15,7 +15,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 
 from ..models import (
-    ContentItem, PublishJob, Delivery, EngagementSnapshot,
+    ContentItem, ContentPlan, PublishJob, Delivery, EngagementSnapshot,
     ContentState, ApprovalStatus, JobStatus
 )
 from app.features.core.audit_mixin import AuditContext
@@ -56,6 +56,13 @@ class ContentBroadcasterService(BaseService[ContentItem]):
             # Build base query with tenant isolation
             query = select(ContentItem).filter(ContentItem.tenant_id == self.tenant_id)
 
+            plan_visibility_filter = or_(
+                ContentItem.content_metadata.is_(None),
+                ~ContentItem.content_metadata.has_key('generated_from_plan'),
+                ContentItem.content_metadata["plan_run_status"].astext == "published"
+            )
+            query = query.filter(plan_visibility_filter)
+
             # Apply filters
             if search:
                 query = query.filter(
@@ -76,6 +83,7 @@ class ContentBroadcasterService(BaseService[ContentItem]):
 
             # Get total count
             count_query = select(func.count(ContentItem.id)).filter(ContentItem.tenant_id == self.tenant_id)
+            count_query = count_query.filter(plan_visibility_filter)
             if search:
                 count_query = count_query.filter(
                     or_(
@@ -687,18 +695,31 @@ class ContentBroadcasterService(BaseService[ContentItem]):
             raise
 
     async def delete_content(self, content_id: str) -> bool:
-        """Delete content item and all related data."""
+        """Delete content item and all related data (no state restrictions)."""
         try:
             content = await self.get_content_by_id(content_id)
             if not content:
                 return False
 
-            # Can only delete draft or rejected content
-            if content.state not in [ContentState.DRAFT.value, ContentState.REJECTED.value]:
-                raise ValueError(f"Cannot delete content in {content.state} state")
+            # Clear references from any plans that point at this content
+            stmt = select(ContentPlan).where(
+                ContentPlan.generated_content_item_id == content.id
+            )
+            plan_result = await self.db.execute(stmt)
+            plans = plan_result.scalars().all()
+            for plan in plans:
+                plan.generated_content_item_id = None
+                metadata = dict(plan.generation_metadata or {})
+                if metadata.get("run_history"):
+                    metadata["run_history"] = [
+                        entry for entry in metadata["run_history"]
+                        if entry.get("content_item_id") != content.id
+                    ]
+                plan.generation_metadata = metadata
 
             await self.db.delete(content)
             await self.db.flush()
+            await self.db.commit()
 
             logger.info("Deleted content", content_id=content_id)
             return True

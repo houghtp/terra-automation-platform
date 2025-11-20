@@ -17,7 +17,6 @@ from app.features.core.route_imports import (
     Depends,
     Request,
     HTTPException,
-    JSONResponse,
     AsyncSession,
     get_db,
     tenant_dependency,
@@ -136,31 +135,6 @@ async def update_prompt(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prompt not found")
 
     return updated.to_dict()
-
-
-@router.delete("/prompts/{prompt_id}")
-async def delete_prompt(
-    prompt_id: int,
-    tenant_id: str = Depends(tenant_dependency),
-    current_user: User = Depends(get_current_user),
-    service: AIPromptService = Depends(get_prompt_service),
-):
-    """Soft delete a prompt (deactivate)."""
-    prompt = await service.get_prompt_by_id(prompt_id)
-    if not prompt:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prompt not found")
-
-    if prompt.is_system and not is_global_admin(current_user):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only global admins can deactivate system prompts")
-
-    if prompt.tenant_id and prompt.tenant_id != tenant_id and not is_global_admin(current_user):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot delete another tenant's prompt")
-
-    success = await service.delete_prompt(prompt_id)
-    if not success:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to deactivate prompt")
-
-    return JSONResponse({"success": True})
 
 
 @router.post("/prompts/{prompt_id}/restore")

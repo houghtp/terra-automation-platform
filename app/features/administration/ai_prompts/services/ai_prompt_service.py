@@ -408,41 +408,6 @@ class AIPromptService:
             logger.exception(f"Error updating prompt {prompt_id}: {e}")
             raise
 
-    async def delete_prompt(self, prompt_id: int) -> bool:
-        """
-        Delete a prompt (soft delete by setting is_active=False).
-        System prompts cannot be deleted, only deactivated.
-
-        Args:
-            prompt_id: ID of prompt to delete
-
-        Returns:
-            True if deleted, False if not found or system prompt
-        """
-        try:
-            prompt = await self.get_prompt_by_id(prompt_id)
-            if not prompt:
-                logger.warning(f"Prompt {prompt_id} not found for deletion")
-                return False
-
-            if prompt.is_system and prompt.tenant_id is None:
-                logger.warning(f"Cannot delete system prompt {prompt_id}, deactivating instead")
-                prompt.is_active = False
-                await self.db.commit()
-                return True
-
-            # Soft delete
-            prompt.is_active = False
-            await self.db.commit()
-
-            logger.info(f"Deleted prompt {prompt_id} (key: {prompt.prompt_key})")
-            return True
-
-        except Exception as e:
-            await self.db.rollback()
-            logger.exception(f"Error deleting prompt {prompt_id}: {e}")
-            return False
-
     async def get_categories(self, tenant_id: Optional[str] = None) -> List[str]:
         """Get list of unique categories for available prompts."""
         try:

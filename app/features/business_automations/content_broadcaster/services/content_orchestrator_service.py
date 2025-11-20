@@ -10,7 +10,7 @@ This service orchestrates the complete AI content generation pipeline:
 
 import uuid
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Callable, Awaitable
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.sqlalchemy_imports import get_logger
@@ -56,7 +56,8 @@ class ContentOrchestratorService:
     async def process_content_plan(
         self,
         plan_id: str,
-        openai_api_key: str
+        openai_api_key: str,
+        progress_callback: Optional[Callable[[str, str, str, Dict[str, Any]], Awaitable[None]]] = None
     ) -> Dict[str, Any]:
         """
         Process a content plan through the complete AI workflow.
@@ -80,19 +81,40 @@ class ContentOrchestratorService:
         Note:
             Research phase fetches scraping API keys internally from Secrets Management.
         """
+        async def emit_progress(stage: str, message: str, status: str = "running", data: Optional[Dict[str, Any]] = None):
+            if not progress_callback:
+                return
+            try:
+                await progress_callback(stage=stage, message=message, status=status, data=data or {})
+            except Exception as emit_error:
+                logger.warning(
+                    "Progress callback failed",
+                    plan_id=plan_id,
+                    stage=stage,
+                    error=str(emit_error)
+                )
+
         try:
             # Get the content plan
             plan = await self.planning_service.get_plan(plan_id)
             if not plan:
                 raise ValueError(f"Content plan {plan_id} not found")
 
-            # Allow planned and failed statuses (failed plans can be retried)
-            allowed_statuses = [ContentPlanStatus.PLANNED.value, ContentPlanStatus.FAILED.value]
-            if plan.status not in allowed_statuses:
+            # Block only active processing statuses; all other states can be regenerated
+            blocked_statuses = {
+                ContentPlanStatus.GENERATING.value,
+                ContentPlanStatus.REFINING.value
+            }
+            if plan.status in blocked_statuses:
                 raise ValueError(
-                    f"Cannot process plan in {plan.status} state. "
-                    f"Only 'planned' or 'failed' status can be processed."
+                    f"Cannot process plan in {plan.status} state because it is already running."
                 )
+
+            await emit_progress(
+                "queued",
+                f"Preparing '{plan.title}' for AI generation.",
+                data={"plan_id": plan_id, "title": plan.title}
+            )
 
             logger.info(
                 "Starting content generation workflow",
@@ -122,6 +144,11 @@ class ContentOrchestratorService:
                     "Skipping research phase (direct generation requested)",
                     plan_id=plan_id
                 )
+                await emit_progress(
+                    "generating",
+                    f"Generating draft for '{plan.title}' (research skipped).",
+                    data={"plan_id": plan_id, "title": plan.title}
+                )
                 await self.planning_service.update_plan_status(
                     plan_id,
                     ContentPlanStatus.GENERATING.value,
@@ -136,6 +163,12 @@ class ContentOrchestratorService:
                 )
                 plan = await self._commit_and_refresh_plan(plan_id)
 
+                await emit_progress(
+                    "researching",
+                    f"Researching competitors for '{plan.title}'.",
+                    data={"plan_id": plan_id, "title": plan.title}
+                )
+
                 # Process research (API keys fetched inside process_research)
                 research_data = await self.research_service.process_research(
                     title=plan.title,
@@ -149,6 +182,11 @@ class ContentOrchestratorService:
                     plan_id=plan_id,
                     num_sources=len(research_data.get("scraped_content", []))
                 )
+                await emit_progress(
+                    "research_complete",
+                    f"Research complete – analyzed {len(research_data.get('scraped_content', []))} sources.",
+                    data={"plan_id": plan_id, "title": plan.title}
+                )
 
                 # Step 2: Generation Phase
                 await self.planning_service.update_plan_status(
@@ -160,6 +198,12 @@ class ContentOrchestratorService:
                     }
                 )
                 plan = await self._commit_and_refresh_plan(plan_id)
+
+            await emit_progress(
+                "generating",
+                f"Generating initial draft for '{plan.title}'.",
+                data={"plan_id": plan_id, "title": plan.title}
+            )
 
             # Generate content with or without research insights
             content_body = await self.generation_service.generate_blog_post(
@@ -187,6 +231,7 @@ class ContentOrchestratorService:
             best_content = content_body
             best_score = 0
 
+            final_validation_result = None
             while current_iteration <= max_iterations:
                 validation_settings = dict(prompt_settings)
                 validation_settings["target_score"] = min_seo_score
@@ -207,6 +252,7 @@ class ContentOrchestratorService:
                     openai_api_key=openai_api_key,
                     prompt_settings=validation_settings
                 )
+                final_validation_result = validation_result
 
                 seo_score = validation_result.get("score", 0)
                 validation_status = validation_result.get("status", "UNKNOWN")
@@ -307,27 +353,17 @@ Please improve the content to address these specific issues while maintaining th
                 target_achieved=final_score >= min_seo_score
             )
 
-            # Step 4: Create ContentItem with draft
-            await self.planning_service.update_plan_status(
-                plan_id,
-                ContentPlanStatus.DRAFT_READY.value,
-                {
-                    "research_data": research_data,
-                    "generation_metadata": {
-                        "content_length": len(final_content),
-                        "tone": plan.tone or "professional",
-                        "seo_score": final_score,
-                        "total_iterations": len(refinement_history),
-                        "target_achieved": final_score >= min_seo_score
-                    },
-                    "latest_seo_score": final_score,
-                    "refinement_history": refinement_history,
-                    "message": f"Draft ready for review (SEO Score: {final_score}/100 after {len(refinement_history)} iterations)"
-                }
-            )
-            plan = await self._commit_and_refresh_plan(plan_id)
+            run_id = str(uuid.uuid4())
+            run_parameters = {
+                "tone": plan.tone or "professional",
+                "skip_research": plan.skip_research,
+                "target_channels": plan.target_channels or [],
+                "prompt_settings": dict(prompt_settings),
+                "min_seo_score": min_seo_score,
+                "max_iterations": max_iterations
+            }
 
-            # Create the ContentItem with proper UUID (following standard pattern)
+            # Step 4: Create ContentItem with draft
             content_item = ContentItem(
                 id=str(uuid.uuid4()),
                 tenant_id=self.tenant_id,
@@ -336,6 +372,9 @@ Please improve the content to address these specific issues while maintaining th
                 state=ContentState.IN_REVIEW.value,
                 content_metadata={
                     "generated_from_plan": plan_id,
+                    "plan_run_id": run_id,
+                    "plan_run_status": "current",
+                    "plan_run_parameters": run_parameters,
                     "research_sources": len(research_data.get("sources", [])),
                     "tone": plan.tone or "professional",
                     "seo_score": final_score,
@@ -365,6 +404,76 @@ Please improve the content to address these specific issues while maintaining th
             plan.generated_content_item_id = content_item.id
 
             await self.db.flush()
+
+            existing_metadata = plan.generation_metadata or {}
+            run_history_list = list(existing_metadata.get("run_history", []))
+            for entry in run_history_list:
+                entry["status"] = "archived"
+                await self.planning_service.update_content_item_run_metadata(
+                    entry.get("content_item_id"),
+                    plan_id,
+                    entry.get("run_id"),
+                    "archived",
+                    entry.get("parameters"),
+                    flush=False
+                )
+            sub_scores = (final_validation_result or {}).get("sub_scores") if final_validation_result else None
+            sub_score_details = (final_validation_result or {}).get("sub_score_details") if final_validation_result else None
+            metadata = (final_validation_result or {}).get("metadata") if final_validation_result else None
+
+            run_entry = {
+                "run_id": run_id,
+                "content_item_id": content_item.id,
+                "seo_score": final_score,
+                "iterations": len(refinement_history),
+                "content_length": len(final_content),
+                "created_at": datetime.now().isoformat(),
+                "target_score": min_seo_score,
+                "status": "current",
+                "parameters": run_parameters,
+                "refinement_history": [dict(iteration) for iteration in refinement_history],
+                "sub_scores": sub_scores,
+                "validation_metadata": metadata,
+                "issues": (final_validation_result or {}).get("issues", []),
+                "recommendations": (final_validation_result or {}).get("recommendations", []),
+                "strengths": (final_validation_result or {}).get("strengths", []),
+                "sub_score_details": sub_score_details
+            }
+            run_history_list.append(run_entry)
+            updated_metadata = dict(existing_metadata)
+            updated_metadata.update({
+                "content_length": len(final_content),
+                "tone": plan.tone or "professional",
+                "seo_score": final_score,
+                "refinement_iterations": len(refinement_history),
+                "run_history": run_history_list,
+                "current_run_id": run_id
+            })
+
+            await self.planning_service.update_plan_status(
+                plan_id,
+                ContentPlanStatus.DRAFT_READY.value,
+                {
+                    "research_data": research_data,
+                    "generation_metadata": updated_metadata,
+                    "latest_seo_score": final_score,
+                    "refinement_history": refinement_history,
+                    "message": f"Draft ready for review (SEO Score: {final_score}/100 after {len(refinement_history)} iterations)"
+                }
+            )
+            plan = await self._commit_and_refresh_plan(plan_id)
+
+            await emit_progress(
+                "completed",
+                f"Draft ready for '{plan.title}' (SEO {final_score}/100).",
+                status="success",
+                data={
+                    "plan_id": plan_id,
+                    "title": plan.title,
+                    "content_item_id": content_item.id,
+                    "seo_score": final_score
+                }
+            )
 
             # Step 5: Generate channel-specific variants (if channels specified)
             if plan.target_channels and len(plan.target_channels) > 0:
@@ -459,6 +568,13 @@ Please improve the content to address these specific issues while maintaining th
                 "Content generation workflow failed",
                 plan_id=plan_id,
                 tenant_id=tenant_id_for_log
+            )
+
+            await emit_progress(
+                "error",
+                f"Content generation failed for '{plan_id}': {str(e)}",
+                status="error",
+                data={"plan_id": plan_id, "title": getattr(plan, "title", None)}
             )
 
             raise

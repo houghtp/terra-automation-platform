@@ -205,18 +205,16 @@ async def prompt_edit_form(
     """Render edit prompt form modal."""
     prompt = await service.get_prompt_by_id(prompt_id)
     if not prompt:
-        return HTMLResponse("<div class='alert alert-danger mb-0'>Prompt not found.</div>", status_code=404)
+        return HTMLResponse("<div class='alert alert-danger mb-0'>Prompt not found.</div>")
 
     if prompt.is_system and not is_global_admin(current_user):
         return HTMLResponse(
-            "<div class='alert alert-danger mb-0'>Only global administrators can edit system prompts.</div>",
-            status_code=403,
+            "<div class='alert alert-danger mb-0'>Only global administrators can edit system prompts.</div>"
         )
 
     if prompt.tenant_id and prompt.tenant_id != tenant_id and not is_global_admin(current_user):
         return HTMLResponse(
-            "<div class='alert alert-danger mb-0'>You cannot edit prompts from another tenant.</div>",
-            status_code=403,
+            "<div class='alert alert-danger mb-0'>You cannot edit prompts from another tenant.</div>"
         )
 
     global_admin = is_global_admin(current_user)

@@ -4,70 +4,7 @@
  * This file is the canonical content table used by the templates.
  */
 
-// Helper formatters (used by planning-table.js and content table)
-function formatState(cell) {
-    const state = cell.getValue();
-    const stateClasses = {
-        'draft': 'bg-secondary',
-        'in_review': 'bg-warning',
-        'rejected': 'bg-danger',
-        'scheduled': 'bg-info',
-        'published': 'bg-success'
-    };
-    const className = stateClasses[state] || 'bg-secondary';
-    const displayText = state ? state.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Draft';
-    return `<span class="badge ${className}">${displayText}</span>`;
-}
-
-function formatApprovalStatus(cell) {
-    const status = cell.getValue();
-    const statusClasses = {
-        'pending': 'bg-warning',
-        'approved': 'bg-success',
-        'rejected': 'bg-danger'
-    };
-    const className = statusClasses[status] || 'bg-secondary';
-    const displayText = status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Pending';
-    return `<span class="badge ${className}">${displayText}</span>`;
-}
-
-function formatTags(cell) {
-    const tags = cell.getValue() || [];
-    if (tags.length === 0) return '<span class="text-muted">None</span>';
-    return tags.slice(0, 3).map(tag =>
-        `<span class="badge bg-light text-dark me-1">${tag}</span>`
-    ).join('') + (tags.length > 3 ? ' <span class="text-muted">+' + (tags.length - 3) + '</span>' : '');
-}
-
-function formatDate(cell) {
-    const date = cell.getValue();
-    if (!date) return '<span class="text-muted">—</span>';
-    return new Date(date).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-    });
-}
-
-function formatSeoScore(cell) {
-    const score = cell.getValue();
-    if (score == null || score === '') {
-        return '<span class="text-muted">—</span>';
-    }
-    let badgeClass = 'bg-secondary';
-    if (score >= 95) {
-        badgeClass = 'bg-success';
-    } else if (score >= 90) {
-        badgeClass = 'bg-info';
-    } else if (score >= 80) {
-        badgeClass = 'bg-warning text-dark';
-    } else {
-        badgeClass = 'bg-danger';
-    }
-    return `<span class="badge ${badgeClass}">${escapeHtml(score)}</span>`;
-}
-
-function escapeHtml(value) {
+const htmlEscape = window.escapeHtml || function (value) {
     if (value == null) {
         return '';
     }
@@ -77,16 +14,42 @@ function escapeHtml(value) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
-}
+};
 
-function formatRelativeTime(date) {
-    if (!(date instanceof Date)) return '';
+const relativeTime = window.formatRelativeTime || function (value) {
+    if (!value && value !== 0) return '';
+    const date = value instanceof Date ? value : new Date(value);
+    if (isNaN(date)) return '';
     const diff = Date.now() - date.getTime();
     if (diff < 1000) return 'just now';
     if (diff < 60_000) return `${Math.max(1, Math.round(diff / 1000))}s ago`;
     if (diff < 3_600_000) return `${Math.round(diff / 60000)}m ago`;
     if (diff < 86_400_000) return `${Math.round(diff / 3_600_000)}h ago`;
     return date.toLocaleString();
+};
+
+const dateFormatter = window.formatDate || function (cell) {
+    const value = cell.getValue();
+    if (!value) return '<span class="text-muted">—</span>';
+    return value;
+};
+
+function formatSeoScore(cell) {
+    const score = cell.getValue();
+    if (score == null || score === '') {
+        return '<span class="text-muted">—</span>';
+    }
+    let variant = 'neutral';
+    if (score >= 95) {
+        variant = 'success';
+    } else if (score >= 90) {
+        variant = 'info';
+    } else if (score >= 80) {
+        variant = 'warning';
+    } else {
+        variant = 'danger';
+    }
+    return `<span class="status-badge status-${variant} text-normal">${htmlEscape(score)}</span>`;
 }
 
 const GENERATION_STATUS_LABELS = {
@@ -228,23 +191,23 @@ const GenerationTracker = (() => {
     function renderJob(job) {
         const statusClass = GENERATION_STATUS_CLASSES[job.status] || GENERATION_STATUS_CLASSES.running;
         const statusLabel = GENERATION_STATUS_LABELS[job.status] || GENERATION_STATUS_LABELS.running;
-        const title = escapeHtml(job.title);
-        const message = escapeHtml(job.message);
-        const stage = escapeHtml(job.stage);
+        const title = htmlEscape(job.title);
+        const message = htmlEscape(job.message);
+        const stage = htmlEscape(job.stage);
         const seoScore = job.data && job.data.seo_score != null ? job.data.seo_score : null;
         const contentId = job.data && job.data.content_id ? job.data.content_id : null;
         const extraInfo = [];
         if (seoScore != null) {
-            extraInfo.push(`SEO Score: <strong>${escapeHtml(seoScore)}</strong>`);
+            extraInfo.push(`SEO Score: <strong>${htmlEscape(seoScore)}</strong>`);
         }
         if (contentId) {
-            extraInfo.push(`Content ID: <code>${escapeHtml(contentId)}</code>`);
+            extraInfo.push(`Content ID: <code>${htmlEscape(contentId)}</code>`);
         }
         const extraHtml = extraInfo.length ? `<div class="small text-muted mt-1">${extraInfo.join(' • ')}</div>` : '';
         const spinner = job.status === 'running' ? '<span class="spinner-border spinner-border-sm text-primary me-2"></span>' : '';
 
         return `
-            <li class="mb-2" data-job-id="${escapeHtml(job.jobId)}">
+            <li class="mb-2" data-job-id="${htmlEscape(job.jobId)}">
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="me-3">
                         <div class="fw-semibold">${title}</div>
@@ -253,7 +216,7 @@ const GenerationTracker = (() => {
                     </div>
                     <div class="text-end">
                         <span class="badge ${statusClass}">${statusLabel}</span>
-                        <div class="small text-muted">${formatRelativeTime(job.updatedAt)}</div>
+                        <div class="small text-muted">${relativeTime(job.updatedAt)}</div>
                     </div>
                 </div>
             </li>
@@ -299,10 +262,10 @@ window.initializeContentTable = function () {
                 field: "title",
                 minWidth: 200,
                 headerFilter: "input",
+                cssClass: "tabulator-cell-wrap",
                 formatter: function (cell) {
                     return `<strong>${cell.getValue()}</strong>`;
-                },
-                cssClass: "tabulator-cell-wrap"
+                }
             },
             {
                 title: "State",
@@ -314,7 +277,9 @@ window.initializeContentTable = function () {
                         "": "All States",
                         "draft": "Draft",
                         "pending_approval": "Pending Approval",
+                        "in_review": "In Review",
                         "approved": "Approved",
+                        "failed": "Failed",
                         "scheduled": "Scheduled",
                         "published": "Published",
                         "archived": "Archived"
@@ -323,15 +288,27 @@ window.initializeContentTable = function () {
                 sorter: "string",
                 formatter: function (cell) {
                     const value = cell.getValue();
-                    const badges = {
-                        "draft": '<span class="badge bg-secondary">Draft</span>',
-                        "pending_approval": '<span class="badge bg-warning">Pending Approval</span>',
-                        "approved": '<span class="badge bg-success">Approved</span>',
-                        "scheduled": '<span class="badge bg-info">Scheduled</span>',
-                        "published": '<span class="badge bg-primary">Published</span>',
-                        "archived": '<span class="badge bg-dark">Archived</span>'
+                    const labels = {
+                        "draft": "Draft",
+                        "pending_approval": "Pending Approval",
+                        "in_review": "In Review",
+                        "approved": "Approved",
+                        "failed": "Failed",
+                        "scheduled": "Scheduled",
+                        "published": "Published",
+                        "archived": "Archived"
                     };
-                    return badges[value] || `<span class="badge bg-light">${value}</span>`;
+                    const variants = {
+                        "draft": "neutral",
+                        "pending_approval": "warning",
+                        "in_review": "warning",
+                        "approved": "success",
+                        "failed": "danger",
+                        "scheduled": "info",
+                        "published": "info",
+                        "archived": "neutral"
+                    };
+                    return `<span class="status-badge status-${variants[value] || 'neutral'} text-normal">${labels[value] || value || ''}</span>`;
                 }
             },
             {
@@ -353,10 +330,9 @@ window.initializeContentTable = function () {
                     if (!channels || channels.length === 0) {
                         return '<span class="text-muted">None</span>';
                     }
-                    const channelBadges = channels.map(channel =>
-                        `<span class="badge bg-light text-dark me-1">${channel}</span>`
+                    return channels.map(channel =>
+                        `<span class="status-badge status-neutral text-normal me-1">${htmlEscape(channel)}</span>`
                     ).join('');
-                    return channelBadges;
                 }
             },
             {
@@ -364,14 +340,14 @@ window.initializeContentTable = function () {
                 field: "scheduled_at",
                 minWidth: 120,
                 headerFilter: "input",
-                formatter: formatDate
+                formatter: dateFormatter
             },
             {
                 title: "Created",
                 field: "created_at",
                 minWidth: 120,
                 headerFilter: "input",
-                formatter: formatDate
+                formatter: dateFormatter
             },
             {
                 title: "Actions",
@@ -424,6 +400,13 @@ window.initializeContentTable = function () {
                                style="cursor: pointer; font-size: 18px; color: #2fb344; margin-right: 12px; padding: 4px; border-radius: 4px; transition: all 0.2s;"
                                onclick="publishContentItem('${rowData.id}')"></i>`;
                     }
+
+                    // Delete button (only draft/rejected)
+                    buttons += `
+                        <i class="ti ti-trash row-action-icon"
+                           title="Delete"
+                           style="cursor: pointer; font-size: 18px; color: #d63939; padding: 4px; border-radius: 4px; transition: all 0.2s;"
+                           onclick="deleteContentItem('${rowData.id}')"></i>`;
 
                     return `<div class="row-actions" style="display: flex; align-items: center;">${buttons}</div>`;
                 }
@@ -481,6 +464,39 @@ window.publishContentItem = function (id) {
     showToast('Publish workflow - Backend not implemented yet', 'info');
     console.log('TODO: Publish content item:', id);
     // TODO: Implement publish workflow backend
+};
+
+// Delete content item (draft/rejected)
+window.deleteContentItem = function (id) {
+    showConfirmModal({
+        title: 'Delete Content',
+        message: 'Deleting this content will remove all associated variants and metadata. This action cannot be undone.',
+        confirmText: 'Delete',
+        type: 'danger',
+        onConfirm: () => {
+            fetch(`/features/content-broadcaster/api/${id}/delete`, {
+                method: 'DELETE',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }).then((response) => {
+                if (!response.ok) {
+                    return response.json().catch(() => ({})).then((data) => {
+                        throw new Error(data.detail || 'Failed to delete content');
+                    });
+                }
+                return response.json();
+            }).then(() => {
+                showToast('Content deleted successfully', 'success');
+                if (window.contentTable) {
+                    window.contentTable.setData();
+                }
+            }).catch((error) => {
+                console.error('Delete content error', error);
+                showToast(error.message || 'Failed to delete content', 'error');
+            });
+        }
+    });
 };
 
 // === Event Listeners ===

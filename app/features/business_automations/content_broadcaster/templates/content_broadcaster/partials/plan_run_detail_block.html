@@ -1,0 +1,10 @@
+<div class="content-display">
+    {% set plan_run_history = run_history if run_history is defined else [] %}
+    {% set resolved_selected_run_id = selected_run_id if (selected_run_id is defined and selected_run_id) else (selected_run.run_id if selected_run else None) %}
+    {% set selected_run_id = resolved_selected_run_id %}
+    {% if plan_run_history %}
+        {% include 'content_broadcaster/partials/generation_runs.html' with context %}
+    {% endif %}
+
+    {% include 'content_broadcaster/partials/run_detail.html' %}
+</div>

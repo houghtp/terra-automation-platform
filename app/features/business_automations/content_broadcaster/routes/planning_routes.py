@@ -5,8 +5,10 @@ These routes handle the content planning workflow where users submit
 content ideas that get processed by AI to generate draft content.
 """
 
+import asyncio
 from datetime import datetime
-from typing import Optional, List, Union, Dict, Any
+from typing import Optional, List, Union, Dict, Any, Tuple
+from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Request, Form
 from fastapi.responses import Response, HTMLResponse, JSONResponse
 from sqlalchemy import select
@@ -17,6 +19,7 @@ from app.features.auth.dependencies import get_current_user
 from app.features.core.database import get_db
 from app.features.core.sqlalchemy_imports import get_logger
 from app.features.core.templates import templates
+from app.features.core.config import get_settings
 from app.features.administration.secrets.services import SecretsManagementService
 from app.features.administration.ai_prompts.services import AIPromptService
 from app.features.core.route_imports import is_global_admin
@@ -28,8 +31,11 @@ from ..schemas import ContentPlanCreate, ProcessPlanRequest
 from ..services.content_planning_service import ContentPlanningService
 from ..services.content_orchestrator_service import ContentOrchestratorService
 from ..services.prompt_templates import PROMPT_DEFAULTS
+from ..tasks import run_plan_generation
 
 logger = get_logger(__name__)
+settings = get_settings()
+USE_CELERY_FOR_PLANS = bool(getattr(settings, "CONTENT_BROADCASTER_USE_CELERY", False))
 
 router = APIRouter(prefix="/planning", tags=["Content Planning"])
 
@@ -77,6 +83,118 @@ async def _get_prompt_entries(db: AsyncSession, tenant_id: str) -> List[Dict[str
         })
 
     return prompt_entries
+
+
+async def _run_plan_generation_in_app(plan_id: str, tenant_id: str, triggered_by: Dict[str, Any]):
+    """
+    Fallback path to process a content plan within the FastAPI app process.
+    Avoids the need for Celery in development environments.
+    """
+    try:
+        await run_plan_generation(plan_id=plan_id, tenant_id=tenant_id, triggered_by=triggered_by)
+    except Exception:
+        logger.exception(
+            "In-process content plan generation failed",
+            plan_id=plan_id,
+            tenant_id=tenant_id
+        )
+
+
+async def _build_run_history_context(plan, db: AsyncSession, tenant_id: str) -> Tuple[List[Dict[str, Any]], Dict[str, ContentItem]]:
+    generation_meta = plan.generation_metadata or {}
+    raw_history = generation_meta.get("run_history") or []
+    current_run_id = generation_meta.get("current_run_id")
+    published_run_id = generation_meta.get("published_run_id")
+    run_history: List[Dict[str, Any]] = []
+
+    for entry in sorted(raw_history, key=lambda e: e.get("created_at", ""), reverse=True):
+        entry_copy = dict(entry)
+        entry_copy.setdefault("run_id", entry_copy.get("content_item_id"))
+        params = entry_copy.get("parameters") or {}
+        if not params:
+            params = {
+                "tone": plan.tone,
+                "skip_research": plan.skip_research,
+                "target_channels": plan.target_channels or [],
+                "prompt_settings": plan.prompt_settings or {}
+            }
+        entry_copy["parameters"] = params
+        sub_scores = entry_copy.get("sub_scores") or {}
+        for key in ["keyword_coverage", "structure", "readability", "engagement", "technical"]:
+            sub_scores.setdefault(key, 0)
+        entry_copy["sub_scores"] = sub_scores
+        sub_score_details = entry_copy.get("sub_score_details") or {}
+        for key in ["keyword_coverage", "structure", "readability", "engagement", "technical"]:
+            sub_score_details.setdefault(key, "")
+        entry_copy["sub_score_details"] = sub_score_details
+        if entry_copy.get("validation_metadata") is None and entry_copy.get("metadata"):
+            entry_copy["validation_metadata"] = entry_copy["metadata"]
+        if entry_copy.get("validation_metadata") is None:
+            entry_copy["validation_metadata"] = {}
+        if not entry_copy.get("refinement_history") and entry_copy.get("refinement_history_snapshot"):
+            entry_copy["refinement_history"] = entry_copy["refinement_history_snapshot"]
+
+        identifier = entry_copy.get("run_id")
+        status = entry_copy.get("status")
+        if published_run_id and identifier == published_run_id:
+            status = "published"
+        elif current_run_id and identifier == current_run_id:
+            status = "current"
+        elif not status:
+            status = "archived"
+        entry_copy["status"] = status
+        entry_copy["human_edited"] = bool(entry_copy.get("human_edited"))
+
+        run_history.append(entry_copy)
+
+    run_ids = [entry.get("content_item_id") for entry in run_history if entry.get("content_item_id")]
+    run_content_map: Dict[str, ContentItem] = {}
+    if run_ids:
+        stmt = select(ContentItem).where(
+            ContentItem.id.in_(run_ids),
+            ContentItem.tenant_id == tenant_id
+        )
+        run_result = await db.execute(stmt)
+        run_content_map = {item.id: item for item in run_result.scalars().all()}
+
+    return run_history, run_content_map
+
+
+def _resolve_selected_run(
+    plan,
+    run_history: List[Dict[str, Any]],
+    run_content_map: Dict[str, ContentItem],
+    preferred_run_id: Optional[str],
+    fallback_content: Optional[ContentItem]
+) -> Tuple[Optional[Dict[str, Any]], Optional[ContentItem], Optional[str]]:
+    selected = None
+    normalized_id = preferred_run_id
+    if normalized_id:
+        selected = next(
+            (
+                entry for entry in run_history
+                if entry.get("run_id") == normalized_id or entry.get("content_item_id") == normalized_id
+            ),
+            None
+        )
+    if not selected:
+        selected = next((entry for entry in run_history if entry.get("status") == "published"), None)
+    if not selected:
+        selected = next((entry for entry in run_history if entry.get("status") == "current"), None)
+    if not selected and run_history:
+        selected = run_history[0]
+
+    selected_content = None
+    selected_run_id = None
+    if selected:
+        selected_run_id = selected.get("run_id") or selected.get("content_item_id")
+        if selected.get("content_item_id"):
+            selected_content = run_content_map.get(selected["content_item_id"])
+
+    if not selected_content:
+        selected_content = fallback_content
+
+    return selected, selected_content, selected_run_id
 
 # ==================== Routes ====================
 
@@ -541,6 +659,17 @@ async def view_content_plan(
             result = await db.execute(stmt)
             content_item = result.scalar_one_or_none()
 
+        # Aggregate generation run history
+        run_history, run_content_map = await _build_run_history_context(plan, db, tenant_id)
+        preferred_run_id = request.query_params.get("run_id")
+        selected_run, selected_content_item, selected_run_id = _resolve_selected_run(
+            plan,
+            run_history,
+            run_content_map,
+            preferred_run_id,
+            content_item
+        )
+
         # Gather AI prompts relevant to Content Broadcaster
         prompt_entries = await _get_prompt_entries(db, tenant_id)
 
@@ -549,12 +678,16 @@ async def view_content_plan(
             {
                 "request": request,
                 "plan": plan,
-                "content": content_item,
+                "content": selected_content_item,
+                "selected_run": selected_run,
+                "selected_run_id": selected_run_id,
                 "current_user": current_user,
                 "prompt_entries": prompt_entries,
                 "has_tenant_prompt_access": is_global_admin(current_user) or plan.tenant_id == tenant_id,
                 "is_global_admin_user": is_global_admin(current_user),
-                "tenant_id": tenant_id
+                "tenant_id": tenant_id,
+                "run_history": run_history,
+                "run_content_map": run_content_map
             }
         )
 
@@ -649,6 +782,227 @@ async def get_view_draft_modal(
         logger.exception("Failed to load draft view", plan_id=plan_id, tenant_id=tenant_id)
         raise HTTPException(status_code=500, detail="Failed to load draft")
 
+
+@router.get("/{plan_id}/runs/{content_id}/view", response_class=HTMLResponse)
+async def view_generation_run(
+    request: Request,
+    plan_id: str,
+    content_id: str,
+    tenant_id: str = Depends(tenant_dependency),
+    current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Return modal content for a specific generation run."""
+    try:
+        service = ContentPlanningService(db, tenant_id)
+        plan = await service.get_plan(plan_id)
+
+        if not plan:
+            raise HTTPException(status_code=404, detail="Content plan not found")
+
+        stmt = select(ContentItem).where(
+            ContentItem.id == content_id,
+            ContentItem.tenant_id == tenant_id
+        )
+        result = await db.execute(stmt)
+        content_item = result.scalar_one_or_none()
+
+        if not content_item:
+            raise HTTPException(status_code=404, detail="Content run not found")
+
+        metadata = content_item.content_metadata or {}
+        if metadata.get("generated_from_plan") != plan_id:
+            raise HTTPException(status_code=403, detail="Content run does not belong to this plan")
+
+        return templates.TemplateResponse(
+            "content_broadcaster/partials/view_content_modal.html",
+            {
+                "request": request,
+                "content": content_item,
+                "plan": plan,
+                "current_user": current_user
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Failed to load run content", plan_id=plan_id, tenant_id=tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to load run") from exc
+
+
+@router.post("/{plan_id}/runs/{run_id}/status", response_class=HTMLResponse)
+async def update_run_status(
+    request: Request,
+    plan_id: str,
+    run_id: str,
+    status: str = Form(...),
+    selected_run_id: Optional[str] = Form(None),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update a generation run's status (current/published) and refresh the run table."""
+    status_normalized = (status or "").lower()
+    service = ContentPlanningService(db, tenant_id)
+
+    try:
+        await service.set_run_status(plan_id, run_id, status_normalized)
+    except ValueError as exc:
+        await db.rollback()
+        return templates.TemplateResponse(
+            "components/ui/error_message.html",
+            {
+                "request": request,
+                "message": str(exc)
+            },
+            status_code=400
+        )
+
+    await db.commit()
+    plan = await service.get_plan(plan_id)
+    content_item = None
+    if plan.generated_content_item_id:
+        stmt = select(ContentItem).where(
+            ContentItem.id == plan.generated_content_item_id,
+            ContentItem.tenant_id == tenant_id
+        )
+        result = await db.execute(stmt)
+        content_item = result.scalar_one_or_none()
+
+    run_history, run_content_map = await _build_run_history_context(plan, db, tenant_id)
+    preferred = selected_run_id or run_id
+    selected_run, selected_content_item, resolved_selected_run_id = _resolve_selected_run(
+        plan,
+        run_history,
+        run_content_map,
+        preferred,
+        content_item
+    )
+
+    response = templates.TemplateResponse(
+        "content_broadcaster/partials/plan_run_detail_block.html",
+        {
+            "request": request,
+            "plan": plan,
+            "run_history": run_history,
+            "selected_run": selected_run,
+            "selected_run_id": resolved_selected_run_id,
+            "content": selected_content_item
+        }
+    )
+    response.headers["HX-Trigger"] = "showSuccess"
+    return response
+
+
+@router.get("/{plan_id}/runs/{run_id}/edit", response_class=HTMLResponse)
+async def edit_run_content_form(
+    request: Request,
+    plan_id: str,
+    run_id: str,
+    tenant_id: str = Depends(tenant_dependency),
+    current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Render modal form for editing run content."""
+    service = ContentPlanningService(db, tenant_id)
+    plan = await service.get_plan(plan_id)
+
+    run_history, run_content_map = await _build_run_history_context(plan, db, tenant_id)
+    run_entry = next(
+        (
+            entry for entry in run_history
+            if entry.get("run_id") == run_id or entry.get("content_item_id") == run_id
+        ),
+        None
+    )
+
+    if not run_entry:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    content_item = None
+    content_item_id = run_entry.get("content_item_id")
+    if content_item_id:
+        content_item = run_content_map.get(content_item_id)
+    if not content_item and plan.generated_content_item_id:
+        content_item = run_content_map.get(plan.generated_content_item_id)
+
+    if not content_item:
+        raise HTTPException(status_code=404, detail="Content item not found for this run")
+
+    return templates.TemplateResponse(
+        "content_broadcaster/partials/run_content_edit_form.html",
+        {
+            "request": request,
+            "plan": plan,
+            "run": run_entry,
+            "content_item": content_item,
+            "run_id": run_id
+        }
+    )
+
+
+@router.post("/{plan_id}/runs/{run_id}/edit", response_class=HTMLResponse)
+async def update_run_content(
+    request: Request,
+    plan_id: str,
+    run_id: str,
+    title: str = Form(...),
+    body: str = Form(...),
+    edit_notes: Optional[str] = Form(None),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Save human edits to run content."""
+    service = ContentPlanningService(db, tenant_id)
+    try:
+        await service.update_run_content(
+            plan_id=plan_id,
+            run_id=run_id,
+            title=title,
+            body=body,
+            edited_by_user=current_user,
+            edit_notes=edit_notes
+        )
+        await db.commit()
+    except ValueError as exc:
+        await db.rollback()
+        return templates.TemplateResponse(
+            "components/ui/error_message.html",
+            {"request": request, "message": str(exc)},
+            status_code=400
+        )
+
+    plan = await service.get_plan(plan_id)
+    run_history, run_content_map = await _build_run_history_context(plan, db, tenant_id)
+    fallback_content = None
+    if plan.generated_content_item_id:
+        fallback_content = run_content_map.get(plan.generated_content_item_id)
+
+    selected_run, selected_content_item, resolved_selected_run_id = _resolve_selected_run(
+        plan,
+        run_history,
+        run_content_map,
+        run_id,
+        fallback_content
+    )
+
+    response = templates.TemplateResponse(
+        "content_broadcaster/partials/plan_run_detail_block.html",
+        {
+            "request": request,
+            "plan": plan,
+            "run_history": run_history,
+            "selected_run": selected_run,
+            "selected_run_id": resolved_selected_run_id,
+            "content": selected_content_item
+        }
+    )
+    response.headers["HX-Trigger"] = "closeModal, showSuccess"
+    return response
+
+
 @router.delete("/{plan_id}/prompts/{prompt_id}")
 async def delete_prompt_override(
     plan_id: str,
@@ -702,10 +1056,13 @@ async def enqueue_content_plan_processing(
     except ValueError:
         raise HTTPException(status_code=404, detail="Content plan not found")
 
-    if plan.status not in {
-        ContentPlanStatus.PLANNED.value,
-        ContentPlanStatus.FAILED.value,
-    }:
+    in_progress_statuses = {
+        ContentPlanStatus.RESEARCHING.value,
+        ContentPlanStatus.GENERATING.value,
+        ContentPlanStatus.REFINING.value,
+    }
+
+    if plan.status in in_progress_statuses:
         raise HTTPException(
             status_code=400,
             detail=f"Plan is already being processed (current status: {plan.status})"
@@ -725,13 +1082,31 @@ async def enqueue_content_plan_processing(
         "name": getattr(current_user, "name", None),
     }
 
-    task_id = enqueue_content_plan_task(
-        plan_id=plan_id,
-        tenant_id=tenant_id,
-        triggered_by=triggered_by
-    )
+    task_id = None
 
-    headers = {"HX-Trigger": "refreshTable, showSuccess"}
+    async def enqueue_locally():
+        await _run_plan_generation_in_app(plan_id, tenant_id, triggered_by)
+
+    if USE_CELERY_FOR_PLANS:
+        try:
+            task_id = enqueue_content_plan_task(
+                plan_id=plan_id,
+                tenant_id=tenant_id,
+                triggered_by=triggered_by
+            )
+        except Exception:
+            logger.exception(
+                "Failed to enqueue plan via Celery, falling back to local execution",
+                plan_id=plan_id,
+                tenant_id=tenant_id
+            )
+            task_id = f"inproc-{plan_id}-{uuid4().hex}"
+            asyncio.create_task(enqueue_locally())
+    else:
+        task_id = f"inproc-{plan_id}-{uuid4().hex}"
+        asyncio.create_task(enqueue_locally())
+
+    headers = {"HX-Trigger": "showSuccess"}
     return JSONResponse(
         status_code=202,
         content={
@@ -900,3 +1275,46 @@ async def delete_content_plan(
         logger.exception("Failed to delete content plan", plan_id=plan_id, tenant_id=tenant_id)
         await db.rollback()
         raise HTTPException(status_code=500, detail="Failed to delete content plan")
+@router.get("/{plan_id}/runs/{run_id}/select", response_class=HTMLResponse)
+async def select_generation_run(
+    request: Request,
+    plan_id: str,
+    run_id: str,
+    tenant_id: str = Depends(tenant_dependency),
+    current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    service = ContentPlanningService(db, tenant_id)
+    plan = await service.get_plan(plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Content plan not found")
+
+    content_item = None
+    if plan.generated_content_item_id:
+        stmt = select(ContentItem).where(
+            ContentItem.id == plan.generated_content_item_id,
+            ContentItem.tenant_id == tenant_id
+        )
+        result = await db.execute(stmt)
+        content_item = result.scalar_one_or_none()
+
+    run_history, run_content_map = await _build_run_history_context(plan, db, tenant_id)
+    selected_run, selected_content_item, selected_run_id = _resolve_selected_run(
+        plan,
+        run_history,
+        run_content_map,
+        run_id,
+        content_item
+    )
+
+    return templates.TemplateResponse(
+        "content_broadcaster/partials/plan_run_detail_block.html",
+        {
+            "request": request,
+            "plan": plan,
+            "run_history": run_history,
+            "selected_run": selected_run,
+            "selected_run_id": selected_run_id,
+            "content": selected_content_item
+        }
+    )

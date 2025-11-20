@@ -160,15 +160,10 @@ class PowerShellExecutorService:
                 logger.error("Failed to decode certificate PFX", error=str(e))
                 raise RuntimeError(f"Failed to process certificate: {str(e)}")
 
-        # STAGE 1 TEST: Force has_auth_params to False to test PowerShell execution path
-        # This ensures we don't pass ANY auth params to PowerShell - it will use hardcoded defaults
-        # TODO: Remove after Stage 1 test - restore: has_auth_params = bool(auth_params)
-        has_auth_params = False  # TEMPORARY: Skip auth params completely
-
-        # ORIGINAL CODE (commented for Stage 1 test):
-        # has_auth_params = bool(auth_params)
-        # if has_auth_params:
-        #     auth_path.write_text(json.dumps(auth_params), encoding="utf-8")
+        # Write auth params to JSON file if provided
+        has_auth_params = bool(auth_params)
+        if has_auth_params:
+            auth_path.write_text(json.dumps(auth_params), encoding="utf-8")
 
         lines = [
             "$ErrorActionPreference = 'Stop'",

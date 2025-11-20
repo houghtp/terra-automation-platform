@@ -9,12 +9,13 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, or_, func
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
 
 from app.features.core.enhanced_base_service import BaseService
 from app.features.core.sqlalchemy_imports import get_logger
 from app.features.core.audit_mixin import AuditContext
-from ..models import ContentPlan, ContentPlanStatus
+from ..models import ContentPlan, ContentPlanStatus, ContentItem
 
 logger = get_logger(__name__)
 
@@ -339,6 +340,34 @@ class ContentPlanningService(BaseService[ContentPlan]):
         """
         plan = await self.get_plan(plan_id)
 
+        plan.generated_content_item_id = None
+        plan.latest_seo_score = None
+        generation_meta = plan.generation_metadata or {}
+        run_history = generation_meta.get("run_history", [])
+        for entry in run_history:
+            content_item_id = entry.get("content_item_id")
+            if not content_item_id:
+                continue
+
+            content_item = await self.db.get(ContentItem, content_item_id)
+            if not content_item:
+                continue
+
+            metadata = content_item.content_metadata or {}
+            status = metadata.get("plan_run_status")
+
+            if status == "published":
+                metadata.pop("generated_from_plan", None)
+                metadata.pop("plan_run_id", None)
+                metadata.pop("plan_run_parameters", None)
+                metadata.pop("plan_run_status", None)
+                content_item.content_metadata = metadata
+                content_item.updated_at = datetime.now()
+            else:
+                await self.db.delete(content_item)
+
+        plan.generation_metadata = {}
+
         await self.db.delete(plan)
         await self.db.flush()
 
@@ -499,3 +528,184 @@ class ContentPlanningService(BaseService[ContentPlan]):
         if metadata is None:
             metadata = {}
         return await self.update_status(plan_id, new_status, **metadata)
+
+    async def update_content_item_run_metadata(
+        self,
+        content_item_id: Optional[str],
+        plan_id: str,
+        run_id: Optional[str],
+        status: str,
+        parameters: Optional[Dict[str, Any]] = None,
+        flush: bool = False
+    ) -> Optional[ContentItem]:
+        """Ensure a content item tracks its plan/run association."""
+        if not content_item_id:
+            return None
+
+        content_item = await self.db.get(ContentItem, content_item_id)
+        if not content_item:
+            return None
+
+        metadata = content_item.content_metadata or {}
+        metadata["generated_from_plan"] = plan_id
+        if run_id:
+            metadata["plan_run_id"] = run_id
+        metadata["plan_run_status"] = status
+        if parameters:
+            metadata["plan_run_parameters"] = parameters
+
+        content_item.content_metadata = metadata
+        content_item.updated_at = datetime.now()
+
+        if flush:
+            await self.db.flush()
+
+        return content_item
+
+    async def set_run_status(
+        self,
+        plan_id: str,
+        run_id: str,
+        new_status: str
+    ) -> Dict[str, Any]:
+        """Update the status of a specific run and archive the rest."""
+        allowed_statuses = {"current", "published"}
+        if new_status not in allowed_statuses:
+            raise ValueError("Invalid run status")
+
+        plan = await self.get_plan(plan_id)
+        generation_meta = plan.generation_metadata or {}
+        history = list(generation_meta.get("run_history", []))
+
+        target = None
+        for entry in history:
+            entry_run_id = entry.get("run_id") or entry.get("content_item_id")
+            if entry_run_id == run_id or entry.get("run_id") == run_id:
+                target = entry
+                break
+
+        if not target:
+            raise ValueError("Run not found")
+
+        for entry in history:
+            if entry is target:
+                entry_status = new_status
+            else:
+                entry_status = "archived"
+            entry["status"] = entry_status
+            await self.update_content_item_run_metadata(
+                entry.get("content_item_id"),
+                plan_id,
+                entry.get("run_id"),
+                entry_status,
+                entry.get("parameters"),
+                flush=False
+            )
+
+        generation_meta["run_history"] = history
+        generation_meta["current_run_id"] = target.get("run_id")
+        if new_status == "published":
+            generation_meta["published_run_id"] = target.get("run_id")
+        else:
+            if generation_meta.get("published_run_id") == target.get("run_id"):
+                generation_meta.pop("published_run_id", None)
+
+        plan.generation_metadata = dict(generation_meta)
+        flag_modified(plan, "generation_metadata")
+        if target.get("content_item_id"):
+            plan.generated_content_item_id = target["content_item_id"]
+        if target.get("seo_score") is not None:
+            plan.latest_seo_score = target["seo_score"]
+        if new_status == "published":
+            plan.status = ContentPlanStatus.APPROVED.value
+
+        plan.updated_at = datetime.now()
+        await self.db.flush()
+
+        self.log_operation("content_plan_run_status_updated", {
+            "plan_id": plan_id,
+            "run_id": run_id,
+            "status": new_status
+        })
+
+        return target
+
+    async def update_run_content(
+        self,
+        plan_id: str,
+        run_id: str,
+        title: str,
+        body: str,
+        edited_by_user=None,
+        edit_notes: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Update the content item tied to a run and flag manual edits."""
+        if not title:
+            raise ValueError("Title cannot be empty")
+        if not body:
+            raise ValueError("Content body cannot be empty")
+
+        plan = await self.get_plan(plan_id)
+        generation_meta = plan.generation_metadata or {}
+        history = list(generation_meta.get("run_history", []))
+
+        target = None
+        for entry in history:
+            entry_run_id = entry.get("run_id") or entry.get("content_item_id")
+            if entry_run_id == run_id or entry.get("run_id") == run_id:
+                target = entry
+                break
+
+        if not target:
+            raise ValueError("Run not found")
+
+        content_item_id = target.get("content_item_id") or plan.generated_content_item_id
+        if not content_item_id:
+            raise ValueError("No content item associated with this run")
+
+        content_item = await self.db.get(ContentItem, content_item_id)
+        if not content_item:
+            raise ValueError("Content item not found")
+
+        audit_ctx = AuditContext.from_user(edited_by_user)
+        timestamp = datetime.now().isoformat()
+
+        content_item.title = title.strip()
+        content_item.body = body
+        content_item.updated_at = datetime.now()
+        if audit_ctx:
+            content_item.set_updated_by(audit_ctx.user_email, audit_ctx.user_name)
+
+        metadata = content_item.content_metadata or {}
+        metadata.update({
+            "human_edited": True,
+            "edited_by": audit_ctx.user_name,
+            "edited_by_email": audit_ctx.user_email,
+            "edited_at": timestamp,
+            "edit_run_id": run_id
+        })
+        if edit_notes:
+            metadata["edit_notes"] = edit_notes
+        content_item.content_metadata = metadata
+
+        target["human_edited"] = True
+        target["edited_by"] = audit_ctx.user_name
+        target["edited_by_email"] = audit_ctx.user_email
+        target["edited_at"] = timestamp
+        if edit_notes:
+            target["edit_notes"] = edit_notes
+
+        generation_meta["run_history"] = history
+        plan.generation_metadata = dict(generation_meta)
+        flag_modified(plan, "generation_metadata")
+        plan.updated_at = datetime.now()
+
+        await self.db.flush()
+
+        self.log_operation("content_plan_run_edited", {
+            "plan_id": plan_id,
+            "run_id": run_id,
+            "edited_by": audit_ctx.user_email
+        })
+
+        return target

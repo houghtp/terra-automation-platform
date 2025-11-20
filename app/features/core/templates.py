@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi.templating import Jinja2Templates
 from typing import List
 from markupsafe import Markup
+from markdown import markdown as render_md
 
 def discover_template_directories() -> List[str]:
     """
@@ -125,3 +126,14 @@ templates = Jinja2Templates(directory=TEMPLATE_DIRS)
 
 # Register custom filters
 templates.env.filters['format_procedure'] = format_procedure
+
+
+def render_markdown(text: str) -> Markup:
+    """Render markdown content to safe HTML."""
+    if not text:
+        return Markup("")
+    html = render_md(text, extensions=["extra", "sane_lists", "toc"])
+    return Markup(html)
+
+
+templates.env.filters['markdown'] = render_markdown
