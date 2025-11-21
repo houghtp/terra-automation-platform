@@ -194,6 +194,15 @@
                 <i class="ti ti-edit me-1"></i>
                 Edit Content
             </button>
+            <button
+                class="btn btn-outline-secondary btn-sm"
+                hx-post="/features/content-broadcaster/planning/{{ plan.id }}/runs/{{ selected_run_id }}/validate"
+                hx-target="#plan-detail-container"
+                hx-swap="innerHTML"
+                hx-disabled-elt="this">
+                <i class="ti ti-reload me-1"></i>
+                Re-run SEO Analysis
+            </button>
             {% endif %}
         </div>
     </div>

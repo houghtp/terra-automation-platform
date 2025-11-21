@@ -153,5 +153,16 @@ function editRunContent(planId, runId) {
         }
     });
 }
+
+function editRunContent(planId, runId) {
+    htmx.ajax('GET', `/features/content-broadcaster/planning/${planId}/runs/${runId}/edit`, {
+        target: '#modal-body',
+        swap: 'innerHTML'
+    }).then(() => {
+        if (typeof window.showModal === 'function') {
+            window.showModal();
+        }
+    });
+}
 </script>
 {% endblock %}

@@ -16,6 +16,7 @@ from app.features.core.enhanced_base_service import BaseService
 from app.features.core.sqlalchemy_imports import get_logger
 from app.features.core.audit_mixin import AuditContext
 from ..models import ContentPlan, ContentPlanStatus, ContentItem
+from .ai_generation_service import AIGenerationService
 
 logger = get_logger(__name__)
 
@@ -629,6 +630,171 @@ class ContentPlanningService(BaseService[ContentPlan]):
         })
 
         return target
+
+    async def update_run_content(
+        self,
+        plan_id: str,
+        run_id: str,
+        title: str,
+        body: str,
+        edited_by_user=None,
+        edit_notes: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Update a run's content and flag human edits."""
+        if not title:
+            raise ValueError("Title cannot be empty")
+        if not body:
+            raise ValueError("Content body cannot be empty")
+
+        plan = await self.get_plan(plan_id)
+        generation_meta = plan.generation_metadata or {}
+        history = list(generation_meta.get("run_history", []))
+
+        target = None
+        for entry in history:
+            entry_run_id = entry.get("run_id") or entry.get("content_item_id")
+            if entry_run_id == run_id or entry.get("run_id") == run_id:
+                target = entry
+                break
+
+        if not target:
+            raise ValueError("Run not found")
+
+        content_item_id = target.get("content_item_id") or plan.generated_content_item_id
+        if not content_item_id:
+            raise ValueError("No content item associated with this run")
+
+        content_item = await self.db.get(ContentItem, content_item_id)
+        if not content_item:
+            raise ValueError("Content item not found")
+
+        audit_ctx = AuditContext.from_user(edited_by_user)
+        timestamp = datetime.now().isoformat()
+
+        content_item.title = title.strip()
+        content_item.body = body
+        content_item.updated_at = datetime.now()
+        if audit_ctx:
+            content_item.set_updated_by(audit_ctx.user_email, audit_ctx.user_name)
+
+        metadata = content_item.content_metadata or {}
+        metadata.update({
+            "human_edited": True,
+            "edited_by": audit_ctx.user_name,
+            "edited_by_email": audit_ctx.user_email,
+            "edited_at": timestamp,
+            "edit_run_id": run_id
+        })
+        if edit_notes:
+            metadata["edit_notes"] = edit_notes
+        content_item.content_metadata = metadata
+
+        target["human_edited"] = True
+        target["edited_by"] = audit_ctx.user_name
+        target["edited_by_email"] = audit_ctx.user_email
+        target["edited_at"] = timestamp
+        if edit_notes:
+            target["edit_notes"] = edit_notes
+
+        generation_meta["run_history"] = history
+        plan.generation_metadata = dict(generation_meta)
+        flag_modified(plan, "generation_metadata")
+        plan.updated_at = datetime.now()
+
+        await self.db.flush()
+
+        self.log_operation("content_plan_run_edited", {
+            "plan_id": plan_id,
+            "run_id": run_id,
+            "edited_by": audit_ctx.user_email
+        })
+
+        return target
+
+    async def rerun_seo_validation(
+        self,
+        plan_id: str,
+        run_id: str,
+        openai_api_key: str
+    ) -> Dict[str, Any]:
+        """Re-run SEO validation for a specific run."""
+        plan = await self.get_plan(plan_id)
+        generation_meta = plan.generation_metadata or {}
+        history = list(generation_meta.get("run_history", []))
+
+        target = None
+        for entry in history:
+            entry_run_id = entry.get("run_id") or entry.get("content_item_id")
+            if entry_run_id == run_id or entry.get("run_id") == run_id:
+                target = entry
+                break
+
+        if not target:
+            raise ValueError("Run not found")
+
+        content_item_id = target.get("content_item_id") or plan.generated_content_item_id
+        if not content_item_id:
+            raise ValueError("No content item associated with this run")
+
+        content_item = await self.db.get(ContentItem, content_item_id)
+        if not content_item:
+            raise ValueError("Content item not found")
+
+        generation_service = AIGenerationService(self.db, self.tenant_id)
+        validation_result = await generation_service.validate_content(
+            title=content_item.title or plan.title,
+            content=content_item.body,
+            openai_api_key=openai_api_key,
+            prompt_settings=plan.prompt_settings or {}
+        )
+
+        sub_scores = validation_result.get("sub_scores", {})
+        metadata = validation_result.get("metadata", {})
+        issues = validation_result.get("issues", [])
+        recommendations = validation_result.get("recommendations", [])
+        strengths = validation_result.get("strengths", [])
+
+        target["seo_score"] = validation_result.get("score", 0)
+        target["sub_scores"] = sub_scores
+        target["validation_metadata"] = metadata
+        target["issues"] = issues
+        target["recommendations"] = recommendations
+        target["strengths"] = strengths
+
+        refinement_history = list(target.get("refinement_history") or [])
+        refinement_history.append({
+            "iteration": len(refinement_history) + 1,
+            "score": validation_result.get("score", 0),
+            "status": validation_result.get("status"),
+            "issues": issues,
+            "recommendations": recommendations,
+            "refined_at": datetime.now().isoformat(),
+            "manual": True
+        })
+        target["refinement_history"] = refinement_history
+        target["iterations"] = len(refinement_history)
+
+        generation_meta["run_history"] = history
+        plan.generation_metadata = dict(generation_meta)
+        flag_modified(plan, "generation_metadata")
+
+        current_run_id = generation_meta.get("current_run_id")
+        target_identifier = target.get("run_id") or target.get("content_item_id")
+        if current_run_id and current_run_id == target_identifier:
+            plan.latest_seo_score = validation_result.get("score", 0)
+        elif plan.generated_content_item_id == content_item_id:
+            plan.latest_seo_score = validation_result.get("score", 0)
+
+        plan.updated_at = datetime.now()
+        await self.db.flush()
+
+        self.log_operation("content_plan_run_validated", {
+            "plan_id": plan_id,
+            "run_id": run_id,
+            "score": validation_result.get("score", 0)
+        })
+
+        return validation_result
 
     async def update_run_content(
         self,

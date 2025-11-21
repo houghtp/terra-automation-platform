@@ -196,6 +196,35 @@ def _resolve_selected_run(
 
     return selected, selected_content, selected_run_id
 
+
+async def _get_openai_api_key(
+    db: AsyncSession,
+    tenant_id: str,
+    current_user
+) -> str:
+    """Fetch OpenAI API key from Secrets Management."""
+    secrets_service = SecretsManagementService(db, tenant_id)
+    openai_secret = await secrets_service.get_secret_by_name("OpenAI API Key")
+
+    if not openai_secret:
+        raise HTTPException(
+            status_code=400,
+            detail="OpenAI API key not configured. Please add 'OpenAI_API_Key' in Secrets Management."
+        )
+
+    secret_value = await secrets_service.get_secret_value(
+        secret_id=openai_secret.id,
+        accessed_by_user=current_user
+    )
+
+    if not secret_value:
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to retrieve OpenAI API key value."
+        )
+
+    return secret_value.value
+
 # ==================== Routes ====================
 
 @router.post("/create")
@@ -904,6 +933,166 @@ async def edit_run_content_form(
     current_user = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    """Render modal form to edit run content."""
+    service = ContentPlanningService(db, tenant_id)
+    plan = await service.get_plan(plan_id)
+
+    run_history, run_content_map = await _build_run_history_context(plan, db, tenant_id)
+    run_entry = next(
+        (
+            entry for entry in run_history
+            if entry.get("run_id") == run_id or entry.get("content_item_id") == run_id
+        ),
+        None
+    )
+
+    if not run_entry:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    content_item = None
+    content_item_id = run_entry.get("content_item_id")
+    if content_item_id:
+        content_item = run_content_map.get(content_item_id)
+    if not content_item and plan.generated_content_item_id:
+        content_item = run_content_map.get(plan.generated_content_item_id)
+
+    if not content_item:
+        raise HTTPException(status_code=404, detail="Content item not found for this run")
+
+    return templates.TemplateResponse(
+        "content_broadcaster/partials/run_content_edit_form.html",
+        {
+            "request": request,
+            "plan": plan,
+            "run": run_entry,
+            "run_id": run_id,
+            "content_item": content_item
+        }
+    )
+
+
+@router.post("/{plan_id}/runs/{run_id}/edit", response_class=HTMLResponse)
+async def update_run_content(
+    request: Request,
+    plan_id: str,
+    run_id: str,
+    title: str = Form(...),
+    body: str = Form(...),
+    edit_notes: Optional[str] = Form(None),
+    tenant_id: str = Depends(tenant_dependency),
+    current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Persist manual edits to run content."""
+    service = ContentPlanningService(db, tenant_id)
+    try:
+        await service.update_run_content(
+            plan_id=plan_id,
+            run_id=run_id,
+            title=title,
+            body=body,
+            edited_by_user=current_user,
+            edit_notes=edit_notes
+        )
+        await db.commit()
+    except ValueError as exc:
+        await db.rollback()
+        return templates.TemplateResponse(
+            "components/ui/error_message.html",
+            {"request": request, "message": str(exc)},
+            status_code=400
+        )
+
+    plan = await service.get_plan(plan_id)
+    run_history, run_content_map = await _build_run_history_context(plan, db, tenant_id)
+    fallback_content = None
+    if plan.generated_content_item_id:
+        fallback_content = run_content_map.get(plan.generated_content_item_id)
+
+    selected_run, selected_content_item, resolved_selected_run_id = _resolve_selected_run(
+        plan,
+        run_history,
+        run_content_map,
+        run_id,
+        fallback_content
+    )
+
+    response = templates.TemplateResponse(
+        "content_broadcaster/partials/plan_run_detail_block.html",
+        {
+            "request": request,
+            "plan": plan,
+            "run_history": run_history,
+            "selected_run": selected_run,
+            "selected_run_id": resolved_selected_run_id,
+            "content": selected_content_item
+        }
+    )
+    response.headers["HX-Trigger"] = "closeModal, showSuccess"
+    return response
+
+
+@router.post("/{plan_id}/runs/{run_id}/validate", response_class=HTMLResponse)
+async def rerun_seo_validation(
+    request: Request,
+    plan_id: str,
+    run_id: str,
+    tenant_id: str = Depends(tenant_dependency),
+    current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Re-run SEO validation for manually edited content."""
+    openai_api_key = await _get_openai_api_key(db, tenant_id, current_user)
+    service = ContentPlanningService(db, tenant_id)
+    try:
+        await service.rerun_seo_validation(plan_id, run_id, openai_api_key)
+        await db.commit()
+    except ValueError as exc:
+        await db.rollback()
+        return templates.TemplateResponse(
+            "components/ui/error_message.html",
+            {"request": request, "message": str(exc)},
+            status_code=400
+        )
+
+    plan = await service.get_plan(plan_id)
+    run_history, run_content_map = await _build_run_history_context(plan, db, tenant_id)
+    fallback_content = None
+    if plan.generated_content_item_id:
+        fallback_content = run_content_map.get(plan.generated_content_item_id)
+
+    selected_run, selected_content_item, resolved_selected_run_id = _resolve_selected_run(
+        plan,
+        run_history,
+        run_content_map,
+        run_id,
+        fallback_content
+    )
+
+    response = templates.TemplateResponse(
+        "content_broadcaster/partials/plan_run_detail_block.html",
+        {
+            "request": request,
+            "plan": plan,
+            "run_history": run_history,
+            "selected_run": selected_run,
+            "selected_run_id": resolved_selected_run_id,
+            "content": selected_content_item
+        }
+    )
+    response.headers["HX-Trigger"] = "showSuccess"
+    return response
+
+
+@router.get("/{plan_id}/runs/{run_id}/edit", response_class=HTMLResponse)
+async def edit_run_content_form(
+    request: Request,
+    plan_id: str,
+    run_id: str,
+    tenant_id: str = Depends(tenant_dependency),
+    current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
     """Render modal form for editing run content."""
     service = ContentPlanningService(db, tenant_id)
     plan = await service.get_plan(plan_id)
@@ -1148,31 +1337,7 @@ async def process_content_plan(
     )
 
     try:
-        # Get API keys from secrets
-        secrets_service = SecretsManagementService(db, tenant_id)
-
-        # Step 1: Get secret metadata by name
-        openai_secret = await secrets_service.get_secret_by_name("OpenAI API Key")
-
-        if not openai_secret:
-            raise HTTPException(
-                status_code=400,
-                detail="OpenAI API key not configured. Please add 'OpenAI_API_Key' in Secrets Management."
-            )
-
-        # Step 2: Get the actual decrypted value
-        secret_value = await secrets_service.get_secret_value(
-            secret_id=openai_secret.id,
-            accessed_by_user=current_user
-        )
-
-        if not secret_value:
-            raise HTTPException(
-                status_code=400,
-                detail="Failed to retrieve OpenAI API key value."
-            )
-
-        openai_api_key = secret_value.value
+        openai_api_key = await _get_openai_api_key(db, tenant_id, current_user)
 
         # Process the plan
         # Note: Research phase will fetch scraping API keys internally from Secrets Management
