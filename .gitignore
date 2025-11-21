@@ -55,8 +55,30 @@ coverage.xml
 # Project custom
 app/static/js/site.js.map
 
-# Ignore secrets
+# Ignore secrets and credentials
 secrets.json
+**/app-credentials.json
+**/*credentials*.json
+**/*secrets*.json
+**/*.env.local
+**/*.env.*.local
+.env.local
+.env.*.local
+config/secrets/
+app/config/secrets/
+
+# Azure AD / M365 credentials
+**/*client_secret*
+**/*client-secret*
+**/service-principal*.json
+**/azure-credentials*.json
+**/m365-credentials*.json
+
+# Certificate files (should be managed via environment variables)
+**/*.pfx
+**/*.p12
+**/*.pem.local
+**/*.key.local
 
 # Ignore local dev files
 local_settings.py
