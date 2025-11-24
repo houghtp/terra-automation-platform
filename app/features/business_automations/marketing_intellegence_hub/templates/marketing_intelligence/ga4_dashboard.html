@@ -151,6 +151,34 @@
     ></chart-widget>
   </div>
 </div>
+<div class="row row-cards mt-3">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Top channels (last 30d)</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-vcenter">
+          <thead><tr><th>Channel</th><th>Sessions</th><th>Conversions</th></tr></thead>
+          <tbody id="ga4-top-channels-{{ connection.id }}"><tr><td colspan="3" class="text-muted">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Top pages (last 30d)</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-vcenter">
+          <thead><tr><th>Page</th><th>Sessions</th><th>Conversions</th></tr></thead>
+          <tbody id="ga4-top-pages-{{ connection.id }}"><tr><td colspan="3" class="text-muted">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
 
 {% endblock %}
 
@@ -206,8 +234,37 @@
     const start = new Date(end.getTime() - (days - 1) * GA4_MS_DAY);
     setGa4Range(connId, formatDate(start), formatDate(end), days);
   }
+  function loadTopTables(connId) {
+    const end = new Date();
+    const start = new Date(end.getTime() - 29 * GA4_MS_DAY);
+    fetch(`/features/marketing-intelligence/ga4/connections/${connId}/top_channels?start_date=${formatDate(start)}&end_date=${formatDate(end)}`)
+      .then(r => r.json())
+      .then(data => {
+        const body = document.getElementById(`ga4-top-channels-${connId}`);
+        body.innerHTML = '';
+        (data.items || []).forEach(item => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${item.name}</td><td>${(item.sessions ?? '—')}</td><td>${(item.conversions ?? '—')}</td>`;
+          body.appendChild(tr);
+        });
+        if (!data.items || data.items.length === 0) body.innerHTML = '<tr><td colspan="3" class="text-muted">No data</td></tr>';
+      });
+    fetch(`/features/marketing-intelligence/ga4/connections/${connId}/top_pages?start_date=${formatDate(start)}&end_date=${formatDate(end)}`)
+      .then(r => r.json())
+      .then(data => {
+        const body = document.getElementById(`ga4-top-pages-${connId}`);
+        body.innerHTML = '';
+        (data.items || []).forEach(item => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${item.name}</td><td>${(item.sessions ?? '—')}</td><td>${(item.conversions ?? '—')}</td>`;
+          body.appendChild(tr);
+        });
+        if (!data.items || data.items.length === 0) body.innerHTML = '<tr><td colspan="3" class="text-muted">No data</td></tr>';
+      });
+  }
   document.addEventListener('DOMContentLoaded', () => {
     setGa4Preset('{{ connection.id }}', 30);
+    loadTopTables('{{ connection.id }}');
   });
 </script>
 {% endblock %}

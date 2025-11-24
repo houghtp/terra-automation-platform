@@ -17,7 +17,24 @@ except ModuleNotFoundError:  # pragma: no cover - optional dependency guard for 
     class RefreshError(Exception):
         """Fallback when google-auth is not installed."""
 
+try:
+    from google.analytics.data_v1beta.types import RunReportRequest, DateRange, Dimension, Metric
+except ModuleNotFoundError:  # pragma: no cover
+    RunReportRequest = DateRange = Dimension = Metric = None  # type: ignore
+
 router = APIRouter(prefix="/ga4/connections", tags=["ga4-connections"])
+
+def _parse_date(val: str | None, fallback: date) -> date:
+    if not val:
+        return fallback
+    val = val.strip()
+    try:
+        return date.fromisoformat(val)
+    except ValueError:
+        digits = "".join(ch for ch in val if ch.isdigit())
+        if len(digits) == 8:
+            return date.fromisoformat(f"{digits[0:4]}-{digits[4:6]}-{digits[6:8]}")
+        raise
 
 
 @router.get("/", response_model=List[Ga4ConnectionResponse])
@@ -75,19 +92,6 @@ async def sync_connection(
     """
     hx = request.headers.get("HX-Request") if request else None
 
-    def parse_date(val: str | None, fallback: date) -> date:
-        if not val:
-            return fallback
-        val = val.strip()
-        try:
-            return date.fromisoformat(val)
-        except ValueError:
-            # Accept YYYYMMDD
-            digits = "".join(ch for ch in val if ch.isdigit())
-            if len(digits) == 8:
-                return date.fromisoformat(f"{digits[0:4]}-{digits[4:6]}-{digits[6:8]}")
-            raise
-
     try:
         connection = await connection_service.get_connection(connection_id)
         if not connection:
@@ -106,8 +110,8 @@ async def sync_connection(
         )
 
         # Parse dates from query strings (supports YYYY-MM-DD and YYYYMMDD)
-        end_date = parse_date(end_date, date.today())
-        start_date = parse_date(start_date, end_date - timedelta(days=6))
+        end_date = _parse_date(end_date, date.today())
+        start_date = _parse_date(start_date, end_date - timedelta(days=6))
 
         metrics = await client.fetch_daily_metrics(connection.property_id, start_date, end_date)
         # Persist refreshed access token/expiry if Google rotated it.
@@ -185,6 +189,100 @@ async def sync_connection(
                 status_code=200,
             )
         raise HTTPException(status_code=400, detail=f"Failed to sync GA4 data: {detail}")
+
+
+@router.get("/{connection_id}/top_channels")
+async def top_channels(
+    connection_id: str,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    limit: int = 5,
+    connection_service: Ga4ConnectionCrudService = Depends(get_connection_service),
+    current_user=Depends(get_current_user),
+):
+    connection = await connection_service.get_connection(connection_id)
+    if not connection:
+        raise HTTPException(status_code=404, detail="Connection not found")
+    tokens = await connection_service.get_tokens(connection_id)
+    if not tokens or not tokens.get("refresh_token"):
+        raise HTTPException(status_code=400, detail="No tokens stored for this connection")
+    creds = await load_ga4_credentials(connection_service.db, accessed_by_user=current_user)
+    client = Ga4Client.from_tokens(
+        access_token=tokens.get("access_token"),
+        refresh_token=tokens["refresh_token"],
+        client_id=creds["client_id"],
+        client_secret=creds["client_secret"],
+    )
+    if not RunReportRequest:
+        raise HTTPException(status_code=500, detail="GA4 SDK not available")
+    end = _parse_date(end_date, date.today())
+    start = _parse_date(start_date, end - timedelta(days=29))
+    req = RunReportRequest(
+        property=connection.property_id,
+        date_ranges=[DateRange(start_date=start.isoformat(), end_date=end.isoformat())],
+        dimensions=[Dimension(name="sessionDefaultChannelGroup")],
+        metrics=[Metric(name="sessions"), Metric(name="conversions")],
+        limit=limit,
+        order_bys=[
+            {"desc": True, "metric": {"metric_name": "conversions"}},
+            {"desc": True, "metric": {"metric_name": "sessions"}},
+        ],
+    )
+    resp = client.client.run_report(req)
+    items = []
+    for row in resp.rows:
+        name = row.dimension_values[0].value or "Unassigned"
+        sessions = float(row.metric_values[0].value) if row.metric_values[0].value else 0.0
+        conv = float(row.metric_values[1].value) if row.metric_values[1].value else 0.0
+        items.append({"name": name, "sessions": sessions, "conversions": conv})
+    return {"items": items}
+
+
+@router.get("/{connection_id}/top_pages")
+async def top_pages(
+    connection_id: str,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    limit: int = 5,
+    connection_service: Ga4ConnectionCrudService = Depends(get_connection_service),
+    current_user=Depends(get_current_user),
+):
+    connection = await connection_service.get_connection(connection_id)
+    if not connection:
+        raise HTTPException(status_code=404, detail="Connection not found")
+    tokens = await connection_service.get_tokens(connection_id)
+    if not tokens or not tokens.get("refresh_token"):
+        raise HTTPException(status_code=400, detail="No tokens stored for this connection")
+    creds = await load_ga4_credentials(connection_service.db, accessed_by_user=current_user)
+    client = Ga4Client.from_tokens(
+        access_token=tokens.get("access_token"),
+        refresh_token=tokens["refresh_token"],
+        client_id=creds["client_id"],
+        client_secret=creds["client_secret"],
+    )
+    if not RunReportRequest:
+        raise HTTPException(status_code=500, detail="GA4 SDK not available")
+    end = _parse_date(end_date, date.today())
+    start = _parse_date(start_date, end - timedelta(days=29))
+    req = RunReportRequest(
+        property=connection.property_id,
+        date_ranges=[DateRange(start_date=start.isoformat(), end_date=end.isoformat())],
+        dimensions=[Dimension(name="pageTitle")],
+        metrics=[Metric(name="sessions"), Metric(name="conversions")],
+        limit=limit,
+        order_bys=[
+            {"desc": True, "metric": {"metric_name": "conversions"}},
+            {"desc": True, "metric": {"metric_name": "sessions"}},
+        ],
+    )
+    resp = client.client.run_report(req)
+    items = []
+    for row in resp.rows:
+        title = row.dimension_values[0].value or "Untitled page"
+        sessions = float(row.metric_values[0].value) if row.metric_values[0].value else 0.0
+        conv = float(row.metric_values[1].value) if row.metric_values[1].value else 0.0
+        items.append({"name": title, "sessions": sessions, "conversions": conv})
+    return {"items": items}
 
 
 @router.post("/{connection_id}/client_label", include_in_schema=False)
