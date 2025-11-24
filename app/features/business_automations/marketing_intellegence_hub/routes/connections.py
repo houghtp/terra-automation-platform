@@ -228,19 +228,29 @@ async def top_channels(
             {"desc": True, "metric": {"metric_name": "sessions"}},
         ],
     )
-    resp = client.client.run_report(req)
-    items = []
-    for row in resp.rows:
-        name = row.dimension_values[0].value or "Unassigned"
-        sessions = float(row.metric_values[0].value) if row.metric_values[0].value else 0.0
-        conv = float(row.metric_values[1].value) if row.metric_values[1].value else 0.0
-        items.append({"name": name, "sessions": sessions, "conversions": conv})
-    if request.headers.get("HX-Request"):
-        return templates.TemplateResponse(
-            "marketing_intelligence/partials/top_channels_rows.html",
-            {"request": request, "items": items},
-        )
-    return {"items": items}
+    try:
+        resp = client.client.run_report(req)
+        items = []
+        for row in resp.rows:
+            name = row.dimension_values[0].value or "Unassigned"
+            sessions = float(row.metric_values[0].value) if row.metric_values[0].value else 0.0
+            conv = float(row.metric_values[1].value) if row.metric_values[1].value else 0.0
+            items.append({"name": name, "sessions": sessions, "conversions": conv})
+        if request.headers.get("HX-Request"):
+            return templates.TemplateResponse(
+                "marketing_intelligence/partials/top_channels_rows.html",
+                {"request": request, "items": items},
+            )
+        return {"items": items}
+    except Exception as exc:
+        msg = "Need GA4 reauth to fetch channels."
+        if request.headers.get("HX-Request"):
+            return templates.TemplateResponse(
+                "marketing_intelligence/partials/top_channels_rows.html",
+                {"request": request, "items": [], "error": msg},
+                status_code=200,
+            )
+        raise HTTPException(status_code=401, detail=msg)
 
 
 @router.get("/{connection_id}/top_pages")
@@ -280,19 +290,29 @@ async def top_pages(
             {"desc": True, "metric": {"metric_name": "sessions"}},
         ],
     )
-    resp = client.client.run_report(req)
-    items = []
-    for row in resp.rows:
-        title = row.dimension_values[0].value or "Untitled page"
-        sessions = float(row.metric_values[0].value) if row.metric_values[0].value else 0.0
-        conv = float(row.metric_values[1].value) if row.metric_values[1].value else 0.0
-        items.append({"name": title, "sessions": sessions, "conversions": conv})
-    if request.headers.get("HX-Request"):
-        return templates.TemplateResponse(
-            "marketing_intelligence/partials/top_pages_rows.html",
-            {"request": request, "items": items},
-        )
-    return {"items": items}
+    try:
+        resp = client.client.run_report(req)
+        items = []
+        for row in resp.rows:
+            title = row.dimension_values[0].value or "Untitled page"
+            sessions = float(row.metric_values[0].value) if row.metric_values[0].value else 0.0
+            conv = float(row.metric_values[1].value) if row.metric_values[1].value else 0.0
+            items.append({"name": title, "sessions": sessions, "conversions": conv})
+        if request.headers.get("HX-Request"):
+            return templates.TemplateResponse(
+                "marketing_intelligence/partials/top_pages_rows.html",
+                {"request": request, "items": items},
+            )
+        return {"items": items}
+    except Exception:
+        msg = "Need GA4 reauth to fetch pages."
+        if request.headers.get("HX-Request"):
+            return templates.TemplateResponse(
+                "marketing_intelligence/partials/top_pages_rows.html",
+                {"request": request, "items": [], "error": msg},
+                status_code=200,
+            )
+        raise HTTPException(status_code=401, detail=msg)
 
 
 @router.post("/{connection_id}/client_label", include_in_schema=False)
