@@ -52,8 +52,8 @@
                 hx-post="/features/marketing-intelligence/ga4/connections/{{ conn.id }}/sync?start_date={{ last_30_start.strftime('%Y-%m-%d') }}&end_date={{ today.strftime('%Y-%m-%d') }}"
                 hx-target="#sync-result-{{ conn.id }}"
                 hx-swap="innerHTML"
-                hx-on="htmx:beforeRequest: this.classList.add('disabled'); htmx.find('#ga4-sync-30-icon-{{ conn.id }}').classList.add('d-none'); htmx.find('#ga4-sync-30-spin-{{ conn.id }}').classList.remove('d-none');"
-                hx-on="htmx:afterSwap: this.classList.remove('disabled'); htmx.find('#ga4-sync-30-icon-{{ conn.id }}').classList.remove('d-none'); htmx.find('#ga4-sync-30-spin-{{ conn.id }}').classList.add('d-none'); htmx.find('#sync-result-{{ conn.id }}').dispatchEvent(new Event('htmx:afterSettle'));"
+                hx-on="htmx:beforeRequest: toggleSync('{{ conn.id }}', true, '30');"
+                hx-on="htmx:afterSwap: toggleSync('{{ conn.id }}', false, '30');"
               >
                 <span id="ga4-sync-30-spin-{{ conn.id }}" class="spinner-border spinner-border-sm me-1 d-none" role="status" aria-hidden="true"></span>
                 <i id="ga4-sync-30-icon-{{ conn.id }}" class="ti ti-refresh me-1"></i>
@@ -64,8 +64,8 @@
                 hx-post="/features/marketing-intelligence/ga4/connections/{{ conn.id }}/sync?start_date={{ last_365_start.strftime('%Y-%m-%d') }}&end_date={{ today.strftime('%Y-%m-%d') }}"
                 hx-target="#sync-result-{{ conn.id }}"
                 hx-swap="innerHTML"
-                hx-on="htmx:beforeRequest: this.classList.add('disabled'); htmx.find('#ga4-sync-365-icon-{{ conn.id }}').classList.add('d-none'); htmx.find('#ga4-sync-365-spin-{{ conn.id }}').classList.remove('d-none');"
-                hx-on="htmx:afterSwap: this.classList.remove('disabled'); htmx.find('#ga4-sync-365-icon-{{ conn.id }}').classList.remove('d-none'); htmx.find('#ga4-sync-365-spin-{{ conn.id }}').classList.add('d-none'); htmx.find('#sync-result-{{ conn.id }}').dispatchEvent(new Event('htmx:afterSettle'));"
+                hx-on="htmx:beforeRequest: toggleSync('{{ conn.id }}', true, '365');"
+                hx-on="htmx:afterSwap: toggleSync('{{ conn.id }}', false, '365');"
               >
                 <span id="ga4-sync-365-spin-{{ conn.id }}" class="spinner-border spinner-border-sm me-1 d-none" role="status" aria-hidden="true"></span>
                 <i id="ga4-sync-365-icon-{{ conn.id }}" class="ti ti-database-import me-1"></i>
@@ -86,4 +86,25 @@
     <i class="ti ti-plug-connected me-1"></i> Connect another GA4 property
   </a>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+function toggleSync(connId, isLoading, range) {
+  const spin = document.querySelector(`#ga4-sync-${range}-spin-${connId}`);
+  const icon = document.querySelector(`#ga4-sync-${range}-icon-${connId}`);
+  const btn = spin ? spin.closest('button') : null;
+  if (!btn || !spin || !icon) return;
+  if (isLoading) {
+    btn.classList.add('disabled');
+    icon.classList.add('d-none');
+    spin.classList.remove('d-none');
+  } else {
+    btn.classList.remove('disabled');
+    icon.classList.remove('d-none');
+    spin.classList.add('d-none');
+  }
+}
+</script>
 {% endblock %}
