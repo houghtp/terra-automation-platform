@@ -45,7 +45,35 @@
             <span class="status status-green">{{ conn.status or 'active' }}</span>
           </div>
           <div class="mt-auto">
-            <a href="/features/marketing-intelligence/ga4/connections/{{ conn.id }}" class="btn btn-outline-primary btn-sm">Open dashboard</a>
+            <div class="small text-muted mb-1">Manual sync</div>
+            <div class="d-flex flex-wrap gap-2">
+              <button
+                class="btn btn-outline-primary btn-sm"
+                hx-post="/features/marketing-intelligence/ga4/connections/{{ conn.id }}/sync?start_date={{ last_30_start.strftime('%Y-%m-%d') }}&end_date={{ today.strftime('%Y-%m-%d') }}"
+                hx-target="#sync-result-{{ conn.id }}"
+                hx-swap="innerHTML"
+                hx-on="htmx:beforeRequest: this.classList.add('disabled'); htmx.find('#ga4-sync-30-icon-{{ conn.id }}').classList.add('d-none'); htmx.find('#ga4-sync-30-spin-{{ conn.id }}').classList.remove('d-none');"
+                hx-on="htmx:afterRequest: this.classList.remove('disabled'); htmx.find('#ga4-sync-30-icon-{{ conn.id }}').classList.remove('d-none'); htmx.find('#ga4-sync-30-spin-{{ conn.id }}').classList.add('d-none');"
+              >
+                <span id="ga4-sync-30-spin-{{ conn.id }}" class="spinner-border spinner-border-sm me-1 d-none" role="status" aria-hidden="true"></span>
+                <i id="ga4-sync-30-icon-{{ conn.id }}" class="ti ti-refresh me-1"></i>
+                Last 30 days
+              </button>
+              <button
+                class="btn btn-outline-primary btn-sm"
+                hx-post="/features/marketing-intelligence/ga4/connections/{{ conn.id }}/sync?start_date={{ last_365_start.strftime('%Y-%m-%d') }}&end_date={{ today.strftime('%Y-%m-%d') }}"
+                hx-target="#sync-result-{{ conn.id }}"
+                hx-swap="innerHTML"
+                hx-on="htmx:beforeRequest: this.classList.add('disabled'); htmx.find('#ga4-sync-365-icon-{{ conn.id }}').classList.add('d-none'); htmx.find('#ga4-sync-365-spin-{{ conn.id }}').classList.remove('d-none');"
+                hx-on="htmx:afterRequest: this.classList.remove('disabled'); htmx.find('#ga4-sync-365-icon-{{ conn.id }}').classList.remove('d-none'); htmx.find('#ga4-sync-365-spin-{{ conn.id }}').classList.add('d-none');"
+              >
+                <span id="ga4-sync-365-spin-{{ conn.id }}" class="spinner-border spinner-border-sm me-1 d-none" role="status" aria-hidden="true"></span>
+                <i id="ga4-sync-365-icon-{{ conn.id }}" class="ti ti-database-import me-1"></i>
+                Last 12 months
+              </button>
+            </div>
+            <div id="sync-result-{{ conn.id }}" class="mt-2"></div>
+            <a href="/features/marketing-intelligence/ga4/connections/{{ conn.id }}" class="btn btn-outline-primary btn-sm mt-2">Open dashboard</a>
           </div>
         </div>
       </div>
