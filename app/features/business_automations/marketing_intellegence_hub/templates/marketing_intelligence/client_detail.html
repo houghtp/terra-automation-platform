@@ -53,8 +53,7 @@
                 hx-target="#sync-result-{{ conn.id }}"
                 hx-swap="innerHTML"
                 hx-indicator="#ga4-sync-30-spin-{{ conn.id }}"
-                hx-on="htmx:beforeRequest: this.disabled=true; htmx.find('#ga4-sync-30-icon-{{ conn.id }}').classList.add('d-none');"
-                hx-on="htmx:afterRequest: this.disabled=false; htmx.find('#ga4-sync-30-icon-{{ conn.id }}').classList.remove('d-none');"
+                hx-disabled-elt="this"
               >
                 <span id="ga4-sync-30-spin-{{ conn.id }}" class="spinner-border spinner-border-sm me-1 htmx-indicator" role="status" aria-hidden="true"></span>
                 <i id="ga4-sync-30-icon-{{ conn.id }}" class="ti ti-refresh me-1"></i>
@@ -66,8 +65,7 @@
                 hx-target="#sync-result-{{ conn.id }}"
                 hx-swap="innerHTML"
                 hx-indicator="#ga4-sync-365-spin-{{ conn.id }}"
-                hx-on="htmx:beforeRequest: this.disabled=true; htmx.find('#ga4-sync-365-icon-{{ conn.id }}').classList.add('d-none');"
-                hx-on="htmx:afterRequest: this.disabled=false; htmx.find('#ga4-sync-365-icon-{{ conn.id }}').classList.remove('d-none');"
+                hx-disabled-elt="this"
               >
                 <span id="ga4-sync-365-spin-{{ conn.id }}" class="spinner-border spinner-border-sm me-1 htmx-indicator" role="status" aria-hidden="true"></span>
                 <i id="ga4-sync-365-icon-{{ conn.id }}" class="ti ti-database-import me-1"></i>
@@ -94,6 +92,6 @@
 {{ super() }}
 <style id="htmx-indicator-style">
   .htmx-indicator { display: none; }
-  .htmx-request .htmx-indicator { display: inline-block !important; }
+  .htmx-indicator.htmx-request { display: inline-block !important; }
 </style>
 {% endblock %}
