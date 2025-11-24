@@ -255,7 +255,7 @@ async def top_channels(
                 {"request": request, "items": items},
             )
         return {"items": items}
-    except Exception:
+    except Exception as exc:
         msg = "Need GA4 reauth to fetch channels."
         if request.headers.get("HX-Request"):
             return templates.TemplateResponse(

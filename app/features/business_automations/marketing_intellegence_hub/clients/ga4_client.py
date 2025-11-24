@@ -30,17 +30,20 @@ class Ga4Client:
     @classmethod
     def from_tokens(
         cls,
-        access_token: str,
+        access_token: str | None,
         refresh_token: str,
         client_id: str,
         client_secret: str,
-        access_token_expires_at: str | None = None,
+        access_token_expires_at: str | datetime | None = None,
     ) -> "Ga4Client":
         expiry = None
         if access_token_expires_at:
             try:
-                expiry = datetime.fromisoformat(access_token_expires_at)
-            except ValueError:
+                if isinstance(access_token_expires_at, datetime):
+                    expiry = access_token_expires_at
+                else:
+                    expiry = datetime.fromisoformat(access_token_expires_at)
+            except Exception:
                 expiry = None
         creds = Credentials(
             token=access_token,
