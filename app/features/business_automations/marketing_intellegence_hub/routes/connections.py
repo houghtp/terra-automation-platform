@@ -107,6 +107,7 @@ async def sync_connection(
             refresh_token=tokens["refresh_token"],
             client_id=creds["client_id"],
             client_secret=creds["client_secret"],
+            access_token_expires_at=tokens.get("access_token_expires_at"),
         )
 
         # Parse dates from query strings (supports YYYY-MM-DD and YYYYMMDD)
@@ -212,6 +213,7 @@ async def top_channels(
         refresh_token=tokens["refresh_token"],
         client_id=creds["client_id"],
         client_secret=creds["client_secret"],
+        access_token_expires_at=tokens.get("access_token_expires_at"),
     )
     if not RunReportRequest:
         raise HTTPException(status_code=500, detail="GA4 SDK not available")
@@ -230,6 +232,17 @@ async def top_channels(
     )
     try:
         resp = client.client.run_report(req)
+        # persist refreshed token if rotated
+        token_data = client.current_token_data()
+        if token_data.get("access_token"):
+            await connection_service.upsert_tokens(
+                connection_id,
+                {
+                    "refresh_token": tokens["refresh_token"],
+                    "access_token": token_data["access_token"],
+                    "access_token_expires_at": token_data["access_token_expires_at"],
+                },
+            )
         items = []
         for row in resp.rows:
             name = row.dimension_values[0].value or "Unassigned"
@@ -242,7 +255,7 @@ async def top_channels(
                 {"request": request, "items": items},
             )
         return {"items": items}
-    except Exception as exc:
+    except Exception:
         msg = "Need GA4 reauth to fetch channels."
         if request.headers.get("HX-Request"):
             return templates.TemplateResponse(
@@ -274,6 +287,7 @@ async def top_pages(
         refresh_token=tokens["refresh_token"],
         client_id=creds["client_id"],
         client_secret=creds["client_secret"],
+        access_token_expires_at=tokens.get("access_token_expires_at"),
     )
     if not RunReportRequest:
         raise HTTPException(status_code=500, detail="GA4 SDK not available")
@@ -292,6 +306,16 @@ async def top_pages(
     )
     try:
         resp = client.client.run_report(req)
+        token_data = client.current_token_data()
+        if token_data.get("access_token"):
+            await connection_service.upsert_tokens(
+                connection_id,
+                {
+                    "refresh_token": tokens["refresh_token"],
+                    "access_token": token_data["access_token"],
+                    "access_token_expires_at": token_data["access_token_expires_at"],
+                },
+            )
         items = []
         for row in resp.rows:
             title = row.dimension_values[0].value or "Untitled page"
