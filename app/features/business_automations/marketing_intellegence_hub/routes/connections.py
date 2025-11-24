@@ -235,6 +235,11 @@ async def top_channels(
         sessions = float(row.metric_values[0].value) if row.metric_values[0].value else 0.0
         conv = float(row.metric_values[1].value) if row.metric_values[1].value else 0.0
         items.append({"name": name, "sessions": sessions, "conversions": conv})
+    if request.headers.get("HX-Request"):
+        return templates.TemplateResponse(
+            "marketing_intelligence/partials/top_channels_rows.html",
+            {"request": request, "items": items},
+        )
     return {"items": items}
 
 
@@ -282,6 +287,11 @@ async def top_pages(
         sessions = float(row.metric_values[0].value) if row.metric_values[0].value else 0.0
         conv = float(row.metric_values[1].value) if row.metric_values[1].value else 0.0
         items.append({"name": title, "sessions": sessions, "conversions": conv})
+    if request.headers.get("HX-Request"):
+        return templates.TemplateResponse(
+            "marketing_intelligence/partials/top_pages_rows.html",
+            {"request": request, "items": items},
+        )
     return {"items": items}
 
 

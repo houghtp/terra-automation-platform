@@ -1,0 +1,11 @@
+{% if items %}
+  {% for item in items %}
+    <tr>
+      <td>{{ item.name }}</td>
+      <td>{{ item.sessions }}</td>
+      <td>{{ item.conversions }}</td>
+    </tr>
+  {% endfor %}
+{% else %}
+  <tr><td colspan="3" class="text-muted">No data</td></tr>
+{% endif %}
