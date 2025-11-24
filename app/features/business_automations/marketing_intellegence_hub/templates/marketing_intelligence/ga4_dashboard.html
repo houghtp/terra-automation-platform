@@ -46,6 +46,17 @@
 </div>
 
 <div class="row row-cards">
+  <div class="col-12">
+    <div class="alert alert-info">
+      <div class="d-flex">
+        <div class="alert-icon"><i class="ti ti-bulb"></i></div>
+        <div>
+          <div class="fw-semibold">Insight (last 30d vs prior)</div>
+          <div class="text-muted">{{ insight }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
   <div class="col-sm-6 col-md-3">
     <stats-card
       id="ga4-kpi-sessions-{{ connection.id }}"

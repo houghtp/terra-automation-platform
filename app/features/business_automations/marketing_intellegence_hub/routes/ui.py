@@ -13,7 +13,8 @@ from app.features.core.route_imports import (
     AsyncSession,
 )
 
-from ..services import Ga4ConnectionCrudService, Ga4ClientCrudService
+from ..services import Ga4ConnectionCrudService, Ga4ClientCrudService, Ga4MetricsQueryService
+from ..services.insights import Ga4InsightsService
 
 router = APIRouter()
 
@@ -36,7 +37,12 @@ async def marketing_intel_ga4(
 ):
     """GA4 landing page with client list."""
     client_service = Ga4ClientCrudService(db, tenant_id)
+    connection_service = Ga4ConnectionCrudService(db, tenant_id)
     clients = await client_service.list_clients()
+    connections = await connection_service.list_connections()
+    counts = {}
+    for conn in connections:
+        counts[conn.client_id] = counts.get(conn.client_id, 0) + 1
 
     today = date.today()
     last_30_start = today - timedelta(days=29)
@@ -47,6 +53,7 @@ async def marketing_intel_ga4(
         {
             "request": request,
             "clients": clients,
+            "connection_counts": counts,
             "today": today,
             "last_30_start": last_30_start,
             "last_365_start": last_365_start,
@@ -64,6 +71,8 @@ async def marketing_intel_ga4_dashboard(
 ):
     """GA4 dashboard for a specific connection."""
     connection_service = Ga4ConnectionCrudService(db, tenant_id)
+    metrics_service = Ga4MetricsQueryService(db, tenant_id)
+    insights_service = Ga4InsightsService(metrics_service)
     client_service = Ga4ClientCrudService(db, tenant_id)
     connection = await connection_service.get_connection(connection_id)
     if not connection:
@@ -81,6 +90,7 @@ async def marketing_intel_ga4_dashboard(
     today = date.today()
     last_30_start = today - timedelta(days=29)
     last_90_start = today - timedelta(days=89)
+    insight = await insights_service.simple_insight(connection.id, today, days=30)
 
     return templates.TemplateResponse(
         "marketing_intelligence/ga4_dashboard.html",
@@ -92,6 +102,7 @@ async def marketing_intel_ga4_dashboard(
             "today": today,
             "last_30_start": last_30_start,
             "last_90_start": last_90_start,
+            "insight": insight,
         },
     )
 
