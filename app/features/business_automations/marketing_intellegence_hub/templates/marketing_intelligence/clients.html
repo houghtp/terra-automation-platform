@@ -10,6 +10,12 @@
       <div class="text-muted">Manage brands and their GA4 connections.</div>
     </div>
     <div class="col-auto">
+      <a href="/features/marketing-intelligence/ga4/auth/start" class="btn btn-outline-primary me-2">
+        <i class="ti ti-plug-connected me-1"></i> Connect GA4
+      </a>
+      <a href="/features/marketing-intelligence/ga4/rollup" class="btn btn-outline-secondary me-2">
+        <i class="ti ti-chart-pie me-1"></i> Roll-up
+      </a>
       <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#ga4-client-modal">
         <i class="ti ti-plus me-1"></i> New client
       </button>
@@ -41,6 +47,9 @@
               </div>
             </div>
             <div class="text-muted mb-3">{{ client.notes or '' }}</div>
+            <div class="small text-muted mb-3">
+              {{ connection_counts.get(client.id, 0) }} GA4 connection{{ connection_counts.get(client.id, 0) == 1 and '' or 's' }}
+            </div>
             <div class="mt-auto">
               <a href="/features/marketing-intelligence/ga4/clients/{{ client.id }}" class="btn btn-outline-primary btn-sm">Open</a>
             </div>
