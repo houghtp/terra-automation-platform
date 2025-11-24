@@ -198,6 +198,7 @@ async def top_channels(
     start_date: str | None = None,
     end_date: str | None = None,
     limit: int = 5,
+    request: Request = None,
     connection_service: Ga4ConnectionCrudService = Depends(get_connection_service),
     current_user=Depends(get_current_user),
 ):
@@ -272,6 +273,7 @@ async def top_pages(
     start_date: str | None = None,
     end_date: str | None = None,
     limit: int = 5,
+    request: Request = None,
     connection_service: Ga4ConnectionCrudService = Depends(get_connection_service),
     current_user=Depends(get_current_user),
 ):
