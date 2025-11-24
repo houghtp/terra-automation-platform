@@ -53,8 +53,10 @@
                 hx-target="#sync-result-{{ conn.id }}"
                 hx-swap="innerHTML"
                 hx-indicator="#ga4-sync-30-spin-{{ conn.id }}"
+                hx-on="htmx:beforeRequest: this.disabled=true; htmx.find('#ga4-sync-30-icon-{{ conn.id }}').classList.add('d-none');"
+                hx-on="htmx:afterRequest: this.disabled=false; htmx.find('#ga4-sync-30-icon-{{ conn.id }}').classList.remove('d-none');"
               >
-                <span id="ga4-sync-30-spin-{{ conn.id }}" class="spinner-border spinner-border-sm me-1 d-none" role="status" aria-hidden="true"></span>
+                <span id="ga4-sync-30-spin-{{ conn.id }}" class="spinner-border spinner-border-sm me-1 htmx-indicator" role="status" aria-hidden="true"></span>
                 <i id="ga4-sync-30-icon-{{ conn.id }}" class="ti ti-refresh me-1"></i>
                 Last 30 days
               </button>
@@ -64,8 +66,10 @@
                 hx-target="#sync-result-{{ conn.id }}"
                 hx-swap="innerHTML"
                 hx-indicator="#ga4-sync-365-spin-{{ conn.id }}"
+                hx-on="htmx:beforeRequest: this.disabled=true; htmx.find('#ga4-sync-365-icon-{{ conn.id }}').classList.add('d-none');"
+                hx-on="htmx:afterRequest: this.disabled=false; htmx.find('#ga4-sync-365-icon-{{ conn.id }}').classList.remove('d-none');"
               >
-                <span id="ga4-sync-365-spin-{{ conn.id }}" class="spinner-border spinner-border-sm me-1 d-none" role="status" aria-hidden="true"></span>
+                <span id="ga4-sync-365-spin-{{ conn.id }}" class="spinner-border spinner-border-sm me-1 htmx-indicator" role="status" aria-hidden="true"></span>
                 <i id="ga4-sync-365-icon-{{ conn.id }}" class="ti ti-database-import me-1"></i>
                 Last 12 months
               </button>
@@ -84,4 +88,12 @@
     <i class="ti ti-plug-connected me-1"></i> Connect another GA4 property
   </a>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<style id="htmx-indicator-style">
+  .htmx-indicator { display: none; }
+  .htmx-request .htmx-indicator { display: inline-block !important; }
+</style>
 {% endblock %}
