@@ -86,6 +86,32 @@ async def get_time_series_chart(
     return {"categories": categories, "series": series}
 
 
+@router.get("/rollup/top")
+async def get_rollup_top(
+    connection_ids: str,
+    start_date: date,
+    end_date: date,
+    limit: int = 5,
+    service: Ga4MetricsQueryService = Depends(get_metrics_query_service),
+    connection_service: Ga4ConnectionCrudService = Depends(get_connection_service),
+):
+    ids = _parse_ids(connection_ids)
+    top = await service.get_top_connections(ids, start_date, end_date, limit=limit)
+    # hydrate with connection names
+    result = []
+    for item in top:
+        conn = await connection_service.get_connection(item["connection_id"])
+        result.append(
+            {
+                "connection_id": item["connection_id"],
+                "name": conn.client_name or conn.property_name or conn.property_id if conn else item["connection_id"],
+                "conversions": item["conversions"],
+                "sessions": item["sessions"],
+            }
+        )
+    return {"items": result}
+
+
 # Rollup (multi-connection) endpoints
 
 def _parse_ids(csv: str | None) -> List[str]:

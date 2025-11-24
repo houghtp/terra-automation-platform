@@ -22,16 +22,16 @@
     <div class="card">
       <div class="card-body">
         <div class="mb-2 fw-semibold">Select connections</div>
-        <div class="d-flex flex-wrap gap-2">
-          {% for conn in connections %}
-            <label class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" value="{{ conn.id }}" onchange="toggleRollup(this)" checked>
-              <span class="form-check-label">
-                {{ conn.client_name or conn.property_name or 'GA4 Property' }} ({{ conn.property_id }})
-              </span>
-            </label>
-          {% endfor %}
-        </div>
+    <div class="d-flex flex-wrap gap-2">
+      {% for conn in connections %}
+        <label class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" value="{{ conn.id }}" onchange="toggleRollup(this)" checked>
+          <span class="form-check-label">
+            {{ conn.client_name or conn.property_name or 'GA4 Property' }} ({{ conn.property_id }})
+          </span>
+        </label>
+      {% endfor %}
+    </div>
       </div>
     </div>
   </div>
@@ -42,16 +42,16 @@
 
 <div class="row row-cards">
   <div class="col-sm-6 col-md-3">
-    <stats-card id="rollup-kpi-sessions" title="Sessions" icon="ti-users" color="blue" loading></stats-card>
+    <stats-card id="rollup-kpi-sessions" title="Sessions" icon="ti-users" color="blue" loading data-key="sessions"></stats-card>
   </div>
   <div class="col-sm-6 col-md-3">
-    <stats-card id="rollup-kpi-users" title="Users" icon="ti-user-plus" color="green" loading></stats-card>
+    <stats-card id="rollup-kpi-users" title="Users" icon="ti-user-plus" color="green" loading data-key="users"></stats-card>
   </div>
   <div class="col-sm-6 col-md-3">
-    <stats-card id="rollup-kpi-conv" title="Conversions" icon="ti-target" color="orange" loading></stats-card>
+    <stats-card id="rollup-kpi-conv" title="Conversions" icon="ti-target" color="orange" loading data-key="conversions"></stats-card>
   </div>
   <div class="col-sm-6 col-md-3">
-    <stats-card id="rollup-kpi-cr" title="Conversion Rate" icon="ti-activity" color="purple" loading></stats-card>
+    <stats-card id="rollup-kpi-cr" title="Conversion Rate" icon="ti-activity" color="purple" loading data-key="conversion_rate"></stats-card>
   </div>
 </div>
 
@@ -73,6 +73,28 @@
       description="Aggregate across selected"
       height="260"
     ></chart-widget>
+  </div>
+</div>
+<div class="row row-cards mt-3">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Top clients (by conversions)</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-vcenter">
+          <thead>
+            <tr>
+              <th>Client/Property</th>
+              <th>Conversions</th>
+              <th>Sessions</th>
+            </tr>
+          </thead>
+          <tbody id="rollup-top-clients">
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -98,11 +120,10 @@
     const end = new Date();
     const start = new Date(end.getTime() - 29 * GA4_MS_DAY);
     const kpiUrl = `/features/marketing-intelligence/ga4/metrics/rollup/kpis?connection_ids=${ids.join(',')}&start_date=${formatDate(start)}&end_date=${formatDate(end)}`;
-    document.querySelector('#rollup-kpi-sessions').setAttribute('data-url', kpiUrl + '&data_key=sessions');
-    document.querySelector('#rollup-kpi-users').setAttribute('data-url', kpiUrl + '&data_key=users');
-    document.querySelector('#rollup-kpi-conv').setAttribute('data-url', kpiUrl + '&data_key=conversions');
-    document.querySelector('#rollup-kpi-cr').setAttribute('data-url', kpiUrl + '&data_key=conversion_rate');
-    document.querySelectorAll('stats-card').forEach(c => { if (typeof c.refresh === 'function') c.refresh(); });
+    document.querySelectorAll('#rollup-kpi-sessions, #rollup-kpi-users, #rollup-kpi-conv, #rollup-kpi-cr').forEach((c) => {
+      c.setAttribute('data-url', kpiUrl);
+      if (typeof c.refresh === 'function') c.refresh();
+    });
 
     const trafficChart = document.getElementById('rollup-chart-traffic');
     trafficChart.setAttribute('data-url', `/features/marketing-intelligence/ga4/metrics/rollup/timeseries_chart?connection_ids=${ids.join(',')}&start_date=${formatDate(start)}&end_date=${formatDate(end)}&metrics=sessions,users`);
@@ -110,6 +131,22 @@
     const convChart = document.getElementById('rollup-chart-conv');
     convChart.setAttribute('data-url', `/features/marketing-intelligence/ga4/metrics/rollup/timeseries_chart?connection_ids=${ids.join(',')}&start_date=${formatDate(start)}&end_date=${formatDate(end)}&metrics=conversions`);
     if (typeof convChart.loadData === 'function') convChart.loadData();
+
+    fetch(`/features/marketing-intelligence/ga4/metrics/rollup/top?connection_ids=${ids.join(',')}&start_date=${formatDate(start)}&end_date=${formatDate(end)}`)
+      .then(r => r.json())
+      .then(data => {
+        const body = document.getElementById('rollup-top-clients');
+        body.innerHTML = '';
+        (data.items || []).forEach(item => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${item.name}</td>
+            <td>${item.conversions?.toLocaleString?.() ?? item.conversions ?? '—'}</td>
+            <td>${item.sessions?.toLocaleString?.() ?? item.sessions ?? '—'}</td>
+          `;
+          body.appendChild(tr);
+        });
+      });
   }
   function toggleRollup() { refreshRollup(); }
   document.addEventListener('DOMContentLoaded', () => refreshRollup());

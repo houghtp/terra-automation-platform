@@ -282,3 +282,34 @@ class Ga4MetricsQueryService(BaseService[Ga4DailyMetric]):
             )
             for row in rows
         ]
+
+    async def get_top_connections(self, connection_ids: List[str], start: date, end: date, limit: int = 5):
+        """Return top connections by conversions (fallback to sessions)."""
+        if not connection_ids:
+            return []
+        stmt = (
+            select(
+                Ga4DailyMetric.connection_id,
+                func.sum(Ga4DailyMetric.conversions),
+                func.sum(Ga4DailyMetric.sessions),
+            )
+            .where(
+                Ga4DailyMetric.connection_id.in_(connection_ids),
+                Ga4DailyMetric.date >= start,
+                Ga4DailyMetric.date <= end,
+            )
+            .group_by(Ga4DailyMetric.connection_id)
+            .order_by(func.sum(Ga4DailyMetric.conversions).desc().nullslast(), func.sum(Ga4DailyMetric.sessions).desc().nullslast())
+            .limit(limit)
+        )
+        if self.tenant_id is not None:
+            stmt = stmt.where(Ga4DailyMetric.tenant_id == self.tenant_id)
+        rows = (await self.db.execute(stmt)).all()
+        return [
+            {
+                "connection_id": row[0],
+                "conversions": float(row[1]) if row[1] is not None else 0.0,
+                "sessions": float(row[2]) if row[2] is not None else 0.0,
+            }
+            for row in rows
+        ]
