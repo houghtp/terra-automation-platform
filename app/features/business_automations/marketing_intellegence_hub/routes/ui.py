@@ -64,6 +64,7 @@ async def marketing_intel_ga4_dashboard(
 ):
     """GA4 dashboard for a specific connection."""
     connection_service = Ga4ConnectionCrudService(db, tenant_id)
+    client_service = Ga4ClientCrudService(db, tenant_id)
     connection = await connection_service.get_connection(connection_id)
     if not connection:
         return templates.TemplateResponse(
@@ -71,6 +72,11 @@ async def marketing_intel_ga4_dashboard(
             {"request": request, "message": "GA4 connection not found."},
             status_code=404,
         )
+    peer_connections = []
+    if connection.client_id:
+        all_conns = await connection_service.list_connections()
+        peer_connections = [c for c in all_conns if c.client_id == connection.client_id]
+    client = await client_service.get_client(connection.client_id) if connection.client_id else None
 
     today = date.today()
     last_30_start = today - timedelta(days=29)
@@ -81,6 +87,8 @@ async def marketing_intel_ga4_dashboard(
         {
             "request": request,
             "connection": connection,
+            "client": client,
+            "peer_connections": peer_connections,
             "today": today,
             "last_30_start": last_30_start,
             "last_90_start": last_90_start,
@@ -123,4 +131,20 @@ async def marketing_intel_client_detail(
             "last_30_start": last_30_start,
             "last_365_start": last_365_start,
         },
+    )
+
+
+@router.get("/ga4/rollup", include_in_schema=False)
+async def marketing_intel_rollup(
+    request: Request,
+    tenant_id: str = Depends(tenant_dependency),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Roll-up dashboard across connections."""
+    connection_service = Ga4ConnectionCrudService(db, tenant_id)
+    connections = await connection_service.list_connections()
+    return templates.TemplateResponse(
+        "marketing_intelligence/rollup.html",
+        {"request": request, "connections": connections},
     )

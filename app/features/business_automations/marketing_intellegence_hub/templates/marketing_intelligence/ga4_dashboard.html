@@ -21,11 +21,24 @@
 
 <div class="row row-cards mb-3">
   <div class="col-md-8">
-    <div class="btn-group" role="group" aria-label="Date presets">
+    <div class="btn-group me-2" role="group" aria-label="Date presets">
       <button class="btn btn-outline-secondary btn-sm" onclick="setGa4Preset('{{ connection.id }}', 7)">7d</button>
       <button class="btn btn-outline-secondary btn-sm active" onclick="setGa4Preset('{{ connection.id }}', 30)">30d</button>
       <button class="btn btn-outline-secondary btn-sm" onclick="setGa4Preset('{{ connection.id }}', 90)">90d</button>
     </div>
+    {% if peer_connections|length > 1 %}
+    <div class="d-inline-block">
+      <select class="form-select form-select-sm" onchange="if(this.value){ window.location.href=this.value; }">
+        {% for pc in peer_connections %}
+          <option value="/features/marketing-intelligence/ga4/connections/{{ pc.id }}" {% if pc.id == connection.id %}selected{% endif %}>
+            {{ pc.property_name or 'GA4 Property' }} ({{ pc.property_id }})
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    <a class="btn btn-link btn-sm ms-2" href="/features/marketing-intelligence/ga4/clients/{{ client.id if client else '' }}">Client</a>
+    <a class="btn btn-link btn-sm" href="/features/marketing-intelligence/ga4/rollup">Roll-up</a>
   </div>
   <div class="col-md-4 text-md-end text-muted small">
     Last synced: {{ connection.last_synced_at or '—' }}
