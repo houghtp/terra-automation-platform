@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}GA4 Dashboard | {{ connection.property_name or connection.property_id }}{% endblock %}
+
+{% block content %}
+<div class="page-header mb-3">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">{{ connection.client_name or connection.property_name or 'GA4 Property' }}</h2>
+      <div class="text-muted">
+        {{ connection.property_name or '—' }} • {{ connection.property_id }}
+      </div>
+    </div>
+    <div class="col-auto">
+      <a href="/features/marketing-intelligence/ga4" class="btn btn-outline-secondary">
+        <i class="ti ti-arrow-left me-1"></i> Back to connections
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="row row-cards mb-3">
+  <div class="col-md-8">
+    <div class="btn-group" role="group" aria-label="Date presets">
+      <button class="btn btn-outline-secondary btn-sm" onclick="setGa4Preset('{{ connection.id }}', 7)">7d</button>
+      <button class="btn btn-outline-secondary btn-sm active" onclick="setGa4Preset('{{ connection.id }}', 30)">30d</button>
+      <button class="btn btn-outline-secondary btn-sm" onclick="setGa4Preset('{{ connection.id }}', 90)">90d</button>
+    </div>
+  </div>
+  <div class="col-md-4 text-md-end text-muted small">
+    Last synced: {{ connection.last_synced_at or '—' }}
+  </div>
+</div>
+
+<div class="row row-cards">
+  <div class="col-sm-6 col-md-3">
+    <stats-card
+      id="ga4-kpi-sessions-{{ connection.id }}"
+      class="ga4-kpi"
+      data-ga4-conn="{{ connection.id }}"
+      title="Sessions"
+      icon="ti-users"
+      color="blue"
+      data-key="sessions"
+      loading
+      >
+    </stats-card>
+  </div>
+  <div class="col-sm-6 col-md-3">
+    <stats-card
+      id="ga4-kpi-users-{{ connection.id }}"
+      class="ga4-kpi"
+      data-ga4-conn="{{ connection.id }}"
+      title="Users"
+      icon="ti-user-plus"
+      color="green"
+      data-key="users"
+      loading
+      >
+    </stats-card>
+  </div>
+  <div class="col-sm-6 col-md-3">
+    <stats-card
+      id="ga4-kpi-conv-{{ connection.id }}"
+      class="ga4-kpi"
+      data-ga4-conn="{{ connection.id }}"
+      title="Conversions"
+      icon="ti-target"
+      color="orange"
+      data-key="conversions"
+      loading
+      >
+    </stats-card>
+  </div>
+  <div class="col-sm-6 col-md-3">
+    <stats-card
+      id="ga4-kpi-cr-{{ connection.id }}"
+      class="ga4-kpi"
+      data-ga4-conn="{{ connection.id }}"
+      title="Conversion Rate"
+      icon="ti-activity"
+      color="purple"
+      data-key="conversion_rate"
+      loading
+      >
+    </stats-card>
+  </div>
+</div>
+
+<div class="row row-cards mt-3">
+  <div class="col-md-6">
+    <chart-widget
+      id="ga4-chart-traffic-{{ connection.id }}"
+      type="line"
+      title="Traffic (Sessions vs Users)"
+      description="Daily trend"
+      height="300"
+    ></chart-widget>
+  </div>
+  <div class="col-md-6">
+    <chart-widget
+      id="ga4-chart-conv-{{ connection.id }}"
+      type="line"
+      title="Conversions"
+      description="Daily conversions"
+      height="300"
+    ></chart-widget>
+  </div>
+</div>
+<div class="row row-cards mt-3">
+  <div class="col-md-6">
+    <chart-widget
+      id="ga4-chart-engagement-{{ connection.id }}"
+      type="line"
+      title="Engagement vs Bounce"
+      description="Quality indicators"
+      height="300"
+    ></chart-widget>
+  </div>
+  <div class="col-md-6">
+    <chart-widget
+      id="ga4-chart-newusers-{{ connection.id }}"
+      type="line"
+      title="New Users"
+      description="Daily new users"
+      height="300"
+    ></chart-widget>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="/dashboard/static/js/stats-card.js?v=tabler"></script>
+<script src="/dashboard/static/js/chart-widget.js?v=tabler"></script>
+<script>
+  const GA4_MS_DAY = 24 * 60 * 60 * 1000;
+  function formatDate(d) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  function setGa4Range(connId, startStr, endStr, days) {
+    const startDate = new Date(startStr);
+    const endDate = new Date(endStr);
+    const rangeDays = days || Math.max(1, Math.round((endDate - startDate) / GA4_MS_DAY) + 1);
+    const compareEnd = new Date(startDate.getTime() - GA4_MS_DAY);
+    const compareStart = new Date(compareEnd.getTime() - (rangeDays - 1) * GA4_MS_DAY);
+
+    const kpiUrl = `/features/marketing-intelligence/ga4/metrics/${connId}/kpis?start_date=${startStr}&end_date=${endStr}&compare_start=${formatDate(compareStart)}&compare_end=${formatDate(compareEnd)}`;
+    document.querySelectorAll(`.ga4-kpi[data-ga4-conn="${connId}"]`).forEach((card) => {
+      card.setAttribute('data-url', kpiUrl);
+      if (typeof card.refresh === 'function') {
+        card.refresh();
+      }
+    });
+
+    const trafficChart = document.getElementById(`ga4-chart-traffic-${connId}`);
+    if (trafficChart) {
+      trafficChart.setAttribute('data-url', `/features/marketing-intelligence/ga4/metrics/${connId}/timeseries_chart?start_date=${startStr}&end_date=${endStr}&metrics=sessions,users`);
+    }
+
+    const convChart = document.getElementById(`ga4-chart-conv-${connId}`);
+    if (convChart) {
+      convChart.setAttribute('data-url', `/features/marketing-intelligence/ga4/metrics/${connId}/timeseries_chart?start_date=${startStr}&end_date=${endStr}&metrics=conversions`);
+    }
+
+    const engageChart = document.getElementById(`ga4-chart-engagement-${connId}`);
+    if (engageChart) {
+      engageChart.setAttribute('data-url', `/features/marketing-intelligence/ga4/metrics/${connId}/timeseries_chart?start_date=${startStr}&end_date=${endStr}&metrics=engagement_rate,bounce_rate`);
+    }
+
+    const newUsersChart = document.getElementById(`ga4-chart-newusers-${connId}`);
+    if (newUsersChart) {
+      newUsersChart.setAttribute('data-url', `/features/marketing-intelligence/ga4/metrics/${connId}/timeseries_chart?start_date=${startStr}&end_date=${endStr}&metrics=new_users`);
+    }
+  }
+  function setGa4Preset(connId, days) {
+    const end = new Date();
+    const start = new Date(end.getTime() - (days - 1) * GA4_MS_DAY);
+    setGa4Range(connId, formatDate(start), formatDate(end), days);
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    setGa4Preset('{{ connection.id }}', 30);
+  });
+</script>
+{% endblock %}

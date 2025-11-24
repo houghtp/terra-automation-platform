@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}{{ client.name }} | Marketing Intelligence{% endblock %}
+
+{% block content %}
+<div class="page-header mb-3">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">{{ client.name }}</h2>
+      <div class="text-muted">Status: {{ client.status or 'active' }}</div>
+    </div>
+    <div class="col-auto">
+      <a href="/features/marketing-intelligence/ga4" class="btn btn-outline-secondary">
+        <i class="ti ti-arrow-left me-1"></i> Back to clients
+      </a>
+    </div>
+  </div>
+</div>
+
+{% if connections|length == 0 %}
+  <div class="alert alert-info">
+    <div class="d-flex">
+      <div class="alert-icon"><i class="ti ti-info-circle"></i></div>
+      <div>
+        <h4 class="alert-title mb-1">No GA4 connections</h4>
+        <div class="text-muted">Connect GA4 for this client to view KPIs and charts.</div>
+        <a href="/features/marketing-intelligence/ga4/auth/start" class="btn btn-primary mt-2">
+          <i class="ti ti-plug-connected me-1"></i> Connect GA4
+        </a>
+      </div>
+    </div>
+  </div>
+{% else %}
+  <div class="row row-cards">
+    {% for conn in connections %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card h-100">
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <div class="small text-muted">Property</div>
+              <div class="h4 mb-0">{{ conn.property_name or 'GA4 Property' }}</div>
+              <div class="text-muted">{{ conn.property_id }}</div>
+            </div>
+            <span class="status status-green">{{ conn.status or 'active' }}</span>
+          </div>
+          <div class="mt-auto">
+            <a href="/features/marketing-intelligence/ga4/connections/{{ conn.id }}" class="btn btn-outline-primary btn-sm">Open dashboard</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

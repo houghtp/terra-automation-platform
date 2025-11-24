@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}GA4 Connection{% endblock %}
+
+{% block content %}
+<div class="page-header mb-3">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Select GA4 Property</h2>
+      <div class="text-muted">Choose a property to connect. Tokens will be saved securely.</div>
+    </div>
+  </div>
+</div>
+
+{% if not properties %}
+<div class="alert alert-warning">
+  <div class="d-flex">
+    <div class="alert-icon">
+      <i class="ti ti-alert-triangle"></i>
+    </div>
+    <div>
+      <h4 class="alert-title mb-1">No properties found</h4>
+      <div class="text-muted">Your GA4 account returned no properties. Please verify access and try again.</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="row row-cards">
+  {% for prop in properties %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card card-hover-lift h-100">
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex align-items-center mb-2">
+          <div class="avatar bg-blue-lt text-blue">
+            <i class="ti ti-chart-bar"></i>
+          </div>
+          <div class="ms-3">
+            <div class="small text-muted">Property ID</div>
+            <div class="h4 mb-0">{{ prop.property_id }}</div>
+          </div>
+        </div>
+        <p class="text-muted flex-fill mb-3">{{ prop.display_name or 'Unnamed property' }}</p>
+        <form
+          hx-post="/features/marketing-intelligence/ga4/auth/connect"
+          hx-target="#ga4-connect-result"
+          hx-swap="innerHTML"
+          class="d-grid gap-2 mt-auto"
+        >
+          <input type="hidden" name="property_id" value="{{ prop.property_id }}">
+          <input type="hidden" name="property_name" value="{{ prop.display_name }}">
+          <div class="mb-2">
+            <label class="form-label form-label-sm text-muted">Client/Brand</label>
+            <select class="form-select form-select-sm mb-1" name="client_id">
+              <option value="">Create new…</option>
+              {% for client in clients or [] %}
+                <option value="{{ client.id }}">{{ client.name }}</option>
+              {% endfor %}
+            </select>
+            <input type="text" class="form-control form-control-sm" name="client_name" placeholder="New client name">
+          </div>
+          <input type="hidden" name="refresh_token" value="{{ token_data.refresh_token }}">
+          <input type="hidden" name="access_token" value="{{ token_data.access_token }}">
+          <input type="hidden" name="access_token_expires_at" value="{{ token_data.access_token_expires_at }}">
+          <button class="btn btn-primary" type="submit">
+            <i class="ti ti-plug-connected me-1"></i> Connect
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div id="ga4-connect-result" class="mt-3"></div>
+{% endblock %}

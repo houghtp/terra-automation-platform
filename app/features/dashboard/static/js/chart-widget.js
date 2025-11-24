@@ -137,7 +137,7 @@ class ChartWidget extends HTMLElement {
     async loadData() {
         const dataUrl = this.getAttribute('data-url');
         if (!dataUrl) {
-            this.showError('No data URL provided');
+            // If no URL is set yet (e.g., awaiting a preset), skip silently.
             return;
         }
 

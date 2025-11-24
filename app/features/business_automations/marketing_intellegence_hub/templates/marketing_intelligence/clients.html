@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Marketing Intelligence | Clients{% endblock %}
+
+{% block content %}
+<div class="page-header mb-3">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Clients</h2>
+      <div class="text-muted">Manage brands and their GA4 connections.</div>
+    </div>
+    <div class="col-auto">
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#ga4-client-modal">
+        <i class="ti ti-plus me-1"></i> New client
+      </button>
+    </div>
+  </div>
+</div>
+
+{% if clients|length == 0 %}
+  <div class="alert alert-info">
+    <div class="d-flex">
+      <div class="alert-icon"><i class="ti ti-info-circle"></i></div>
+      <div>
+        <h4 class="alert-title mb-1">No clients yet</h4>
+        <div class="text-muted">Create a client, then connect GA4 for fast reporting.</div>
+      </div>
+    </div>
+  </div>
+{% else %}
+  <div class="row row-cards">
+    {% for client in clients %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <div class="small text-muted">Client</div>
+                <div class="h4 mb-0">{{ client.name }}</div>
+                <div class="text-muted">{{ client.status or 'active' }}</div>
+              </div>
+            </div>
+            <div class="text-muted mb-3">{{ client.notes or '' }}</div>
+            <div class="mt-auto">
+              <a href="/features/marketing-intelligence/ga4/clients/{{ client.id }}" class="btn btn-outline-primary btn-sm">Open</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<!-- Modal: Create Client -->
+<div class="modal fade" id="ga4-client-modal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">New Client</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="ga4-client-form">
+          <div class="mb-3">
+            <label class="form-label">Name</label>
+            <input type="text" class="form-control" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Notes</label>
+            <textarea class="form-control" name="notes" rows="2"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="createGa4Client()">Create</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+async function createGa4Client() {
+  const form = document.getElementById('ga4-client-form');
+  const payload = {
+    name: form.name.value,
+    notes: form.notes.value
+  };
+  try {
+    const res = await fetch('/features/marketing-intelligence/ga4/clients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || 'Failed to create client');
+    }
+    window.location.reload();
+  } catch (err) {
+    alert(err);
+  }
+}
+</script>
+{% endblock %}
