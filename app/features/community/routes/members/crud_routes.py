@@ -33,6 +33,9 @@ from ...services import MemberCrudService, MemberFormService
 
 router = APIRouter()
 
+def _norm_user(val):
+    return None if not val or val == "None" else val
+
 
 # --- HTMX form submissions ---
 
