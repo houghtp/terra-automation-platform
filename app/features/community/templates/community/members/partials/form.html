@@ -70,19 +70,6 @@
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label">Linked User ID</label>
-                    <input
-                        type="text"
-                        name="user_id"
-                        value="{{ form_data.user_id if form_data and form_data.user_id is not none else (member.user_id if member else '') }}"
-                        class="form-control"
-                        maxlength="36"
-                        placeholder="Optional auth user link"
-                    >
-                    <div class="form-text">Map this member to an existing auth user (optional).</div>
-                </div>
-
-                <div class="col-md-6">
                     <label class="form-label">Partner</label>
                     <select
                         name="partner_id"
