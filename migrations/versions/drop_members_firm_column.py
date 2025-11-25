@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = "drop_members_firm_column"
-down_revision: Union[str, Sequence[str], None] = "b3fb10b"
+down_revision: Union[str, Sequence[str], None] = "ga4_add_clients"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
