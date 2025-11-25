@@ -9,10 +9,8 @@
     {% if member %}
         hx-put="/features/community/members/{{ member.id }}"
     {% else %}
-        hx-post="/features/community/members"
+        hx-post="/features/community/members/"
     {% endif %}
-    hx-target="#modal-body"
-    hx-swap="innerHTML"
     hx-disabled-elt="fieldset"
     autocomplete="off"
 >
@@ -49,16 +47,6 @@
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label">Firm</label>
-                    <input
-                        type="text"
-                        name="firm"
-                        value="{{ form_data.firm if form_data and form_data.firm is not none else (member.firm if member else '') }}"
-                        class="form-control"
-                        maxlength="255"
-                    >
-                </div>
-                <div class="col-md-6">
                     <label class="form-label">Location</label>
                     <input
                         type="text"
@@ -92,6 +80,25 @@
                         placeholder="Optional auth user link"
                     >
                     <div class="form-text">Map this member to an existing auth user (optional).</div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Partner</label>
+                    <select
+                        name="partner_id"
+                        class="form-select {{ 'is-invalid' if errors and errors.get('partner_id') }}"
+                    >
+                        <option value="">-- None --</option>
+                        {% for partner in partner_options or [] %}
+                            <option
+                                value="{{ partner.id }}"
+                                {% if (form_data and form_data.partner_id == partner.id) or (member and member.partner_id == partner.id) %}selected{% endif %}
+                            >{{ partner.name }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if errors and errors.get('partner_id') %}
+                        <div class="invalid-feedback d-block">{{ errors['partner_id'][0] }}</div>
+                    {% endif %}
                 </div>
 
                 <div class="col-md-6">

@@ -47,13 +47,9 @@ async def member_create_form(
 ):
     form = await request.form()
 
-    def _norm_user(val):
-        return None if not val or val == "None" else val
-
     raw_data = {
         "name": form.get("name"),
         "email": form.get("email"),
-        "firm": form.get("firm") or None,
         "bio": form.get("bio") or None,
         "aum_range": form.get("aum_range") or None,
         "location": form.get("location") or None,
@@ -127,13 +123,9 @@ async def member_update_form(
 
     form = await request.form()
 
-    def _norm_user(val):
-        return None if not val or val == "None" else val
-
     raw_data = {
         "name": form.get("name"),
         "email": form.get("email"),
-        "firm": form.get("firm") or None,
         "bio": form.get("bio") or None,
         "aum_range": form.get("aum_range") or None,
         "location": form.get("location") or None,

@@ -36,8 +36,8 @@ window.initializeMembersTable = function initializeMembersTable() {
       formatter: formatMemberEmail,
     },
     {
-      title: "Firm",
-      field: "firm",
+      title: "Partner",
+      field: "partner_name",
       headerFilter: "input",
       minWidth: 160,
       formatter: (cell) => cell.getValue() || "<span class='text-muted'>—</span>",
@@ -86,6 +86,7 @@ window.initializeMembersTable = function initializeMembersTable() {
   const table = new Tabulator("#members-table", {
     ...advancedTableConfig,
     ajaxURL: "/features/community/members/api/list",
+    ajaxResponse: standardAjaxResponse,
     columns,
     dataTree: false,
     selectable: true,
@@ -93,7 +94,7 @@ window.initializeMembersTable = function initializeMembersTable() {
 
   window.appTables["members-table"] = table;
   window.membersTable = table;
-  table.searchableFields = ["name", "email", "firm", "location", "aum_range", "specialties", "tags", "bio"];
+  table.searchableFields = ["name", "email", "partner_name", "location", "aum_range", "specialties", "tags", "bio"];
 
   // Update total badge when data loaded
   table.on("dataProcessed", () => {
@@ -127,7 +128,7 @@ window.deleteMember = function deleteMember(id) {
 };
 
 window.editMember = function editMember(id) {
-  editTabulatorRow(`/features/community/members/partials/form?member_id=${id}`);
+  editTabulatorRow(`/features/community/members/${id}/edit`);
 };
 
 document.addEventListener("DOMContentLoaded", () => {

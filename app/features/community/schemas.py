@@ -18,13 +18,13 @@ class MemberBase(BaseModel):
 
     name: constr(strip_whitespace=True, min_length=1, max_length=255)
     email: EmailStr
-    firm: Optional[constr(strip_whitespace=True, max_length=255)] = None
     bio: Optional[str] = None
     aum_range: Optional[constr(strip_whitespace=True, max_length=100)] = None
     location: Optional[constr(strip_whitespace=True, max_length=255)] = None
     specialties: List[str] = Field(default_factory=list)
     tags: List[str] = Field(default_factory=list)
     user_id: Optional[str] = Field(default=None, description="Linked auth user ID when applicable.")
+    partner_id: Optional[str] = Field(default=None, description="Linked partner organization.")
 
 
 class MemberCreate(MemberBase):
@@ -36,13 +36,13 @@ class MemberUpdate(BaseModel):
 
     name: Optional[constr(strip_whitespace=True, min_length=1, max_length=255)] = None
     email: Optional[EmailStr] = None
-    firm: Optional[constr(strip_whitespace=True, max_length=255)] = None
     bio: Optional[str] = None
     aum_range: Optional[constr(strip_whitespace=True, max_length=100)] = None
     location: Optional[constr(strip_whitespace=True, max_length=255)] = None
     specialties: Optional[List[str]] = None
     tags: Optional[List[str]] = None
     user_id: Optional[str] = Field(default=None)
+    partner_id: Optional[str] = Field(default=None)
 
 
 class MemberResponse(MemberBase):

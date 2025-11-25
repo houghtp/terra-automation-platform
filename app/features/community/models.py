@@ -42,10 +42,10 @@ class Member(Base, AuditMixin):
 
     # Optional link to authentication user record (when the member has login access)
     user_id = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)
+    partner_id = Column(String(36), ForeignKey("partners.id", ondelete="SET NULL"), nullable=True, index=True)
 
     name = Column(String(255), nullable=False)
     email = Column(String(255), nullable=False)
-    firm = Column(String(255), nullable=True)
     bio = Column(Text, nullable=True)
     aum_range = Column(String(100), nullable=True)
     location = Column(String(255), nullable=True)
@@ -53,6 +53,7 @@ class Member(Base, AuditMixin):
     tags = Column(JSONB, nullable=False, default=list)
 
     user = relationship("User", backref="community_member", lazy="joined", uselist=False)
+    partner = relationship("Partner", backref=backref("contacts", lazy="selectin"))
 
     __table_args__ = (
         Index("ix_members_tenant_email_unique", "tenant_id", "email", unique=True),
@@ -67,12 +68,13 @@ class Member(Base, AuditMixin):
             "user_id": self.user_id,
             "name": self.name,
             "email": self.email,
-            "firm": self.firm,
             "bio": self.bio,
             "aum_range": self.aum_range,
             "location": self.location,
             "specialties": self.specialties or [],
             "tags": self.tags or [],
+            "partner_id": self.partner_id,
+            "partner_name": self.partner.name if self.partner else None,
         }
         data.update(self.get_audit_info())
         return data
