@@ -14,32 +14,32 @@ from ..dependencies import (
     get_event_service,
     get_poll_service,
     get_message_service,
-    get_content_service,
+    get_article_service,
     get_podcast_service,
     get_video_service,
     get_news_service,
     get_content_engagement_service,
 )
 from ..services import (
-    MemberService,
-    PartnerService,
-    GroupService,
-    EventService,
-    PollService,
-    MessageService,
-    ContentService,
-    PodcastService,
-    VideoService,
-    NewsService,
-    ContentEngagementService,
+    MemberCrudService,
+    PartnerCrudService,
+    GroupCrudService,
+    EventCrudService,
+    PollCrudService,
+    MessageCrudService,
+    ArticleCrudService,
+    PodcastCrudService,
+    VideoCrudService,
+    NewsCrudService,
+    ContentEngagementCrudService,
 )
 
 router = APIRouter(tags=["community-pages"])
 
 
 async def _community_dashboard_context(
-    member_service: MemberService,
-    partner_service: PartnerService,
+    member_service: MemberCrudService,
+    partner_service: PartnerCrudService,
 ) -> dict:
     """Build context for the community landing page."""
     member_count = await member_service.count_all()
@@ -61,10 +61,10 @@ def _summarize_copy(value: str | None, limit: int = 140) -> str:
 
 
 async def _build_announcements(
-    event_service: EventService,
-    poll_service: PollService,
-    content_service: ContentService,
-    news_service: NewsService,
+    event_service: EventCrudService,
+    poll_service: PollCrudService,
+    article_service: ArticleCrudService,
+    news_service: NewsCrudService,
 ) -> list[dict]:
     announcements: list[dict] = []
 
@@ -106,7 +106,7 @@ async def _build_announcements(
             }
         )
 
-    articles, _ = await content_service.list_content(limit=1, offset=0)
+    articles, _ = await article_service.list_articles(limit=1, offset=0)
     if articles:
         article = articles[0]
         announcements.append(
@@ -144,19 +144,19 @@ async def _build_announcements(
 async def community_home(
     request: Request,
     current_user: User = Depends(get_current_user),
-    member_service: MemberService = Depends(get_member_service),
-    partner_service: PartnerService = Depends(get_partner_service),
-    event_service: EventService = Depends(get_event_service),
-    poll_service: PollService = Depends(get_poll_service),
-    content_service: ContentService = Depends(get_content_service),
-    news_service: NewsService = Depends(get_news_service),
+    member_service: MemberCrudService = Depends(get_member_service),
+    partner_service: PartnerCrudService = Depends(get_partner_service),
+    event_service: EventCrudService = Depends(get_event_service),
+    poll_service: PollCrudService = Depends(get_poll_service),
+    article_service: ArticleCrudService = Depends(get_article_service),
+    news_service: NewsCrudService = Depends(get_news_service),
 ):
     """Render the community landing page with high-level metrics."""
     context = await _community_dashboard_context(member_service, partner_service)
     announcements = await _build_announcements(
         event_service=event_service,
         poll_service=poll_service,
-        content_service=content_service,
+        article_service=article_service,
         news_service=news_service,
     )
     context.update(
@@ -176,7 +176,7 @@ async def community_home(
 async def members_page(
     request: Request,
     current_user: User = Depends(get_current_user),
-    member_service: MemberService = Depends(get_member_service),
+    member_service: MemberCrudService = Depends(get_member_service),
 ):
     """Render the members directory."""
     total = await member_service.count_all()
@@ -197,7 +197,7 @@ async def members_page(
 async def partners_page(
     request: Request,
     current_user: User = Depends(get_current_user),
-    partner_service: PartnerService = Depends(get_partner_service),
+    partner_service: PartnerCrudService = Depends(get_partner_service),
 ):
     """Render the partner directory shell."""
     total = await partner_service.count_all()
@@ -218,7 +218,7 @@ async def partners_page(
 async def groups_page(
     request: Request,
     current_user: User = Depends(get_current_user),
-    group_service: GroupService = Depends(get_group_service),
+    group_service: GroupCrudService = Depends(get_group_service),
 ):
     total = await group_service.count_all()
     return templates.TemplateResponse(
@@ -238,7 +238,7 @@ async def groups_page(
 async def messages_page(
     request: Request,
     current_user: User = Depends(get_current_user),
-    message_service: MessageService = Depends(get_message_service),
+    message_service: MessageCrudService = Depends(get_message_service),
 ):
     conversations, total = await message_service.list_conversations(member_id=current_user.id, limit=1, offset=0)
     return templates.TemplateResponse(
@@ -259,7 +259,7 @@ async def messages_page(
 async def events_page(
     request: Request,
     current_user: User = Depends(get_current_user),
-    event_service: EventService = Depends(get_event_service),
+    event_service: EventCrudService = Depends(get_event_service),
 ):
     total = await event_service.count_all()
     return templates.TemplateResponse(
@@ -279,7 +279,7 @@ async def events_page(
 async def polls_page(
     request: Request,
     current_user: User = Depends(get_current_user),
-    poll_service: PollService = Depends(get_poll_service),
+    poll_service: PollCrudService = Depends(get_poll_service),
 ):
     _, total = await poll_service.list_polls(limit=1, offset=0)
     return templates.TemplateResponse(
@@ -299,13 +299,13 @@ async def polls_page(
 async def content_page(
     request: Request,
     current_user: User = Depends(get_current_user),
-    content_service: ContentService = Depends(get_content_service),
-    podcast_service: PodcastService = Depends(get_podcast_service),
-    video_service: VideoService = Depends(get_video_service),
-    news_service: NewsService = Depends(get_news_service),
-    engagement_service: ContentEngagementService = Depends(get_content_engagement_service),
+    content_service: ArticleCrudService = Depends(get_article_service),
+    podcast_service: PodcastCrudService = Depends(get_podcast_service),
+    video_service: VideoCrudService = Depends(get_video_service),
+    news_service: NewsCrudService = Depends(get_news_service),
+    engagement_service: ContentEngagementCrudService = Depends(get_content_engagement_service),
 ):
-    articles, article_total = await content_service.list_content(limit=5, offset=0)
+    articles, article_total = await content_service.list_articles(limit=5, offset=0)
     podcasts, podcast_total = await podcast_service.list_podcasts(limit=5, offset=0)
     videos, video_total = await video_service.list_videos(limit=5, offset=0)
     news_items, news_total = await news_service.list_news(limit=5, offset=0)
