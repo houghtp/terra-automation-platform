@@ -27,9 +27,9 @@ from app.features.core.route_imports import (
     tenant_dependency,
     User,
 )
-from ...dependencies import get_member_service
+from ...dependencies import get_member_service, get_member_form_service
 from ...schemas import MemberCreate, MemberResponse, MemberUpdate
-from ...services import MemberCrudService
+from ...services import MemberCrudService, MemberFormService
 
 router = APIRouter()
 
@@ -43,8 +43,12 @@ async def member_create_form(
     tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user),
     member_service: MemberCrudService = Depends(get_member_service),
+    member_form_service: MemberFormService = Depends(get_member_form_service),
 ):
     form = await request.form()
+
+    def _norm_user(val):
+        return None if not val or val == "None" else val
 
     raw_data = {
         "name": form.get("name"),
@@ -55,6 +59,8 @@ async def member_create_form(
         "location": form.get("location") or None,
         "specialties": [item.strip() for item in form.get("specialties", "").split(",") if item.strip()],
         "tags": [item.strip() for item in form.get("tags", "").split(",") if item.strip()],
+        "partner_id": form.get("partner_id") or None,
+        "user_id": _norm_user(form.get("user_id")),
     }
 
     try:
@@ -68,6 +74,7 @@ async def member_create_form(
             "errors": errors,
             "specialties_text": form.get("specialties", ""),
             "tags_text": form.get("tags", ""),
+            "partner_options": await member_form_service.get_partner_options(),
         }
         return templates.TemplateResponse(
             "community/members/partials/form.html",
@@ -87,6 +94,7 @@ async def member_create_form(
             "errors": errors,
             "specialties_text": form.get("specialties", ""),
             "tags_text": form.get("tags", ""),
+            "partner_options": await member_form_service.get_partner_options(),
         }
         await db.rollback()
         return templates.TemplateResponse(
@@ -107,6 +115,7 @@ async def member_update_form(
     tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user),
     member_service: MemberCrudService = Depends(get_member_service),
+    member_form_service: MemberFormService = Depends(get_member_form_service),
 ):
     member = await member_service.get_by_id(member_id)
     if not member:
@@ -118,6 +127,9 @@ async def member_update_form(
 
     form = await request.form()
 
+    def _norm_user(val):
+        return None if not val or val == "None" else val
+
     raw_data = {
         "name": form.get("name"),
         "email": form.get("email"),
@@ -127,6 +139,8 @@ async def member_update_form(
         "location": form.get("location") or None,
         "specialties": [item.strip() for item in form.get("specialties", "").split(",") if item.strip()],
         "tags": [item.strip() for item in form.get("tags", "").split(",") if item.strip()],
+        "partner_id": form.get("partner_id") or None,
+        "user_id": _norm_user(form.get("user_id")),
     }
 
     try:
@@ -140,6 +154,7 @@ async def member_update_form(
             "errors": errors,
             "specialties_text": form.get("specialties", ""),
             "tags_text": form.get("tags", ""),
+            "partner_options": await member_form_service.get_partner_options(),
         }
         return templates.TemplateResponse(
             "community/members/partials/form.html",
@@ -164,6 +179,7 @@ async def member_update_form(
             "errors": errors,
             "specialties_text": form.get("specialties", ""),
             "tags_text": form.get("tags", ""),
+            "partner_options": await member_form_service.get_partner_options(),
         }
         return templates.TemplateResponse(
             "community/members/partials/form.html",
