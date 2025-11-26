@@ -96,7 +96,6 @@ class GroupBase(BaseModel):
 
     name: constr(strip_whitespace=True, min_length=1, max_length=255)
     description: Optional[str] = None
-    privacy: constr(strip_whitespace=True, min_length=4, max_length=32) = "private"
     owner_id: Optional[str] = None
 
 
@@ -109,7 +108,6 @@ class GroupUpdate(BaseModel):
 
     name: Optional[constr(strip_whitespace=True, min_length=1, max_length=255)] = None
     description: Optional[str] = None
-    privacy: Optional[constr(strip_whitespace=True, min_length=4, max_length=32)] = None
     owner_id: Optional[str] = None
 
 
@@ -438,7 +436,6 @@ class GroupBase(BaseModel):
 
     name: constr(strip_whitespace=True, min_length=2, max_length=255)
     description: Optional[str] = None
-    privacy: constr(strip_whitespace=True, max_length=50) = Field(default="private")
     owner_id: Optional[str] = None
 
 
@@ -451,7 +448,6 @@ class GroupUpdate(BaseModel):
 
     name: Optional[constr(strip_whitespace=True, min_length=2, max_length=255)] = None
     description: Optional[str] = None
-    privacy: Optional[constr(strip_whitespace=True, max_length=50)] = None
     owner_id: Optional[str] = None
 
 

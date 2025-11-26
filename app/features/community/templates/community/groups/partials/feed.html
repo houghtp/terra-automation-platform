@@ -1,0 +1,70 @@
+<div id="group-feed">
+<div class="card mb-3">
+  <div class="card-header">
+    <div class="d-flex align-items-center">
+      <i class="ti ti-pencil-plus text-primary me-2"></i>
+      <div>
+        <div class="fw-semibold">Start a discussion</div>
+        <div class="text-muted small">Share an update with everyone in this hub.</div>
+      </div>
+    </div>
+  </div>
+  <div class="card-body">
+    <form
+      hx-post="/features/community/groups/{{ group.id }}/posts/partials"
+      hx-target="#group-feed"
+      hx-swap="outerHTML"
+      hx-disabled-elt="fieldset, button"
+      autocomplete="off"
+    >
+      <fieldset class="form-fieldset">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Title <span class="text-muted">(optional)</span></label>
+            <input
+              type="text"
+              name="title"
+              class="form-control"
+              maxlength="255"
+              value="{{ post_form_data.title if post_form_data and post_form_data.title is not none else '' }}"
+              placeholder="What's on your mind?"
+            >
+          </div>
+          <div class="col-12">
+            <label class="form-label required">Content</label>
+            <textarea
+              name="content"
+              rows="4"
+              class="form-control {% if post_errors and post_errors.get('content') %}is-invalid{% endif %}"
+              required
+              placeholder="Share an update, ask a question, or drop a link."
+            >{{ post_form_data.content if post_form_data and post_form_data.content is not none else '' }}</textarea>
+            {% if post_errors and post_errors.get('content') %}
+              <div class="invalid-feedback d-block">{{ post_errors['content'][0] }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </fieldset>
+      <div class="mt-3 d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary">
+          <span class="htmx-indicator spinner-border spinner-border-sm me-2" role="status"></span>
+          Post
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if posts %}
+  {% for post in posts %}
+    {% include "community/groups/partials/post_card.html" with context %}
+  {% endfor %}
+{% else %}
+  <div class="card">
+    <div class="card-body text-center text-muted">
+      <div class="mb-2"><i class="ti ti-mood-smile text-primary" style="font-size: 24px;"></i></div>
+      <div>No posts yet. Be the first to start a thread.</div>
+    </div>
+  </div>
+{% endif %}
+</div>

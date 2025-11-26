@@ -132,7 +132,6 @@ class Group(Base, AuditMixin):
     tenant_id = Column(String(64), nullable=False, index=True)
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
-    privacy = Column(String(32), nullable=False, default="private")
     owner_id = Column(String(36), nullable=True)
 
     __table_args__ = (
@@ -145,7 +144,6 @@ class Group(Base, AuditMixin):
             "tenant_id": self.tenant_id,
             "name": self.name,
             "description": self.description,
-            "privacy": self.privacy,
             "owner_id": self.owner_id,
         }
         data.update(self.get_audit_info())

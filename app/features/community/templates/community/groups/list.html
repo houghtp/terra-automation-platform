@@ -23,11 +23,11 @@
 </div>
 
 <div class="row g-3">
-    <div class="col-12 col-lg-6">
+    <div class="col-12">
         <div class="card h-100">
             <div class="card-header">
                 {% set title = "Group Directory" %}
-                {% set description = "Create cohorts, set privacy, and manage group ownership." %}
+                {% set description = "Create cohorts and manage group ownership." %}
                 {% set icon = "ti ti-users-group" %}
                 {% set add_url = "/features/community/groups/partials/form" %}
                 {% set entity_name = "Group" %}
@@ -36,26 +36,6 @@
             </div>
             <div class="card-body p-0">
                 <div id="groups-table"></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-12 col-lg-6">
-        <div class="card h-100">
-            <div class="card-header">
-                {% set title = "Group Posts" %}
-                {% set description = "Select a group to review discussion threads and manage posts." %}
-                {% set icon = "ti ti-message-circle" %}
-                {% set add_url = "#" %}
-                {% set entity_name = "Post" %}
-                {% set table_id = "group-posts-table" %}
-                {% set id_prefix = "group-posts" %}
-                {% set add_label = "New Post" %}
-                {% set add_disabled = True %}
-                {% set show_bulk_actions = False %}
-                {% include 'components/ui/table_actions.html' with context %}
-            </div>
-            <div class="card-body p-0">
-                <div id="group-posts-table" class="border-top"></div>
             </div>
         </div>
     </div>

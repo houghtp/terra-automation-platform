@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}{{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <div class="page-pretitle">Community</div>
+      <h2 class="page-title">{{ group.name }}</h2>
+      {% if group.description %}
+        <div class="text-muted mt-1">{{ group.description }}</div>
+      {% endif %}
+    </div>
+    <div class="col-auto ms-auto">
+      <a href="/features/community/groups" class="btn btn-outline-primary">
+        <i class="ti ti-arrow-left me-1"></i>
+        Back to Groups
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-9">
+    <div id="group-feed"
+         hx-get="/features/community/groups/{{ group.id }}/partials/feed"
+         hx-trigger="load"
+         hx-swap="outerHTML"
+         hx-target="this">
+      <div class="p-4 text-center text-muted">
+        <div class="spinner-border text-primary feed-indicator" role="status"></div>
+        <div class="mt-2 small">Loading group posts...</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex align-items-center mb-2">
+          <i class="ti ti-users-group me-2 text-primary"></i>
+          <div class="fw-semibold">Anyone in the hub can view</div>
+        </div>
+        <div class="text-muted small">
+          Posts and comments are visible to all members. Authors and moderators can edit or delete their own content.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.body.addEventListener("refreshGroupFeed", function () {
+    const feed = document.getElementById("group-feed");
+    if (feed) {
+      htmx.trigger(feed, "load");
+    }
+  });
+</script>
+{% endblock %}

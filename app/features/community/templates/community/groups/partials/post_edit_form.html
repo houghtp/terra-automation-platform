@@ -1,0 +1,57 @@
+<div class="card mb-3" id="post-{{ post.id }}">
+  <div class="card-header">
+    <div class="fw-semibold">Edit Post</div>
+  </div>
+  <div class="card-body">
+    <form
+      hx-put="/features/community/groups/posts/{{ post.id }}/partials"
+      hx-target="#post-{{ post.id }}"
+      hx-swap="outerHTML"
+      hx-disabled-elt="fieldset, button"
+      autocomplete="off"
+    >
+      <fieldset class="form-fieldset">
+        <div class="mb-3">
+          <label class="form-label">Title</label>
+          <input
+            type="text"
+            name="title"
+            class="form-control {% if errors and errors.get('title') %}is-invalid{% endif %}"
+            maxlength="255"
+            value="{{ post.title if post.title is not none else '' }}"
+          >
+          {% if errors and errors.get('title') %}
+            <div class="invalid-feedback d-block">{{ errors['title'][0] }}</div>
+          {% endif %}
+        </div>
+        <div class="mb-3">
+          <label class="form-label required">Content</label>
+          <textarea
+            name="content"
+            rows="4"
+            required
+            class="form-control {% if errors and errors.get('content') %}is-invalid{% endif %}"
+          >{{ post.content if post.content is not none else '' }}</textarea>
+          {% if errors and errors.get('content') %}
+            <div class="invalid-feedback d-block">{{ errors['content'][0] }}</div>
+          {% endif %}
+        </div>
+      </fieldset>
+      <div class="d-flex justify-content-end gap-2">
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          hx-get="/features/community/groups/posts/{{ post.id }}/partials"
+          hx-target="#post-{{ post.id }}"
+          hx-swap="outerHTML"
+        >
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary">
+          <span class="htmx-indicator spinner-border spinner-border-sm me-2" role="status"></span>
+          Save
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -234,6 +234,33 @@ async def groups_page(
     )
 
 
+@router.get("/groups/{group_id}/view", response_class=HTMLResponse)
+async def group_detail_page(
+    request: Request,
+    group_id: str,
+    current_user: User = Depends(get_current_user),
+    group_service: GroupCrudService = Depends(get_group_service),
+):
+    group = await group_service.get_by_id(group_id)
+    if not group:
+        return HTMLResponse(
+            "<div class='alert alert-danger m-3'>Group not found.</div>",
+            status_code=404,
+        )
+    return templates.TemplateResponse(
+        "community/groups/detail.html",
+        {
+            "request": request,
+            "user": current_user,
+            "group": group,
+            "page_title": group.name,
+            "page_description": group.description or "Open discussion space for the community.",
+            "page_icon": "users-group",
+            "is_moderator": current_user.role in {"admin", "global_admin"},
+        },
+    )
+
+
 @router.get("/messages", response_class=HTMLResponse)
 async def messages_page(
     request: Request,

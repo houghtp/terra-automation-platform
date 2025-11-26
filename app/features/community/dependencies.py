@@ -53,21 +53,24 @@ async def get_group_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
 ) -> GroupCrudService:
-    return GroupCrudService(session, tenant_id)
+    # Groups are global within the community hub, so bypass tenant scoping.
+    return GroupCrudService(session, tenant_id=None)
 
 
 async def get_group_post_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
 ) -> GroupPostCrudService:
-    return GroupPostCrudService(session, tenant_id)
+    # Group posts are shared hub-wide (global).
+    return GroupPostCrudService(session, tenant_id=None)
 
 
 async def get_group_comment_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
 ) -> GroupCommentCrudService:
-    return GroupCommentCrudService(session, tenant_id)
+    # Comments inherit the global group scope.
+    return GroupCommentCrudService(session, tenant_id=None)
 
 
 async def get_message_service(

@@ -23,7 +23,6 @@ class GroupCrudService(BaseService[Group]):
     async def list_groups(
         self,
         search: Optional[str] = None,
-        privacy: Optional[str] = None,
         limit: int = 50,
         offset: int = 0,
     ) -> Tuple[List[Group], int]:
@@ -39,9 +38,6 @@ class GroupCrudService(BaseService[Group]):
             if search:
                 like = f"%{search.lower()}%"
                 filters.append(or_(func.lower(Group.name).like(like), func.lower(Group.description).like(like)))
-
-            if privacy:
-                filters.append(func.lower(Group.privacy) == privacy.lower())
 
             if filters:
                 stmt = stmt.where(*filters)
@@ -68,9 +64,7 @@ class GroupCrudService(BaseService[Group]):
     async def create_group(self, payload: Dict[str, Any], user) -> Group:
         """Create a new group."""
         try:
-            tenant_id = self.tenant_id
-            if tenant_id in (None, "global"):
-                raise ValueError("Tenant context is required for groups.")
+            tenant_id = self.tenant_id or "global"
 
             audit_ctx = AuditContext.from_user(user) if user else None
             group = Group(
@@ -78,7 +72,6 @@ class GroupCrudService(BaseService[Group]):
                 tenant_id=tenant_id,
                 name=payload["name"],
                 description=payload.get("description"),
-                privacy=payload.get("privacy", "private"),
                 owner_id=payload.get("owner_id"),
             )
             if audit_ctx:
@@ -165,16 +158,14 @@ class GroupPostCrudService(BaseService[GroupPost]):
     async def create_post(self, payload: Dict[str, Any], user) -> GroupPost:
         """Create a group post."""
         try:
-            tenant_id = self.tenant_id
-            if tenant_id in (None, "global"):
-                raise ValueError("Tenant context is required for posts.")
+            tenant_id = self.tenant_id or "global"
 
             audit_ctx = AuditContext.from_user(user) if user else None
             post = GroupPost(
                 id=str(uuid4()),
                 tenant_id=tenant_id,
                 group_id=payload["group_id"],
-                author_id=payload.get("author_id"),
+                author_id=payload.get("author_id") or (getattr(user, "id", None) if user else None),
                 title=payload.get("title"),
                 content=payload["content"],
             )
@@ -251,16 +242,14 @@ class GroupCommentCrudService(BaseService[GroupComment]):
 
     async def create_comment(self, payload: Dict[str, Any], user) -> GroupComment:
         try:
-            tenant_id = self.tenant_id
-            if tenant_id in (None, "global"):
-                raise ValueError("Tenant context is required for comments.")
+            tenant_id = self.tenant_id or "global"
 
             audit_ctx = AuditContext.from_user(user) if user else None
             comment = GroupComment(
                 id=str(uuid4()),
                 tenant_id=tenant_id,
                 post_id=payload["post_id"],
-                author_id=payload.get("author_id"),
+                author_id=payload.get("author_id") or (getattr(user, "id", None) if user else None),
                 content=payload["content"],
             )
             if audit_ctx:
@@ -279,3 +268,22 @@ class GroupCommentCrudService(BaseService[GroupComment]):
         await self.db.delete(comment)
         await self.db.flush()
         return True
+
+    async def update_comment(self, comment_id: str, payload: Dict[str, Any], user) -> Optional[GroupComment]:
+        comment = await super().get_by_id(GroupComment, comment_id)
+        if not comment:
+            return None
+
+        try:
+            if "content" in payload and payload["content"] is not None:
+                comment.content = payload["content"]
+
+            audit_ctx = AuditContext.from_user(user) if user else None
+            if audit_ctx:
+                comment.set_updated_by(audit_ctx.user_email, audit_ctx.user_name)
+
+            await self.db.flush()
+            await self.db.refresh(comment)
+            return comment
+        except Exception as exc:
+            await self.handle_error("update_comment", exc, comment_id=comment_id)

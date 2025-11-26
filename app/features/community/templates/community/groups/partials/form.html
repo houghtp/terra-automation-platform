@@ -31,17 +31,6 @@
             <div class="invalid-feedback d-block">{{ errors['name'][0] }}</div>
           {% endif %}
         </div>
-        <div class="col-md-6">
-          <label class="form-label">Privacy</label>
-          <select
-            name="privacy"
-            class="form-select"
-          >
-            {% set selected_privacy = (form_data.privacy if form_data and form_data.privacy is not none else (group.privacy if group else 'private')) %}
-            <option value="private" {% if selected_privacy == 'private' %}selected{% endif %}>Private</option>
-            <option value="public" {% if selected_privacy == 'public' %}selected{% endif %}>Public</option>
-          </select>
-        </div>
         <div class="col-12">
           <label class="form-label">Description</label>
           <textarea

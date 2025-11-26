@@ -1,0 +1,45 @@
+{% set post_id = post.id %}
+<div id="comments-{{ post_id }}">
+  <div class="d-flex align-items-center mb-2">
+    <div class="fw-semibold">Comments</div>
+    <div class="ms-2 badge bg-light text-muted">{{ post.comments|length }}</div>
+  </div>
+
+  {% if post.comments %}
+    <div class="list-group list-group-flush mb-3">
+      {% for comment in post.comments %}
+        {% include "community/groups/partials/comment_item.html" with context %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="text-muted small mb-3">No comments yet.</div>
+  {% endif %}
+
+  <form
+    hx-post="/features/community/groups/posts/{{ post_id }}/comments"
+    hx-target="#comments-{{ post_id }}"
+    hx-swap="outerHTML"
+    hx-disabled-elt="fieldset, button"
+    class="mt-2"
+  >
+    <fieldset class="form-fieldset">
+      <label class="form-label required">Add a comment</label>
+      <textarea
+        name="content"
+        rows="2"
+        required
+        class="form-control {% if comment_errors and comment_errors.get('content') %}is-invalid{% endif %}"
+        placeholder="Write a reply..."
+      >{{ comment_form_data.content if comment_form_data and comment_form_data.post_id == post_id else '' }}</textarea>
+      {% if comment_errors and comment_errors.get('content') %}
+        <div class="invalid-feedback d-block">{{ comment_errors['content'][0] }}</div>
+      {% endif %}
+    </fieldset>
+    <div class="d-flex justify-content-end mt-2">
+      <button type="submit" class="btn btn-outline-primary btn-sm">
+        <span class="htmx-indicator spinner-border spinner-border-sm me-2" role="status"></span>
+        Comment
+      </button>
+    </div>
+  </form>
+</div>
