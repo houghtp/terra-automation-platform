@@ -4,45 +4,21 @@
 
 let pollResultChart = null;
 
-function renderPollChart(data) {
-  const element = document.getElementById("poll-results");
-  if (!element) return;
-
-  if (!pollResultChart) {
-    pollResultChart = echarts.init(element);
-  }
-
-  const labels = data.map((item) => item.label);
-  const values = data.map((item) => item.votes);
-
-  pollResultChart.setOption({
-    tooltip: { trigger: "item" },
-    series: [
-      {
-        type: "pie",
-        radius: ["40%", "70%"],
-        data: labels.map((label, idx) => ({ value: values[idx], name: label })),
-        emphasis: {
-          itemStyle: {
-            shadowBlur: 10,
-            shadowOffsetX: 0,
-            shadowColor: "rgba(0,0,0,0.4)",
-          },
-        },
-      },
-    ],
-  });
-}
-
 function loadPollSummary(pollId) {
   fetch(`/features/community/polls/api/${pollId}/summary`)
     .then((resp) => resp.json())
     .then((payload) => {
-      renderPollChart(payload.data || []);
-      const refreshBtn = document.getElementById("refresh-poll-results");
-      if (refreshBtn) {
-        refreshBtn.disabled = false;
-        refreshBtn.onclick = () => loadPollSummary(pollId);
+      const widget = document.getElementById("poll-results-widget");
+      if (!widget) return;
+      const items = (payload.data || []).map((item) => ({
+        name: item.label,
+        value: item.votes,
+      }));
+      widget.setAttribute("data-type", "bar");
+      widget.setAttribute("data-title", "Poll Results");
+      widget.chartData = { items };
+      if (typeof widget.loadData === "function") {
+        widget.loadData();
       }
     })
     .catch((error) => console.error("Failed to load poll summary", error));

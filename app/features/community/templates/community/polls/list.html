@@ -34,22 +34,25 @@
             </div>
         </div>
     </div>
-    <div class="col-12 col-xl-6">
-        <div class="card h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <div>
-                    <h3 class="card-title mb-0"><i class="ti ti-chart-pie me-2"></i>Results</h3>
-                    <p class="text-muted mb-0">Choose a poll to see live voting results.</p>
-                </div>
-                <button class="btn btn-outline-primary btn-sm" id="refresh-poll-results" disabled>
-                    <i class="ti ti-refresh"></i>
-                </button>
-            </div>
-            <div class="card-body">
-                <div id="poll-results" style="height: 320px;"></div>
-            </div>
+<div class="col-12 col-xl-6">
+    <div class="card h-100">
+        <div class="card-header">
+            <h3 class="card-title mb-0"><i class="ti ti-chart-bar me-2"></i>Results</h3>
+            <p class="text-muted mb-0">Choose a poll to see live voting results.</p>
+        </div>
+        <div class="card-body">
+            <chart-widget
+                id="poll-results-widget"
+                class="chart-widget"
+                data-url=""
+                data-type="bar"
+                data-title="Poll Results"
+                data-height="320">
+                <div class="text-muted">Select a poll to load results.</div>
+            </chart-widget>
         </div>
     </div>
+</div>
 </div>
 
 <div class="modal modal-blur fade" id="modal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -63,4 +66,5 @@
 
 {% block scripts %}
 <script src="/features/community/static/js/polls-table.js"></script>
+<script src="/dashboard/static/js/chart-widget.js"></script>
 {% endblock %}
