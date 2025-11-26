@@ -2,9 +2,9 @@
   <ul class="list-group" id="recipient-options-list">
     {% for user in users %}
       <li class="list-group-item list-group-item-action"
-          hx-get="/features/community/messages/partials/recipient_add"
-          hx-target="#recipient-chips"
-          hx-swap="outerHTML"
+          hx-post="/features/community/messages/partials/recipient_add"
+          hx-target="#recipient-updates"
+          hx-swap="innerHTML"
           hx-include="#recipient_ids_field"
           hx-vals='{"select_id": "{{ user.id }}", "select_label": "{{ user.name }} ({{ user.email }})"}'>
         <div class="fw-semibold">{{ user.name }}</div>

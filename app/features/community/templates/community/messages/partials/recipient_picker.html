@@ -7,8 +7,8 @@
         <a href="#"
            class="ms-1 text-white"
            hx-get="/features/community/messages/partials/recipient_remove"
-           hx-target="#recipient-chips"
-           hx-swap="outerHTML"
+           hx-target="#recipient-updates"
+           hx-swap="innerHTML"
            hx-include="#recipient_ids_field"
            hx-vals='{"remove_id": "{{ user.id }}"}'
            aria-label="Remove {{ user.name }}">×</a>
@@ -29,4 +29,5 @@
     autocomplete="off"
   >
   <div id="recipient-options" class="mt-1"></div>
+  <div id="recipient-updates"></div>
 </div>

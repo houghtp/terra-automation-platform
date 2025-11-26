@@ -51,7 +51,7 @@ async def recipient_add(
     user_result = await db.execute(users_stmt)
     selected_users = list(user_result.scalars().all())
     return templates.TemplateResponse(
-        "community/messages/partials/recipient_picker.html",
+        "community/messages/partials/recipient_update.html",
         {"request": request, "selected_ids": selected_ids, "selected_users": selected_users},
     )
 
@@ -68,6 +68,6 @@ async def recipient_remove(
     user_result = await db.execute(users_stmt)
     selected_users = list(user_result.scalars().all())
     return templates.TemplateResponse(
-        "community/messages/partials/recipient_picker.html",
+        "community/messages/partials/recipient_update.html",
         {"request": request, "selected_ids": selected_ids, "selected_users": selected_users},
     )
