@@ -62,9 +62,7 @@ class EventCrudService(BaseService[Event]):
     async def create_event(self, payload: Dict[str, Optional[str]], user) -> Event:
         """Create a new event record."""
         try:
-            tenant_id = self.tenant_id
-            if tenant_id in (None, "global"):
-                raise ValueError("Tenant context is required for events.")
+            tenant_id = self.tenant_id or "global"
 
             audit_ctx = AuditContext.from_user(user) if user else None
             event = Event(

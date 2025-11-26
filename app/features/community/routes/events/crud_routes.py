@@ -36,7 +36,6 @@ router = APIRouter()
 async def create_event_form(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user),
     event_service: EventCrudService = Depends(get_event_service),
 ):
@@ -78,7 +77,6 @@ async def update_event_form(
     request: Request,
     event_id: str,
     db: AsyncSession = Depends(get_db),
-    tenant_id: str = Depends(tenant_dependency),
     current_user: User = Depends(get_current_user),
     event_service: EventCrudService = Depends(get_event_service),
 ):

@@ -84,7 +84,8 @@ async def get_event_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
 ) -> EventCrudService:
-    return EventCrudService(session, tenant_id)
+    # Events are community-wide; bypass tenant scoping.
+    return EventCrudService(session, tenant_id=None)
 
 
 async def get_poll_service(

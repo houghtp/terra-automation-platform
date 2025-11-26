@@ -219,6 +219,8 @@
 
     const table = new Tabulator(tableEl, {
       ...advancedTableConfig,
+      rowHeader: false,
+      selectable: false,
       ajaxURL: API_ENDPOINT,
       ajaxResponse: standardAjaxResponse,
       columns: [
