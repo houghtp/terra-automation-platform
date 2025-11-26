@@ -184,4 +184,25 @@ async def delete_event_api(
     return Response(status_code=204)
 
 
+# --- HTMX delete ---
+
+
+@router.delete("/{event_id}", response_class=HTMLResponse)
+async def delete_event_form(
+    event_id: str,
+    db: AsyncSession = Depends(get_db),
+    event_service: EventCrudService = Depends(get_event_service),
+):
+    deleted = await event_service.delete_event(event_id)
+    if not deleted:
+        await db.rollback()
+        return HTMLResponse(
+            "<div class='alert alert-danger mb-0'>Event not found.</div>",
+            status_code=404,
+        )
+    await commit_transaction(db, "delete_event_form")
+    headers = {"HX-Trigger": "closeModal, refreshTable, showSuccess"}
+    return Response(status_code=204, headers=headers)
+
+
 __all__ = ["router"]

@@ -404,7 +404,7 @@
   };
 
   window.deleteEvent = function deleteEvent(id) {
-    deleteTabulatorRow(`/features/community/events/${id}/delete`, "#events-table", {
+    deleteTabulatorRow(`/features/community/events/api/${id}`, "#events-table", {
       title: "Delete Event",
       message: "Are you sure you want to delete this event?",
       confirmText: "Delete Event",

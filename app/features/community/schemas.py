@@ -599,8 +599,8 @@ class EventBase(BaseModel):
 
     title: constr(strip_whitespace=True, min_length=3, max_length=255)
     description: Optional[str] = None
-    start_time: datetime
-    end_time: Optional[datetime] = None
+    start_date: datetime
+    end_date: Optional[datetime] = None
     location: Optional[constr(strip_whitespace=True, max_length=255)] = None
     url: Optional[constr(strip_whitespace=True, max_length=500)] = None
     category: Optional[constr(strip_whitespace=True, max_length=100)] = None
@@ -615,8 +615,8 @@ class EventUpdate(BaseModel):
 
     title: Optional[constr(strip_whitespace=True, min_length=3, max_length=255)] = None
     description: Optional[str] = None
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
     location: Optional[constr(strip_whitespace=True, max_length=255)] = None
     url: Optional[constr(strip_whitespace=True, max_length=500)] = None
     category: Optional[constr(strip_whitespace=True, max_length=100)] = None
