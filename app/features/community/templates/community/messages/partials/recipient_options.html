@@ -7,7 +7,7 @@
           hx-swap="innerHTML"
           hx-include="#recipient_ids_field"
           hx-vals='{"select_id": "{{ user.id }}", "select_label": "{{ user.name }} ({{ user.email }})"}'>
-        <div class="fw-semibold">{{ user.name }}</div>
+       <div class="fw-semibold">{{ user.name }}</div>
         <div class="text-muted small">{{ user.email }}</div>
       </li>
     {% endfor %}

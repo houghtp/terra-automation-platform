@@ -36,7 +36,7 @@ async def recipient_picker(
     )
 
 
-@router.get("/partials/recipient_add")
+@router.post("/partials/recipient_add")
 async def recipient_add(
     request: Request,
     select_id: str,
@@ -56,7 +56,7 @@ async def recipient_add(
     )
 
 
-@router.get("/partials/recipient_remove")
+@router.post("/partials/recipient_remove")
 async def recipient_remove(
     request: Request,
     remove_id: str,

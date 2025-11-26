@@ -6,7 +6,7 @@
         {{ user.name }} ({{ user.email }})
         <a href="#"
            class="ms-1 text-white"
-           hx-get="/features/community/messages/partials/recipient_remove"
+           hx-post="/features/community/messages/partials/recipient_remove"
            hx-target="#recipient-updates"
            hx-swap="innerHTML"
            hx-include="#recipient_ids_field"
@@ -31,3 +31,15 @@
   <div id="recipient-options" class="mt-1"></div>
   <div id="recipient-updates"></div>
 </div>
+<script>
+  document.body.addEventListener("htmx:afterSwap", function(evt) {
+    if (evt.target && (evt.target.id === "recipient-options" || evt.target.id === "recipient-updates")) {
+      const input = document.getElementById("recipient-search");
+      if (input) {
+        const len = input.value.length;
+        input.focus();
+        input.setSelectionRange(len, len);
+      }
+    }
+  });
+</script>
