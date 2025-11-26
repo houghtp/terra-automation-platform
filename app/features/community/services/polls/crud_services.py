@@ -66,9 +66,7 @@ class PollCrudService(BaseService[Poll]):
     async def create_poll(self, payload: Dict[str, any], user) -> Poll:
         """Create poll with options."""
         try:
-            tenant_id = self.tenant_id
-            if tenant_id in (None, "global"):
-                raise ValueError("Tenant context is required for polls.")
+            tenant_id = self.tenant_id or "global"
 
             audit_ctx = AuditContext.from_user(user) if user else None
             poll = Poll(
@@ -191,9 +189,7 @@ class PollVoteCrudService(BaseService[PollVote]):
     async def cast_vote(self, poll_id: str, option_id: str, member_id: Optional[str]) -> PollVote:
         """Cast or replace a vote."""
         try:
-            tenant_id = self.tenant_id
-            if tenant_id in (None, "global"):
-                raise ValueError("Tenant context is required for votes.")
+            tenant_id = self.tenant_id or "global"
 
             if member_id:
                 await self.db.execute(

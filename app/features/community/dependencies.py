@@ -92,14 +92,16 @@ async def get_poll_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
 ) -> PollCrudService:
-    return PollCrudService(session, tenant_id)
+    # Polls are community-wide; bypass tenant scoping.
+    return PollCrudService(session, tenant_id=None)
 
 
 async def get_poll_vote_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
 ) -> PollVoteCrudService:
-    return PollVoteCrudService(session, tenant_id)
+    # Poll votes follow the hub-wide scope.
+    return PollVoteCrudService(session, tenant_id=None)
 
 
 async def get_article_service(
