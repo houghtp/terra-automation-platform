@@ -1,45 +1,32 @@
 {% set selected_ids = selected_ids or [] %}
-<div class="border rounded p-2" id="recipient-picker">
-  <div id="recipient-chips" class="d-flex flex-wrap gap-2 mb-2">
-    {% for user in selected_users %}
-      <span class="badge bg-primary d-flex align-items-center">
-        {{ user.name }} ({{ user.email }})
-        <a href="#"
-           class="ms-1 text-white"
-           hx-post="/features/community/messages/partials/recipient_remove"
-           hx-target="#recipient-updates"
-           hx-swap="innerHTML"
-           hx-include="#recipient_ids_field"
-           hx-vals='{"remove_id": "{{ user.id }}"}'
-           aria-label="Remove {{ user.name }}">×</a>
-      </span>
-    {% endfor %}
+{% set selected_users = selected_users or [] %}
+<div id="recipient-picker" class="musel w-100">
+  <input type="hidden" name="recipient_ids" value="{{ selected_ids|join(',') }}" />
+  {% for user in selected_users %}
+    <button type="button"
+            class="mb-1 btn btn-dark"
+            hx-post="/features/community/messages/partials/recipient_update"
+            hx-target="#recipient-picker"
+            hx-swap="outerHTML"
+            hx-include="[name='recipient_ids']"
+            hx-vals='{"action": "remove", "key": "{{ user.id }}"}'>
+      {{ user.name }} ({{ user.email }}) <i class="ti ti-trash"></i>
+    </button>
+  {% endfor %}
+  <input type="text"
+         name="recipient_query"
+         class="mt-2 form-control"
+         autocomplete="off"
+         placeholder="Type to search recipients..."
+         hx-include="[name='recipient_ids']"
+         hx-post="/features/community/messages/partials/recipients"
+         hx-target="#recipient-picker .dropdown"
+         hx-trigger="input changed delay:500ms, search"
+         hx-indicator="#recipient-picker .htmx-indicator">
+  <div class="dropdown"></div>
+  <div class="htmx-indicator dropdown">
+    <div class="dropdown-menu show p-1">
+      <div class="spinner-border"></div>
+    </div>
   </div>
-  <input type="hidden" name="recipient_ids" id="recipient_ids_field" value="{{ selected_ids|join(',') }}">
-  <input
-    type="text"
-    id="recipient-search"
-    class="form-control"
-    placeholder="Type a name or email"
-    hx-get="/features/community/messages/partials/recipients"
-    hx-trigger="input changed delay:300ms"
-    hx-target="#recipient-options"
-    hx-swap="innerHTML"
-    hx-include="#recipient_ids_field"
-    autocomplete="off"
-  >
-  <div id="recipient-options" class="mt-1"></div>
-  <div id="recipient-updates"></div>
 </div>
-<script>
-  document.body.addEventListener("htmx:afterSwap", function(evt) {
-    if (evt.target && (evt.target.id === "recipient-options" || evt.target.id === "recipient-updates")) {
-      const input = document.getElementById("recipient-search");
-      if (input) {
-        const len = input.value.length;
-        input.focus();
-        input.setSelectionRange(len, len);
-      }
-    }
-  });
-</script>
