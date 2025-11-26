@@ -20,6 +20,19 @@ class PollCrudService(BaseService[Poll]):
     async def get_by_id(self, poll_id: str) -> Optional[Poll]:
         return await super().get_by_id(Poll, poll_id)
 
+    async def get_by_id_with_options(self, poll_id: str) -> Optional[Poll]:
+        """Fetch poll with options eagerly loaded."""
+        try:
+            stmt = (
+                select(Poll)
+                .options(selectinload(Poll.options))
+                .where(Poll.id == poll_id)
+            )
+            result = await self.db.execute(stmt)
+            return result.scalar_one_or_none()
+        except Exception as exc:
+            await self.handle_error("get_by_id_with_options", exc, poll_id=poll_id)
+
     async def list_polls(
         self,
         status: Optional[str] = None,
@@ -111,6 +124,50 @@ class PollCrudService(BaseService[Poll]):
             return poll
         except Exception as exc:
             await self.handle_error("update_poll", exc, poll_id=poll_id)
+
+    async def update_poll_with_options(
+        self,
+        poll_id: str,
+        payload: Dict[str, any],
+        options: List[Dict[str, any]],
+        user,
+    ) -> Optional[Poll]:
+        """Update poll and replace options."""
+        poll = await self.get_by_id_with_options(poll_id)
+        if not poll:
+            return None
+
+        try:
+            for key, value in payload.items():
+                if value is not None and hasattr(poll, key):
+                    setattr(poll, key, value)
+
+            # Replace options
+            await self.db.execute(PollOption.__table__.delete().where(PollOption.poll_id == poll.id))
+            audit_ctx = AuditContext.from_user(user) if user else None
+            option_rows = []
+            for idx, opt in enumerate(options):
+                option = PollOption(
+                    id=str(uuid4()),
+                    poll_id=poll.id,
+                    text=opt["text"],
+                    order=opt.get("order", idx),
+                )
+                if audit_ctx:
+                    option.set_created_by(audit_ctx.user_email, audit_ctx.user_name)
+                option_rows.append(option)
+            if option_rows:
+                self.db.add_all(option_rows)
+
+            audit_ctx = AuditContext.from_user(user) if user else None
+            if audit_ctx:
+                poll.set_updated_by(audit_ctx.user_email, audit_ctx.user_name)
+
+            await self.db.flush()
+            await self.db.refresh(poll)
+            return poll
+        except Exception as exc:
+            await self.handle_error("update_poll_with_options", exc, poll_id=poll_id)
 
     async def delete_poll(self, poll_id: str) -> bool:
         """Delete poll."""

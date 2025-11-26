@@ -36,6 +36,21 @@ from ...services import PollCrudService, PollVoteCrudService
 router = APIRouter()
 
 
+def _parse_options_text(options_text: str) -> list[dict]:
+    """Split textarea into ordered option dicts."""
+    if options_text is None:
+        return []
+    lines = [line.strip() for line in options_text.splitlines() if line.strip()]
+    seen = set()
+    options = []
+    for idx, line in enumerate(lines):
+        if line in seen:
+            continue
+        seen.add(line)
+        options.append({"text": line, "order": idx})
+    return options
+
+
 # --- HTMX form submissions ---
 
 @router.post("/", response_class=HTMLResponse)
@@ -52,6 +67,7 @@ async def create_poll_form(
         "status": form.get("status") or "draft",
         "expires_at": form.get("expires_at") or None,
     }
+    options_list = _parse_options_text(form.get("options"))
 
     try:
         payload = PollCreate(**raw_data)
@@ -60,7 +76,7 @@ async def create_poll_form(
         context = {
             "request": request,
             "poll": None,
-            "form_data": SimpleNamespace(**raw_data),
+            "form_data": SimpleNamespace(**{**raw_data, "options_text": form.get("options") or ""}),
             "errors": errors,
         }
         return templates.TemplateResponse(
@@ -70,14 +86,18 @@ async def create_poll_form(
         )
 
     try:
-        await poll_service.create_poll(payload.model_dump(), current_user)
+        if len(options_list) < 2:
+            raise ValueError("Please provide at least two options.")
+        payload_data = payload.model_dump()
+        payload_data["options"] = options_list
+        await poll_service.create_poll(payload_data, current_user)
         await commit_transaction(db, "create_poll_form")
     except Exception as exc:
         await db.rollback()
         context = {
             "request": request,
             "poll": None,
-            "form_data": SimpleNamespace(**raw_data),
+            "form_data": SimpleNamespace(**{**raw_data, "options_text": form.get("options") or ""}),
             "errors": {"general": [str(exc)]},
         }
         return templates.TemplateResponse(
@@ -99,13 +119,15 @@ async def update_poll_form(
     current_user: User = Depends(get_current_user),
     poll_service: PollCrudService = Depends(get_poll_service),
 ):
-    poll = await poll_service.get_by_id(poll_id)
+    poll = await poll_service.get_by_id_with_options(poll_id)
     if not poll:
         return HTMLResponse(
             "<div class='alert alert-danger mb-0'>Poll not found.</div>",
             status_code=404,
         )
-    poll_ns = PollResponse.model_validate(poll, from_attributes=True)
+    poll_dict = poll.to_dict()
+    poll_dict["options"] = [opt.to_dict() for opt in getattr(poll, "options", [])]
+    poll_ns = PollResponse.model_validate(poll_dict)
 
     form = await request.form()
     raw_data = {
@@ -113,6 +135,7 @@ async def update_poll_form(
         "status": form.get("status") or None,
         "expires_at": form.get("expires_at") or None,
     }
+    options_list = _parse_options_text(form.get("options"))
 
     try:
         payload = PollUpdate(**raw_data)
@@ -121,7 +144,7 @@ async def update_poll_form(
         context = {
             "request": request,
             "poll": poll_ns,
-            "form_data": SimpleNamespace(**raw_data),
+            "form_data": SimpleNamespace(**{**raw_data, "options_text": form.get("options") or ""}),
             "errors": errors,
         }
         return templates.TemplateResponse(
@@ -130,7 +153,26 @@ async def update_poll_form(
             status_code=400,
         )
 
-    updated = await poll_service.update_poll(poll_id, payload.model_dump(exclude_unset=True), current_user)
+    if len(options_list) < 2:
+        errors = {"options": ["Please provide at least two options."]}
+        context = {
+            "request": request,
+            "poll": poll_ns,
+            "form_data": SimpleNamespace(**{**raw_data, "options_text": form.get("options") or ""}),
+            "errors": errors,
+        }
+        return templates.TemplateResponse(
+            "community/polls/partials/form.html",
+            context,
+            status_code=400,
+        )
+
+    updated = await poll_service.update_poll_with_options(
+        poll_id,
+        payload.model_dump(exclude_unset=True),
+        options_list,
+        current_user,
+    )
     if not updated:
         await db.rollback()
         return HTMLResponse(

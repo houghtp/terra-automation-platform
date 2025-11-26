@@ -2,7 +2,7 @@
  * Poll management tables and chart rendering.
  */
 
-let pollResultChart = null;
+let selectedPollId = null;
 
 function loadPollSummary(pollId) {
   fetch(`/features/community/polls/api/${pollId}/summary`)
@@ -22,6 +22,80 @@ function loadPollSummary(pollId) {
       }
     })
     .catch((error) => console.error("Failed to load poll summary", error));
+}
+
+function renderVotePanel(poll) {
+  const panel = document.getElementById("poll-vote-panel");
+  if (!panel) return;
+
+  if (!poll || !poll.options || poll.options.length === 0) {
+    panel.innerHTML = '<div class="text-muted">Select a poll to vote.</div>';
+    selectedPollId = null;
+    return;
+  }
+
+  selectedPollId = poll.id;
+  const optionsHtml = poll.options
+    .map(
+      (opt, idx) => `
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="radio" name="poll-option" id="poll-opt-${idx}" value="${opt.id}">
+          <label class="form-check-label" for="poll-opt-${idx}">${opt.text}</label>
+        </div>
+      `
+    )
+    .join("");
+
+  panel.innerHTML = `
+    <div class="fw-semibold mb-2">${poll.question}</div>
+    <form id="poll-vote-form">
+      ${optionsHtml}
+      <button type="submit" class="btn btn-primary btn-sm mt-2" disabled>
+        <span class="htmx-indicator spinner-border spinner-border-sm me-2" role="status"></span>
+        Vote
+      </button>
+    </form>
+  `;
+
+  const form = panel.querySelector("#poll-vote-form");
+  const submitBtn = form.querySelector("button[type='submit']");
+  form.addEventListener("change", () => {
+    const checked = form.querySelector("input[name='poll-option']:checked");
+    submitBtn.disabled = !checked;
+  });
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const checked = form.querySelector("input[name='poll-option']:checked");
+    if (!checked) return;
+    submitBtn.disabled = true;
+    submitBtn.classList.add("disabled");
+    fetch(`/features/community/polls/api/${poll.id}/vote`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "same-origin",
+      body: JSON.stringify({ poll_id: poll.id, option_id: checked.value }),
+    })
+      .then((resp) => {
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        if (typeof window.showToast === "function") {
+          window.showToast("Vote recorded", "success");
+        }
+        loadPollSummary(poll.id);
+      })
+      .catch((error) => {
+        console.error("Failed to submit vote", error);
+        if (typeof window.showToast === "function") {
+          window.showToast("Failed to submit vote.", "error");
+        }
+      })
+      .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove("disabled");
+      });
+  });
 }
 
 window.initializePollsTable = function initializePollsTable() {
@@ -58,6 +132,7 @@ window.initializePollsTable = function initializePollsTable() {
   table.on("rowClick", (event, row) => {
     const data = row.getData();
     loadPollSummary(data.id);
+    renderVotePanel(data);
   });
 
   window.pollsTable = table;
