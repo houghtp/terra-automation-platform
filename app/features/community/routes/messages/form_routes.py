@@ -25,7 +25,7 @@ from sqlalchemy import func, or_
 from app.features.community.models import Member
 
 from ...dependencies import get_message_service
-from ...schemas import MessageCreate
+from ...schemas import MessageCreate, ThreadCreate
 from ...services import MessageCrudService
 from app.features.auth.models import User
 
@@ -115,10 +115,12 @@ async def send_message_form(
 async def new_thread_form(
     request: Request,
     current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
+    user_options = (await db.execute(select(User).order_by(User.name))).scalars().all()
     return templates.TemplateResponse(
         "community/messages/partials/new_thread.html",
-        {"request": request, "current_member_id": current_user.id},
+        {"request": request, "current_member_id": current_user.id, "user_options": user_options},
     )
 
 
@@ -130,41 +132,59 @@ async def create_new_thread(
     message_service: MessageCrudService = Depends(get_message_service),
 ):
     form = await request.form()
-    recipient_id = form.get("recipient_id")
+    recipient_ids = form.getlist("recipient_ids")
     content = form.get("content")
     try:
-        payload = MessageCreate(recipient_id=recipient_id, content=content, thread_id=None)
+        payload = ThreadCreate(recipient_ids=recipient_ids, content=content)
     except ValidationError as exc:
         errors = _validation_errors_to_dict(exc)
+        user_options = (await db.execute(select(User).order_by(User.name))).scalars().all()
         return templates.TemplateResponse(
             "community/messages/partials/new_thread.html",
-            {"request": request, "errors": errors, "current_member_id": current_user.id, "recipient_id": recipient_id, "content": content},
+            {
+                "request": request,
+                "errors": errors,
+                "current_member_id": current_user.id,
+                "recipient_ids": recipient_ids,
+                "content": content,
+                "user_options": user_options,
+            },
             status_code=400,
         )
 
     try:
-        message = await message_service.create_message(payload.model_dump(), sender_id=current_user.id)
+        thread = await message_service.create_thread(payload.recipient_ids, created_by=current_user.id)
+        msg = await message_service.create_message({"thread_id": thread.id, "content": payload.content}, sender_id=current_user.id)
         await commit_transaction(db, "create_message_form")
-        thread_id = message.thread_id
-        messages = await message_service.fetch_thread(thread_id=thread_id, member_id=current_user.id)
+        messages = await message_service.fetch_thread(thread_id=thread.id, member_id=current_user.id)
+        participant_ids = await message_service.participants_for_thread(thread.id)
+        names = await message_service._user_map(participant_ids)
+        participants_label = ", ".join([names.get(pid, {}).get("name") or pid for pid in participant_ids])
         return templates.TemplateResponse(
             "community/messages/partials/thread.html",
             {
                 "request": request,
                 "messages": messages,
-                "thread_id": thread_id,
-                "other_party": recipient_id,
-                "other_party_name": None,
-                "other_party_email": None,
+                "thread_id": thread.id,
+                "participants_label": participants_label,
+                "participants_secondary": None,
                 "current_member_id": current_user.id,
             },
         )
     except Exception as exc:
         await db.rollback()
+        user_options = (await db.execute(select(User).order_by(User.name))).scalars().all()
         errors = {"general": [str(exc)]}
         return templates.TemplateResponse(
             "community/messages/partials/new_thread.html",
-            {"request": request, "errors": errors, "current_member_id": current_user.id, "recipient_id": recipient_id, "content": content},
+            {
+                "request": request,
+                "errors": errors,
+                "current_member_id": current_user.id,
+                "recipient_ids": recipient_ids,
+                "content": content,
+                "user_options": user_options,
+            },
             status_code=400,
         )
 
@@ -234,25 +254,16 @@ async def thread_view(
 ):
     """Render a thread with composer."""
     messages = await message_service.fetch_thread(thread_id=thread_id, member_id=current_user.id)
-    other_party: Optional[str] = None
-    other_party_name: Optional[str] = None
-    other_party_email: Optional[str] = None
-    if messages:
-        first = messages[0]
-        other_party = first.recipient_id if first.sender_id == current_user.id else first.sender_id
-        user_stmt = select(User).where(User.id == other_party)
-        res = await db.execute(user_stmt)
-        user = res.scalar_one_or_none()
-        if user:
-            other_party_name = user.name
-            other_party_email = user.email
+    participant_ids = await message_service.participants_for_thread(thread_id)
+    names = await message_service._user_map(participant_ids)
+    participants_label = ", ".join([names.get(pid, {}).get("name") or pid for pid in participant_ids])
+    participants_secondary = ", ".join([names.get(pid, {}).get("email") or "" for pid in participant_ids if names.get(pid, {}).get("email")])
     context = {
         "request": request,
         "messages": messages,
         "thread_id": thread_id,
-        "other_party": other_party,
-        "other_party_name": other_party_name,
-        "other_party_email": other_party_email,
+        "participants_label": participants_label,
+        "participants_secondary": participants_secondary,
         "current_member_id": current_user.id,
     }
     return templates.TemplateResponse("community/messages/partials/thread.html", context)
@@ -268,11 +279,10 @@ async def thread_reply(
 ):
     """Post a reply and re-render the thread."""
     form = await request.form()
-    recipient_id = form.get("recipient_id")
     content = form.get("content")
 
     try:
-        payload = MessageCreate(recipient_id=recipient_id, content=content, thread_id=thread_id)
+        payload = MessageCreate(content=content, thread_id=thread_id)
     except ValidationError as exc:
         errors = _validation_errors_to_dict(exc)
         messages = await message_service.fetch_thread(thread_id=thread_id, member_id=current_user.id)
@@ -280,7 +290,6 @@ async def thread_reply(
             "request": request,
             "messages": messages,
             "thread_id": thread_id,
-            "other_party": recipient_id,
             "current_member_id": current_user.id,
             "errors": errors,
         }
@@ -296,19 +305,23 @@ async def thread_reply(
             "request": request,
             "messages": messages,
             "thread_id": thread_id,
-            "other_party": recipient_id,
             "current_member_id": current_user.id,
             "errors": {"general": [str(exc)]},
         }
         return templates.TemplateResponse("community/messages/partials/thread.html", context, status_code=400)
 
     messages = await message_service.fetch_thread(thread_id=thread_id, member_id=current_user.id)
+    participant_ids = await message_service.participants_for_thread(thread_id)
+    names = await message_service._user_map(participant_ids)
+    participants_label = ", ".join([names.get(pid, {}).get("name") or pid for pid in participant_ids])
+    participants_secondary = ", ".join([names.get(pid, {}).get("email") or "" for pid in participant_ids if names.get(pid, {}).get("email")])
     context = {
         "request": request,
         "messages": messages,
         "thread_id": thread_id,
-        "other_party": recipient_id,
         "current_member_id": current_user.id,
+        "participants_label": participants_label,
+        "participants_secondary": participants_secondary,
     }
     return templates.TemplateResponse("community/messages/partials/thread.html", context)
 

@@ -10,12 +10,8 @@
       hx-push-url="false"
     >
       <div class="me-2">
-        <div class="d-flex align-items-center mb-1">
-          <span class="badge bg-azure text-uppercase me-2">{{ (convo.other_party_name or convo.other_party_email or 'User')[0:2] }}</span>
-          <span class="fw-semibold">{{ convo.other_party_name or convo.other_party_email or "Conversation" }}</span>
-          {% if convo.is_unread %}
-            <span class="badge bg-red ms-2">New</span>
-          {% endif %}
+        <div class="d-flex align-items-center mb-1 fw-semibold">
+          {{ ", ".join(convo.participants or []) }}
         </div>
         <div class="text-muted small text-truncate" style="-webkit-line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical;">
           {{ convo.last_message or "No messages yet." }}

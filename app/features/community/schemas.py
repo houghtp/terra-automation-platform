@@ -168,9 +168,13 @@ class GroupCommentResponse(GroupCommentBase):
 
 
 class MessageCreate(BaseModel):
-    recipient_id: str
     content: constr(strip_whitespace=True, min_length=1, max_length=2000)
-    thread_id: Optional[str] = None
+    thread_id: str
+
+
+class ThreadCreate(BaseModel):
+    recipient_ids: List[str]
+    content: constr(strip_whitespace=True, min_length=1, max_length=2000)
 
 
 class MessageResponse(BaseModel):
@@ -649,6 +653,7 @@ __all__ = [
     "GroupCommentCreate",
     "GroupCommentUpdate",
     "GroupCommentResponse",
+    "ThreadCreate",
     "MessageThreadCreate",
     "MessageThreadResponse",
     "MessageCreate",

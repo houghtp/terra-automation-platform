@@ -2,8 +2,8 @@
   {% if thread_id %}
     <div class="d-flex align-items-center justify-content-between py-3 px-4 border-bottom">
       <div>
-        <div class="fw-semibold">{{ other_party_name or other_party_email or 'Conversation' }}</div>
-        <div class="text-muted small">{{ other_party_email }}</div>
+        <div class="fw-semibold">{{ participants_label or 'Conversation' }}</div>
+        <div class="text-muted small">{{ participants_secondary }}</div>
       </div>
       <button
         class="btn btn-outline-secondary btn-sm"

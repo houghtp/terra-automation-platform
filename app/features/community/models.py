@@ -217,9 +217,9 @@ class Message(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     tenant_id = Column(String(64), nullable=False, index=True)
-    thread_id = Column(String(36), nullable=True)
+    thread_id = Column(String(36), ForeignKey("threads.id", ondelete="CASCADE"), nullable=True, index=True)
     sender_id = Column(String(36), nullable=False)
-    recipient_id = Column(String(36), nullable=False)
+    recipient_id = Column(String(36), nullable=True)  # Deprecated: use thread participants instead
     content = Column(Text, nullable=False)
     is_read = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), nullable=False)
@@ -278,6 +278,35 @@ class Event(Base, AuditMixin):
         }
         data.update(self.get_audit_info())
         return data
+
+
+class Thread(Base):
+    """Group conversation thread."""
+
+    __tablename__ = "threads"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(64), nullable=False, index=True)
+    created_by = Column(String(36), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+
+    def __repr__(self) -> str:
+        return f"<Thread id={self.id} tenant={self.tenant_id}>"
+
+
+class ThreadParticipant(Base):
+    """Participant membership in a thread."""
+
+    __tablename__ = "thread_participants"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    thread_id = Column(String(36), ForeignKey("threads.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    joined_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_thread_participants_thread_user_unique", "thread_id", "user_id", unique=True),
+    )
 
 
 class Poll(Base, AuditMixin):

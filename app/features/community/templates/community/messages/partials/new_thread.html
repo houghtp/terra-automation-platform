@@ -16,23 +16,19 @@
       hx-disabled-elt="fieldset"
     >
       <fieldset class="form-fieldset mb-0">
-        <div class="mb-2">
+        <div class="mb-3">
           <label class="form-label">To</label>
-          <input type="hidden" name="recipient_id" id="new_recipient_id" value="{{ recipient_id or '' }}">
-          <input
-            type="text"
-            name="recipient_label"
-            id="new_recipient_label"
-            value="{{ recip }}"
-            class="form-control"
-            placeholder="Type a name or email"
-            hx-get="/features/community/messages/partials/recipients"
-            hx-trigger="input changed delay:400ms, keyup[key=='Enter']"
-            hx-target="#new-recipient-results"
-            hx-swap="innerHTML"
-            autocomplete="off"
-          >
-          <div id="new-recipient-results"></div>
+          <select name="recipient_ids" multiple class="form-select" size="6">
+            {% for user in user_options %}
+              <option value="{{ user.id }}"
+                {% if recipient_ids is defined and user.id in recipient_ids %}selected{% endif %}>
+                {{ user.name }} ({{ user.email }})
+              </option>
+            {% endfor %}
+          </select>
+          {% if errors and errors.get("recipient_ids") %}
+            <div class="invalid-feedback d-block">{{ errors["recipient_ids"][0] }}</div>
+          {% endif %}
         </div>
         <div class="mb-2">
           <textarea name="content" class="form-control" rows="3" placeholder="Message..." required>{{ content if content is defined else "" }}</textarea>

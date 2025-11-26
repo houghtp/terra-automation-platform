@@ -8,7 +8,7 @@ from datetime import datetime
 
 from app.features.core.sqlalchemy_imports import AsyncSession, and_, func, or_, select
 from app.features.core.enhanced_base_service import BaseService
-from app.features.community.models import Message, Member
+from app.features.community.models import Message, Member, Thread, ThreadParticipant
 from app.features.auth.models import User
 
 CROSS_TENANT_ID = "community"
@@ -22,6 +22,30 @@ class MessageCrudService(BaseService[Message]):
 
     async def get_by_id(self, message_id: str) -> Optional[Message]:
         return await super().get_by_id(Message, message_id)
+
+    async def _threads_for_user(self, user_id: str) -> List[str]:
+        stmt = select(ThreadParticipant.thread_id).where(ThreadParticipant.user_id == user_id)
+        result = await self.db.execute(stmt)
+        return [row[0] for row in result.all()]
+
+    async def create_thread(self, participant_ids: List[str], created_by: str) -> Thread:
+        participant_set = set(participant_ids or [])
+        participant_set.add(created_by)
+        thread = Thread(id=str(uuid4()), tenant_id=CROSS_TENANT_ID, created_by=created_by)
+        self.db.add(thread)
+        await self.db.flush()
+        participants = [
+            ThreadParticipant(
+                id=str(uuid4()),
+                thread_id=thread.id,
+                user_id=pid,
+            )
+            for pid in participant_set
+        ]
+        self.db.add_all(participants)
+        await self.db.flush()
+        await self.db.refresh(thread)
+        return thread
 
     async def list_conversations(
         self,
@@ -67,59 +91,53 @@ class MessageCrudService(BaseService[Message]):
         member_id: str,
         limit: int = 50,
     ) -> List[Dict[str, str]]:
-        """
-        Return latest message per thread for the member (rail view).
-        Favors simplicity by picking the newest message for each thread in Python.
-        """
+        """Return latest message per thread for the member (rail view)."""
         try:
-            stmt = select(Message).where(
-                or_(Message.sender_id == member_id, Message.recipient_id == member_id)
+            thread_ids = await self._threads_for_user(member_id)
+            if not thread_ids:
+                return []
+            msg_stmt = (
+                select(Message)
+                .where(Message.thread_id.in_(thread_ids))
+                .order_by(Message.thread_id, Message.created_at.desc())
             )
-            if self.tenant_id not in (None, "global"):
-                stmt = stmt.where(Message.tenant_id == self.tenant_id)
-
-            stmt = stmt.order_by(Message.created_at.desc()).limit(limit * 4)
-            result = await self.db.execute(stmt)
+            result = await self.db.execute(msg_stmt)
             messages = list(result.scalars().all())
 
-            summaries: Dict[str, Dict[str, str]] = {}
+            latest_by_thread: Dict[str, Message] = {}
             for msg in messages:
-                thread = msg.thread_id or self._compute_thread_id(msg.sender_id, msg.recipient_id)
-                if thread in summaries:
-                    continue
-                other_party = msg.recipient_id if msg.sender_id == member_id else msg.sender_id
-                summaries[thread] = {
-                    "thread_id": thread,
-                    "last_message": msg.content,
-                    "last_sender_id": msg.sender_id,
-                    "other_party_id": other_party,
-                    "created_at": msg.created_at,
-                    "is_unread": (msg.recipient_id == member_id) and (not msg.is_read),
-                }
-                if len(summaries) >= limit:
-                    break
-
-            # Fetch user display info for other parties
-            other_party_ids = [s["other_party_id"] for s in summaries.values() if s.get("other_party_id")]
-            user_map: Dict[str, Dict[str, str]] = {}
-            if other_party_ids:
-                user_stmt = select(User).where(User.id.in_(other_party_ids))
-            if self.tenant_id not in (None, "global"):
-                user_stmt = user_stmt.where(User.tenant_id == self.tenant_id)
-                user_result = await self.db.execute(user_stmt)
-                for user in user_result.scalars().all():
-                    user_map[user.id] = {"name": user.name, "email": user.email}
-
-            enriched = []
-            for s in summaries.values():
-                details = user_map.get(s.get("other_party_id"), {})
-                s["other_party_name"] = details.get("name")
-                s["other_party_email"] = details.get("email")
-                enriched.append(s)
-
-            return enriched
+                if msg.thread_id not in latest_by_thread:
+                    latest_by_thread[msg.thread_id] = msg
+            thread_summaries = []
+            for tid, msg in latest_by_thread.items():
+                participant_ids = await self.participants_for_thread(tid)
+                others = [p for p in participant_ids if p != member_id]
+                names = await self._user_map(others + [msg.sender_id])
+                thread_summaries.append(
+                    {
+                        "thread_id": tid,
+                        "last_message": msg.content,
+                        "last_sender_id": msg.sender_id,
+                        "participants": [names.get(pid, {}).get("name") or pid for pid in participant_ids],
+                        "created_at": msg.created_at,
+                    }
+                )
+            thread_summaries.sort(key=lambda x: x["created_at"] or datetime.min, reverse=True)
+            return thread_summaries[:limit]
         except Exception as exc:
             await self.handle_error("list_conversation_summaries", exc, member_id=member_id)
+
+    async def _user_map(self, user_ids: List[str]) -> Dict[str, Dict[str, str]]:
+        if not user_ids:
+            return {}
+        stmt = select(User).where(User.id.in_(user_ids))
+        result = await self.db.execute(stmt)
+        return {u.id: {"name": u.name, "email": u.email} for u in result.scalars().all()}
+
+    async def participants_for_thread(self, thread_id: str) -> List[str]:
+        stmt = select(ThreadParticipant.user_id).where(ThreadParticipant.thread_id == thread_id)
+        result = await self.db.execute(stmt)
+        return [row[0] for row in result.all()]
 
     async def fetch_thread(
         self,
@@ -129,39 +147,17 @@ class MessageCrudService(BaseService[Message]):
     ) -> List[Message]:
         """Return chronological messages in a thread."""
         try:
-            stmt = select(Message)
-            computed_thread_id = thread_id
-            if not computed_thread_id:
-                # Fallback to messages sent by the member with no thread id (legacy)
-                stmt = stmt.where(and_(Message.sender_id == member_id, Message.thread_id.is_(None)))
-            else:
-                if ":" in computed_thread_id:
-                    try:
-                        a, b = computed_thread_id.split(":", 1)
-                        stmt = stmt.where(
-                            or_(
-                                Message.thread_id == computed_thread_id,
-                                and_(
-                                    Message.thread_id.is_(None),
-                                    or_(
-                                        and_(Message.sender_id == a, Message.recipient_id == b),
-                                        and_(Message.sender_id == b, Message.recipient_id == a),
-                                    ),
-                                ),
-                            )
-                        )
-                    except ValueError:
-                        stmt = stmt.where(Message.thread_id == computed_thread_id)
-                else:
-                    stmt = stmt.where(Message.thread_id == computed_thread_id)
+            # Ensure membership
+            participant_threads = await self._threads_for_user(member_id)
+            if thread_id not in participant_threads:
+                return []
 
-            # Only return messages where the requester is a participant
-            stmt = stmt.where(or_(Message.sender_id == member_id, Message.recipient_id == member_id))
-
-            if self.tenant_id not in (None, "global"):
-                stmt = stmt.where(Message.tenant_id == self.tenant_id)
-
-            stmt = stmt.order_by(Message.created_at.asc()).limit(limit)
+            stmt = (
+                select(Message)
+                .where(Message.thread_id == thread_id)
+                .order_by(Message.created_at.asc())
+                .limit(limit)
+            )
             result = await self.db.execute(stmt)
             return list(result.scalars().all())
         except Exception as exc:
@@ -171,16 +167,21 @@ class MessageCrudService(BaseService[Message]):
         """Persist a new message."""
         try:
             tenant_id = CROSS_TENANT_ID
+            thread_id = payload.get("thread_id")
+            if not thread_id:
+                raise ValueError("thread_id is required for messaging")
 
-            recipient_id = payload["recipient_id"]
-            thread_id = self._compute_thread_id(sender_id, recipient_id, payload.get("thread_id"))
+            # Validate membership
+            participant_threads = await self._threads_for_user(sender_id)
+            if thread_id not in participant_threads:
+                raise ValueError("Sender is not a participant of this thread")
 
             message = Message(
                 id=str(uuid4()),
                 tenant_id=tenant_id,
                 thread_id=thread_id,
                 sender_id=sender_id,
-                recipient_id=recipient_id,
+                recipient_id=None,
                 content=payload["content"],
                 is_read=False,
                 created_at=datetime.utcnow(),
