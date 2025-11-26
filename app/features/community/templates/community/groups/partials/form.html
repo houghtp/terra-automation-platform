@@ -40,13 +40,17 @@
           >{{ form_data.description if form_data and form_data.description is not none else (group.description if group else '') }}</textarea>
         </div>
         <div class="col-md-6">
-          <label class="form-label">Owner Member ID</label>
+          <label class="form-label">Owner</label>
+          <input
+            type="hidden"
+            name="owner_id"
+            value="{{ owner_id if owner_id is not none else (form_data.owner_id if form_data else '') }}"
+          >
           <input
             type="text"
-            name="owner_id"
-            value="{{ form_data.owner_id if form_data and form_data.owner_id is not none else (group.owner_id if group else '') }}"
             class="form-control"
-            maxlength="36"
+            value="{{ owner_name if owner_name is not none else (group.owner_id if group else '') }}"
+            readonly
           >
         </div>
       </div>

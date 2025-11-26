@@ -2,12 +2,16 @@
 
 from types import SimpleNamespace
 
+from sqlalchemy import select
+
 from app.features.core.route_imports import (
     APIRouter,
     Depends,
+    get_current_user,
     HTMLResponse,
     Request,
     templates,
+    User,
 )
 
 from ...dependencies import get_group_service, get_group_post_service
@@ -21,6 +25,7 @@ router = APIRouter()
 async def group_form_partial(
     request: Request,
     group_id: str | None = None,
+    current_user: User = Depends(get_current_user),
     group_service: GroupCrudService = Depends(get_group_service),
 ):
     group = None
@@ -33,11 +38,29 @@ async def group_form_partial(
             )
         group = _group_to_namespace(group)
 
+    owner_id = group.owner_id if group else getattr(current_user, "id", None)
+    owner_name = None
+    if owner_id:
+        # Prefer current_user if matches, otherwise look up, finally fallback to ID
+        if getattr(current_user, "id", None) == owner_id:
+            owner_name = getattr(current_user, "name", None) or getattr(current_user, "email", None)
+        if not owner_name:
+            try:
+                result = await group_service.db.execute(select(User).where(User.id == owner_id))
+                owner = result.scalar_one_or_none()
+                if owner:
+                    owner_name = owner.name or owner.email
+            except Exception:
+                owner_name = None
+        owner_name = owner_name or owner_id
+
     context = {
         "request": request,
         "group": group,
         "form_data": None,
         "errors": {},
+        "owner_id": owner_id,
+        "owner_name": owner_name,
     }
     return templates.TemplateResponse("community/groups/partials/form.html", context)
 

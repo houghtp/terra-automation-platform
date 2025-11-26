@@ -160,8 +160,9 @@ async def create_group_form(
     raw_data = {
         "name": form.get("name"),
         "description": form.get("description") or None,
-        "owner_id": form.get("owner_id") or None,
+        "owner_id": getattr(current_user, "id", None),
     }
+    owner_name = getattr(current_user, "name", None) or getattr(current_user, "email", None) or raw_data["owner_id"]
 
     try:
         payload = GroupCreate(**raw_data)
@@ -172,6 +173,8 @@ async def create_group_form(
             "group": None,
             "form_data": SimpleNamespace(**raw_data),
             "errors": errors,
+            "owner_name": owner_name,
+            "owner_id": raw_data["owner_id"],
         }
         return templates.TemplateResponse(
             "community/groups/partials/form.html",
@@ -189,6 +192,8 @@ async def create_group_form(
             "group": None,
             "form_data": SimpleNamespace(**raw_data),
             "errors": {"name": [str(exc)]},
+            "owner_name": owner_name,
+            "owner_id": raw_data["owner_id"],
         }
         return templates.TemplateResponse(
             "community/groups/partials/form.html",
@@ -218,10 +223,15 @@ async def update_group_form(
     group_ns = GroupResponse.model_validate(group, from_attributes=True)
 
     form = await request.form()
+    owner_id = group.owner_id or getattr(current_user, "id", None)
+    owner_name = None
+    if owner_id:
+        owner_map = await _fetch_author_map(db, {owner_id})
+        owner_name = owner_map.get(owner_id, owner_id)
     raw_data = {
         "name": form.get("name"),
         "description": form.get("description") or None,
-        "owner_id": form.get("owner_id") or None,
+        "owner_id": owner_id,
     }
 
     try:
@@ -233,6 +243,8 @@ async def update_group_form(
             "group": group_ns,
             "form_data": SimpleNamespace(**raw_data),
             "errors": errors,
+            "owner_name": owner_name or owner_id,
+            "owner_id": owner_id,
         }
         return templates.TemplateResponse(
             "community/groups/partials/form.html",
