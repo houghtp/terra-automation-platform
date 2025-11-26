@@ -1,7 +1,7 @@
 """Recipient selection endpoints for messaging multiselect."""
 
 from typing import Optional, List
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,8 +40,9 @@ async def recipient_options(
     q: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ):
-    selected_ids = _parse_selected(request.form())
-    search = (q or request.form().get("recipient_query") or "").strip().lower()
+    form = await request.form()
+    selected_ids = _parse_selected(form)
+    search = (q or form.get("recipient_query") or "").strip().lower()
     stmt = select(User).join(Member, Member.user_id == User.id)
     if search:
         like = f"%{search}%"
@@ -60,11 +61,15 @@ async def recipient_options(
 @router.post("/partials/recipient_update")
 async def recipient_update(
     request: Request,
-    action: str,
-    key: str,
     db: AsyncSession = Depends(get_db),
 ):
-    selected_ids = _parse_selected(await request.form())
+    form = await request.form()
+    action = form.get("action") or request.query_params.get("action")
+    key = form.get("key") or request.query_params.get("key")
+    if not action or not key:
+        raise HTTPException(status_code=400, detail="Missing action or key")
+
+    selected_ids = _parse_selected(form)
     if action == "select":
         if key not in selected_ids:
             selected_ids.append(key)
