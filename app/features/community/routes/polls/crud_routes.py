@@ -66,6 +66,7 @@ async def create_poll_form(
         "question": form.get("question") or None,
         "status": form.get("status") or "draft",
         "expires_at": form.get("expires_at") or None,
+        "options": options_list,
     }
     options_list = _parse_options_text(form.get("options"))
 
