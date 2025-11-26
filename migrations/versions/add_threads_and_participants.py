@@ -40,6 +40,16 @@ def upgrade():
     op.create_index("ix_thread_participants_thread_id", "thread_participants", ["thread_id"])
     op.create_index("ix_thread_participants_user_id", "thread_participants", ["user_id"])
 
+    # Null out legacy thread_ids that don't have a backing thread to satisfy FK
+    op.execute(
+        """
+        UPDATE messages
+        SET thread_id = NULL
+        WHERE thread_id IS NOT NULL
+          AND thread_id NOT IN (SELECT id FROM threads)
+        """
+    )
+
     with op.batch_alter_table("messages") as batch:
         batch.alter_column("recipient_id", existing_type=sa.String(length=36), nullable=True)
         batch.alter_column("thread_id", existing_type=sa.String(length=36), nullable=True)
