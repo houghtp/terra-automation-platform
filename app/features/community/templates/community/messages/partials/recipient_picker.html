@@ -1,5 +1,5 @@
 {% set selected_ids = selected_ids or [] %}
-<div class="border rounded p-2" id="recipient-picker" data-selected="{{ selected_ids|join(',') }}">
+<div class="border rounded p-2" id="recipient-picker">
   <div id="recipient-chips" class="d-flex flex-wrap gap-2 mb-2">
     {% for user in selected_users %}
       <span class="badge bg-primary d-flex align-items-center">
@@ -7,7 +7,7 @@
         <a href="#"
            class="ms-1 text-white"
            hx-get="/features/community/messages/partials/recipient_remove"
-           hx-target="#recipient-picker"
+           hx-target="#recipient-chips"
            hx-swap="outerHTML"
            hx-include="#recipient_ids_field"
            hx-vals='{"remove_id": "{{ user.id }}"}'

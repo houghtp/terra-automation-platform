@@ -50,8 +50,10 @@ async def recipient_add(
     users_stmt = select(User).where(User.id.in_(selected_ids)) if selected_ids else select(User).where(False)
     user_result = await db.execute(users_stmt)
     selected_users = list(user_result.scalars().all())
-    context = {"request": request, "selected_ids": selected_ids, "selected_users": selected_users}
-    return templates.TemplateResponse("community/messages/partials/recipient_picker.html", context)
+    return templates.TemplateResponse(
+        "community/messages/partials/recipient_picker.html",
+        {"request": request, "selected_ids": selected_ids, "selected_users": selected_users},
+    )
 
 
 @router.get("/partials/recipient_remove")
@@ -62,12 +64,9 @@ async def recipient_remove(
 ):
     selected_ids = _parse_selected(request.query_params)
     selected_ids = [sid for sid in selected_ids if sid != remove_id]
-    if selected_ids:
-        users_stmt = select(User).where(User.id.in_(selected_ids))
-        user_result = await db.execute(users_stmt)
-        selected_users = list(user_result.scalars().all())
-    else:
-        selected_users = []
+    users_stmt = select(User).where(User.id.in_(selected_ids)) if selected_ids else select(User).where(False)
+    user_result = await db.execute(users_stmt)
+    selected_users = list(user_result.scalars().all())
     return templates.TemplateResponse(
         "community/messages/partials/recipient_picker.html",
         {"request": request, "selected_ids": selected_ids, "selected_users": selected_users},
