@@ -55,6 +55,8 @@ window.initializePollsTable = function initializePollsTable() {
 
   const table = new Tabulator("#polls-table", {
     ...advancedTableConfig,
+    rowHeader: false,
+    selectable: false,
     ajaxURL: "/features/community/polls/api",
     ajaxResponse: standardAjaxResponse,
     columns: [
