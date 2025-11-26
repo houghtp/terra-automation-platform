@@ -173,7 +173,7 @@ class MessageCreate(BaseModel):
 
 
 class ThreadCreate(BaseModel):
-    recipient_ids: List[str]
+    recipient_ids: List[str] = Field(min_length=1)
     content: constr(strip_whitespace=True, min_length=1, max_length=2000)
 
 

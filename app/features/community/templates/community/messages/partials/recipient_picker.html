@@ -1,0 +1,32 @@
+{% set selected_ids = selected_ids or [] %}
+<div class="border rounded p-2" id="recipient-picker" data-selected="{{ selected_ids|join(',') }}">
+  <div id="recipient-chips" class="d-flex flex-wrap gap-2 mb-2">
+    {% for user in selected_users %}
+      <span class="badge bg-primary d-flex align-items-center">
+        {{ user.name }} ({{ user.email }})
+        <a href="#"
+           class="ms-1 text-white"
+           hx-get="/features/community/messages/partials/recipient_remove"
+           hx-target="#recipient-picker"
+           hx-swap="outerHTML"
+           hx-include="#recipient_ids_field"
+           hx-vals='{"remove_id": "{{ user.id }}"}'
+           aria-label="Remove {{ user.name }}">×</a>
+      </span>
+    {% endfor %}
+  </div>
+  <input type="hidden" name="recipient_ids" id="recipient_ids_field" value="{{ selected_ids|join(',') }}">
+  <input
+    type="text"
+    id="recipient-search"
+    class="form-control"
+    placeholder="Type a name or email"
+    hx-get="/features/community/messages/partials/recipients"
+    hx-trigger="input changed delay:300ms"
+    hx-target="#recipient-options"
+    hx-swap="innerHTML"
+    hx-include="#recipient_ids_field"
+    autocomplete="off"
+  >
+  <div id="recipient-options" class="mt-1"></div>
+</div>

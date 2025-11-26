@@ -118,9 +118,17 @@ async def new_thread_form(
     db: AsyncSession = Depends(get_db),
 ):
     user_options = (await db.execute(select(User).order_by(User.name))).scalars().all()
+    # Build selected user list from initial values (none)
+    selected_users = []
     return templates.TemplateResponse(
         "community/messages/partials/new_thread.html",
-        {"request": request, "current_member_id": current_user.id, "user_options": user_options},
+        {
+            "request": request,
+            "current_member_id": current_user.id,
+            "user_options": user_options,
+            "selected_users": selected_users,
+            "recipient_ids": [],
+        },
     )
 
 
@@ -132,13 +140,16 @@ async def create_new_thread(
     message_service: MessageCrudService = Depends(get_message_service),
 ):
     form = await request.form()
-    recipient_ids = form.getlist("recipient_ids")
+    raw_recips = form.get("recipient_ids") or ""
+    recipient_ids = [r.strip() for r in raw_recips.split(",") if r.strip()]
     content = form.get("content")
     try:
         payload = ThreadCreate(recipient_ids=recipient_ids, content=content)
     except ValidationError as exc:
         errors = _validation_errors_to_dict(exc)
         user_options = (await db.execute(select(User).order_by(User.name))).scalars().all()
+        sel_stmt = select(User).where(User.id.in_(recipient_ids)) if recipient_ids else select(User).where(False)
+        selected_users = (await db.execute(sel_stmt)).scalars().all()
         return templates.TemplateResponse(
             "community/messages/partials/new_thread.html",
             {
@@ -148,6 +159,7 @@ async def create_new_thread(
                 "recipient_ids": recipient_ids,
                 "content": content,
                 "user_options": user_options,
+                "selected_users": selected_users,
             },
             status_code=400,
         )
@@ -195,8 +207,14 @@ async def recipient_options(
     q: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
+    select_id: Optional[str] = None,
+    select_label: Optional[str] = None,
 ):
     search = (q or "").strip().lower()
+    selected_ids = []
+    raw_selected = request.query_params.get("recipient_ids")
+    if raw_selected:
+        selected_ids = [v.strip() for v in raw_selected.split(",") if v.strip()]
     stmt = (
         select(User)
         .join(Member, Member.user_id == User.id)
@@ -209,12 +227,15 @@ async def recipient_options(
                 func.lower(User.email).like(like),
             )
         )
+    if selected_ids:
+        stmt = stmt.where(~User.id.in_(selected_ids))
     stmt = stmt.order_by(func.lower(User.name)).limit(10)
     result = await db.execute(stmt)
     users = list(result.scalars().all())
+    context = {"request": request, "users": users, "select_id": select_id, "select_label": select_label}
     return templates.TemplateResponse(
         "community/messages/partials/recipient_options.html",
-        {"request": request, "users": users},
+        context,
     )
 
 
@@ -224,10 +245,8 @@ async def select_recipient(
     recipient_id: str,
     label: str,
 ):
-    return templates.TemplateResponse(
-        "community/messages/partials/select_recipient.html",
-        {"request": request, "recipient_id": recipient_id, "label": label},
-    )
+    # Not used in the new multi-select flow; kept for compatibility
+    return HTMLResponse("")
 
 
 @router.get("/partials/conversations", response_class=HTMLResponse)

@@ -18,14 +18,8 @@
       <fieldset class="form-fieldset mb-0">
         <div class="mb-3">
           <label class="form-label">To</label>
-          <select name="recipient_ids" multiple class="form-select" size="6">
-            {% for user in user_options %}
-              <option value="{{ user.id }}"
-                {% if recipient_ids is defined and user.id in recipient_ids %}selected{% endif %}>
-                {{ user.name }} ({{ user.email }})
-              </option>
-            {% endfor %}
-          </select>
+          {% set selected_ids = recipient_ids if recipient_ids is defined else [] %}
+          {% include "community/messages/partials/recipient_picker.html" with context %}
           {% if errors and errors.get("recipient_ids") %}
             <div class="invalid-feedback d-block">{{ errors["recipient_ids"][0] }}</div>
           {% endif %}
