@@ -70,22 +70,16 @@
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label">Partner</label>
-                    <select
-                        name="partner_id"
-                        class="form-select {{ 'is-invalid' if errors and errors.get('partner_id') }}"
-                    >
+                    <label class="form-label">Linked User</label>
+                    <select name="user_id" class="form-select">
                         <option value="">-- None --</option>
-                        {% for partner in partner_options or [] %}
+                        {% for user in user_options %}
                             <option
-                                value="{{ partner.id }}"
-                                {% if (form_data and form_data.partner_id == partner.id) or (member and member.partner_id == partner.id) %}selected{% endif %}
-                            >{{ partner.name }}</option>
+                                value="{{ user.id }}"
+                                {% if (form_data and form_data.user_id == user.id) or (member and member.user_id == user.id) %}selected{% endif %}
+                            >{{ user.name }} ({{ user.email }})</option>
                         {% endfor %}
                     </select>
-                    {% if errors and errors.get('partner_id') %}
-                        <div class="invalid-feedback d-block">{{ errors['partner_id'][0] }}</div>
-                    {% endif %}
                 </div>
 
                 <div class="col-md-6">

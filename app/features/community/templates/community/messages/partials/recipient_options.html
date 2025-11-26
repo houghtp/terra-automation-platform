@@ -1,0 +1,16 @@
+{% if users %}
+  <ul class="list-group mt-1" id="recipient-options-list">
+    {% for user in users %}
+      <li class="list-group-item list-group-item-action"
+          hx-get="/features/community/messages/partials/select_recipient"
+          hx-target="#new-recipient-results"
+          hx-swap="outerHTML"
+          hx-vals='{"recipient_id": "{{ user.id }}", "label": "{{ user.name }} ({{ user.email }})"}'>
+        <div class="fw-semibold">{{ user.name }}</div>
+        <div class="text-muted small">{{ user.email }}</div>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="text-muted small mt-1">No matches found.</div>
+{% endif %}

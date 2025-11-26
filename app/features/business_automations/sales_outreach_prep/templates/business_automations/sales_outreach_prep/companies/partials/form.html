@@ -1,0 +1,109 @@
+<!-- Company Form Modal -->
+<form id="company-form"
+      {% if company %}
+      hx-put="/features/business-automations/sales-outreach-prep/companies/{{ company.id }}"
+      {% else %}
+      hx-post="/features/business-automations/sales-outreach-prep/companies/"
+      {% endif %}
+      hx-encoding="application/json"
+      hx-swap="none">
+
+    <div class="modal-header">
+        <h5 class="modal-title">
+            {% if company %}Edit Company{% else %}New Company{% endif %}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+
+    <div class="modal-body">
+        <!-- Name -->
+        <div class="mb-3">
+            <label class="form-label required">Company Name</label>
+            <input type="text"
+                   name="name"
+                   class="form-control"
+                   value="{% if company %}{{ company.name }}{% endif %}"
+                   placeholder="e.g., Acme Corp"
+                   required>
+        </div>
+
+        <!-- Domain -->
+        <div class="mb-3">
+            <label class="form-label">Domain</label>
+            <input type="text"
+                   name="domain"
+                   class="form-control"
+                   value="{% if company %}{{ company.domain }}{% endif %}"
+                   placeholder="e.g., acme.com">
+            <small class="form-hint">Primary company domain (for email enrichment)</small>
+        </div>
+
+        <!-- Industry -->
+        <div class="mb-3">
+            <label class="form-label">Industry</label>
+            <input type="text"
+                   name="industry"
+                   class="form-control"
+                   value="{% if company %}{{ company.industry }}{% endif %}"
+                   placeholder="e.g., Technology">
+        </div>
+
+        <!-- Headquarters -->
+        <div class="mb-3">
+            <label class="form-label">Headquarters</label>
+            <input type="text"
+                   name="headquarters"
+                   class="form-control"
+                   value="{% if company %}{{ company.headquarters }}{% endif %}"
+                   placeholder="e.g., Boston, MA">
+        </div>
+
+        <!-- Website URL -->
+        <div class="mb-3">
+            <label class="form-label">Website</label>
+            <input type="url"
+                   name="website_url"
+                   class="form-control"
+                   value="{% if company %}{{ company.website_url }}{% endif %}"
+                   placeholder="https://...">
+        </div>
+
+        <!-- LinkedIn URL -->
+        <div class="mb-3">
+            <label class="form-label">LinkedIn URL</label>
+            <input type="url"
+                   name="linkedin_url"
+                   class="form-control"
+                   value="{% if company %}{{ company.linkedin_url }}{% endif %}"
+                   placeholder="https://linkedin.com/company/...">
+        </div>
+
+        <!-- Description -->
+        <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea name="description"
+                      class="form-control"
+                      rows="3"
+                      placeholder="Company description...">{% if company %}{{ company.description }}{% endif %}</textarea>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="ti ti-x icon"></i>
+            Cancel
+        </button>
+        <button type="submit" class="btn btn-outline-primary">
+            <i class="ti ti-check icon"></i>
+            {% if company %}Update Company{% else %}Create Company{% endif %}
+        </button>
+    </div>
+</form>
+
+<script>
+htmx.on('#company-form', 'htmx:configRequest', (evt) => {
+    const formData = new FormData(evt.detail.parameters);
+    const json = Object.fromEntries(formData.entries());
+    evt.detail.parameters = json;
+});
+</script>

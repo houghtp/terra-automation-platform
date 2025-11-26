@@ -29,17 +29,18 @@ from app.features.community.models import (
     CommunityContent,
     ContentEngagement,
 )
-from app.features.community.services.member_services import MemberService
-from app.features.community.services.partner_services import PartnerService
-from app.features.community.services.group_services import (
-    GroupService,
-    GroupPostService,
-    GroupCommentService,
+from app.features.community.services import (
+    MemberCrudService,
+    PartnerCrudService,
+    GroupCrudService,
+    GroupPostCrudService,
+    GroupCommentCrudService,
+    EventCrudService,
+    PollCrudService,
+    PollVoteCrudService,
+    MessageCrudService,
+    ContentEngagementCrudService,
 )
-from app.features.community.services.event_services import EventService
-from app.features.community.services.poll_services import PollService, PollVoteService
-from app.features.community.services.messaging_services import MessageService
-from app.features.community.services.content_services import ContentEngagementService
 
 from seed_community_content import seed as seed_content_hub
 
@@ -599,16 +600,16 @@ async def seed_demo_data():
     async_session = async_sessionmaker(engine, expire_on_commit=False)
 
     async with async_session() as session:
-        member_service = MemberService(session, TENANT_ID)
-        partner_service = PartnerService(session, TENANT_ID)
-        group_service = GroupService(session, TENANT_ID)
-        group_post_service = GroupPostService(session, TENANT_ID)
-        group_comment_service = GroupCommentService(session, TENANT_ID)
-        event_service = EventService(session, TENANT_ID)
-        poll_service = PollService(session, TENANT_ID)
-        poll_vote_service = PollVoteService(session, TENANT_ID)
-        message_service = MessageService(session, TENANT_ID)
-        engagement_service = ContentEngagementService(session, TENANT_ID)
+        member_service = MemberCrudService(session, TENANT_ID)
+        partner_service = PartnerCrudService(session, TENANT_ID)
+        group_service = GroupCrudService(session, TENANT_ID)
+        group_post_service = GroupPostCrudService(session, TENANT_ID)
+        group_comment_service = GroupCommentCrudService(session, TENANT_ID)
+        event_service = EventCrudService(session, TENANT_ID)
+        poll_service = PollCrudService(session, TENANT_ID)
+        poll_vote_service = PollVoteCrudService(session, TENANT_ID)
+        message_service = MessageCrudService(session, TENANT_ID)
+        engagement_service = ContentEngagementCrudService(session, TENANT_ID)
 
         member_lookup, members_created = await upsert_members(session, member_service)
         partners_created = await upsert_partners(session, partner_service)

@@ -1,0 +1,103 @@
+<!-- Prospect Form Modal -->
+<form id="prospect-form"
+      {% if prospect %}
+      hx-put="/features/business-automations/sales-outreach-prep/prospects/{{ prospect.id }}"
+      {% else %}
+      hx-post="/features/business-automations/sales-outreach-prep/prospects/"
+      {% endif %}
+      hx-encoding="application/json"
+      hx-swap="none">
+
+    <div class="modal-header">
+        <h5 class="modal-title">
+            {% if prospect %}Edit Prospect{% else %}New Prospect{% endif %}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+
+    <div class="modal-body">
+        <!-- Hidden campaign_id -->
+        {% if campaign_id %}
+        <input type="hidden" name="campaign_id" value="{{ campaign_id }}">
+        {% endif %}
+
+        <!-- Full Name -->
+        <div class="mb-3">
+            <label class="form-label required">Full Name</label>
+            <input type="text"
+                   name="full_name"
+                   class="form-control"
+                   value="{% if prospect %}{{ prospect.full_name }}{% endif %}"
+                   placeholder="e.g., John Doe"
+                   required>
+        </div>
+
+        <!-- Job Title -->
+        <div class="mb-3">
+            <label class="form-label">Job Title</label>
+            <input type="text"
+                   name="job_title"
+                   class="form-control"
+                   value="{% if prospect %}{{ prospect.job_title }}{% endif %}"
+                   placeholder="e.g., CTO">
+        </div>
+
+        <!-- LinkedIn URL -->
+        <div class="mb-3">
+            <label class="form-label">LinkedIn URL</label>
+            <input type="url"
+                   name="linkedin_url"
+                   class="form-control"
+                   value="{% if prospect %}{{ prospect.linkedin_url }}{% endif %}"
+                   placeholder="https://linkedin.com/in/...">
+        </div>
+
+        <!-- Email -->
+        <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input type="email"
+                   name="email"
+                   class="form-control"
+                   value="{% if prospect %}{{ prospect.email }}{% endif %}"
+                   placeholder="john.doe@example.com">
+        </div>
+
+        <!-- Location -->
+        <div class="mb-3">
+            <label class="form-label">Location</label>
+            <input type="text"
+                   name="location"
+                   class="form-control"
+                   value="{% if prospect %}{{ prospect.location }}{% endif %}"
+                   placeholder="e.g., Boston, MA">
+        </div>
+
+        <!-- Notes -->
+        <div class="mb-3">
+            <label class="form-label">Notes</label>
+            <textarea name="notes"
+                      class="form-control"
+                      rows="3"
+                      placeholder="Additional notes...">{% if prospect %}{{ prospect.notes }}{% endif %}</textarea>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="ti ti-x icon"></i>
+            Cancel
+        </button>
+        <button type="submit" class="btn btn-outline-primary">
+            <i class="ti ti-check icon"></i>
+            {% if prospect %}Update Prospect{% else %}Create Prospect{% endif %}
+        </button>
+    </div>
+</form>
+
+<script>
+htmx.on('#prospect-form', 'htmx:configRequest', (evt) => {
+    const formData = new FormData(evt.detail.parameters);
+    const json = Object.fromEntries(formData.entries());
+    evt.detail.parameters = json;
+});
+</script>

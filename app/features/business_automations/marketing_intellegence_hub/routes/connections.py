@@ -1,6 +1,6 @@
 """GA4 connection routes."""
 
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from typing import List
 
 from app.features.core.route_imports import APIRouter, Depends, HTTPException, Response, Body, Request, templates, Form
@@ -154,6 +154,7 @@ async def sync_connection(
         ]
 
         await metrics_service.upsert_daily_metrics(connection_id, payloads, current_user)
+        await connection_service.update_connection(connection_id, Ga4ConnectionUpdate(last_synced_at=datetime.utcnow()), current_user)
         # Commit at the route boundary to keep transaction control here.
         await connection_service.db.commit()
 

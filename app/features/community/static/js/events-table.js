@@ -246,6 +246,10 @@
     tableInstance = table;
     window.eventsTable = table;
     window.appTables["events-table"] = table;
+    bindRowActionHandlers("#events-table", {
+      onEdit: "editEvent",
+      onDelete: "deleteEvent",
+    });
 
     return table;
   }
@@ -351,23 +355,11 @@
       return;
     }
 
-    htmx.ajax(
-      "GET",
-      `/features/community/events/partials/form?event_id=${eventId}`,
-      "#modal-body",
-    );
+    loadModalContent(`/features/community/events/partials/form?event_id=${eventId}`);
   }
 
   function handleDateClick() {
-    if (typeof htmx === "undefined") {
-      return;
-    }
-
-    htmx.ajax(
-      "GET",
-      "/features/community/events/partials/form",
-      "#modal-body",
-    );
+    loadModalContent("/features/community/events/partials/form");
   }
 
   function attachTooltip(info) {
@@ -407,26 +399,12 @@
     }
   }
 
-  function ensureHTMX() {
-    if (typeof htmx === "undefined") {
-      console.error("HTMX is required for modal interactions on events.");
-      return false;
-    }
-    return true;
-  }
-
   window.editEvent = function editEvent(id) {
-    if (!ensureHTMX()) {
-      return;
-    }
-    htmx.ajax("GET", `/features/community/events/partials/form?event_id=${id}`, "#modal-body");
+    editTabulatorRow(`/features/community/events/partials/form?event_id=${id}`);
   };
 
   window.deleteEvent = function deleteEvent(id) {
-    if (!ensureHTMX()) {
-      return;
-    }
-    deleteTabulatorRow(`/features/community/events/api/${id}`, "#events-table", {
+    deleteTabulatorRow(`/features/community/events/${id}/delete`, "#events-table", {
       title: "Delete Event",
       message: "Are you sure you want to delete this event?",
       confirmText: "Delete Event",

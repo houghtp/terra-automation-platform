@@ -1,0 +1,162 @@
+<!-- Campaign Form Modal -->
+<form id="campaign-form"
+      {% if campaign %}
+      hx-put="/features/business-automations/sales-outreach-prep/campaigns/{{ campaign.id }}"
+      {% else %}
+      hx-post="/features/business-automations/sales-outreach-prep/campaigns/"
+      {% endif %}
+      hx-swap="none">
+
+    <div class="modal-header">
+        <h5 class="modal-title">
+            {% if campaign %}Edit Campaign{% else %}New Campaign{% endif %}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+
+    <div class="modal-body">
+        <!-- Name -->
+        <div class="mb-3">
+            <label class="form-label required">Campaign Name</label>
+            <input type="text"
+                   name="name"
+                   class="form-control"
+                   value="{% if campaign %}{{ campaign.name }}{% endif %}"
+                   placeholder="e.g., Q1 Boston Tech CTOs"
+                   required>
+        </div>
+
+        <!-- Description -->
+        <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea name="description"
+                      class="form-control"
+                      rows="3"
+                      placeholder="Describe the campaign goals...">{% if campaign %}{{ campaign.description }}{% endif %}</textarea>
+        </div>
+
+        <!-- Discovery Type -->
+        <div class="mb-3">
+            <label class="form-label required">Discovery Method</label>
+            <select name="discovery_type" id="discovery-type" class="form-select" required
+                    onchange="document.querySelectorAll('[data-discovery-type]').forEach(el => el.style.display = 'none'); document.querySelectorAll(`[data-discovery-type='${this.value}']`).forEach(el => el.style.display = 'block');">
+                <option value="company_discovery" {% if not campaign or campaign.discovery_type == 'company_discovery' %}selected{% endif %}>
+                    Company Discovery (Search by industry/location)
+                </option>
+                <option value="ai_research" {% if campaign and campaign.discovery_type == 'ai_research' %}selected{% endif %}>
+                    AI Research (Natural language research goal)
+                </option>
+                <option value="manual_import" {% if campaign and campaign.discovery_type == 'manual_import' %}selected{% endif %}>
+                    Manual Import (CSV/list of contacts)
+                </option>
+            </select>
+            <small class="form-hint">
+                <i class="ti ti-info-circle me-1"></i>
+                Choose how prospects will be discovered for this campaign
+            </small>
+        </div>
+
+        <!-- AI Research Prompt (shown for ai_research type) -->
+        <div class="mb-3" data-discovery-type="ai_research" style="display: {% if campaign and campaign.discovery_type == 'ai_research' %}block{% else %}none{% endif %};">
+            <label class="form-label">Research Goal</label>
+            <textarea name="research_prompt"
+                      class="form-control"
+                      rows="4"
+                      placeholder="Describe what you're looking for in natural language. Example: 'Find organizers of large corporate awards events in the UK with 400+ attendees. Start by researching top venues that hold these events.'">{% if campaign %}{{ campaign.research_prompt }}{% endif %}</textarea>
+            <small class="form-hint">
+                <i class="ti ti-sparkles me-1"></i>
+                Describe your research goal as if talking to a research assistant. The AI will interpret this and find relevant organizations.
+            </small>
+        </div>
+
+        <!-- Company Discovery Fields (shown for company_discovery type) -->
+        <div data-discovery-type="company_discovery" style="display: {% if not campaign or campaign.discovery_type == 'company_discovery' %}block{% else %}none{% endif %};">
+        <!-- Target Industry -->
+        <div class="mb-3">
+            <label class="form-label">Target Industry</label>
+            <input type="text"
+                   name="target_industry"
+                   class="form-control"
+                   value="{% if campaign %}{{ campaign.target_industry }}{% endif %}"
+                   placeholder="e.g., Technology, Healthcare">
+        </div>
+
+        <!-- Target Geography -->
+        <div class="mb-3">
+            <label class="form-label">Target Geography</label>
+            <input type="text"
+                   name="target_geography"
+                   class="form-control"
+                   value="{% if campaign %}{{ campaign.target_geography }}{% endif %}"
+                   placeholder="e.g., Boston, MA">
+        </div>
+
+        <!-- Target Roles -->
+        <div class="mb-3">
+            <label class="form-label">Target Roles</label>
+            <input type="text"
+                   name="target_roles"
+                   class="form-control"
+                   value="{% if campaign %}{{ campaign.target_roles }}{% endif %}"
+                   placeholder="e.g., CTO, VP Engineering, Director of IT">
+            <small class="form-hint">Comma-separated list of job titles</small>
+        </div>
+
+        <!-- Target Seniority -->
+        <div class="mb-3">
+            <label class="form-label">Target Seniority</label>
+            <select name="target_seniority" class="form-select">
+                <option value="">Any</option>
+                <option value="c-level" {% if campaign and campaign.target_seniority == 'c-level' %}selected{% endif %}>C-Level</option>
+                <option value="vp" {% if campaign and campaign.target_seniority == 'vp' %}selected{% endif %}>VP</option>
+                <option value="director" {% if campaign and campaign.target_seniority == 'director' %}selected{% endif %}>Director</option>
+                <option value="manager" {% if campaign and campaign.target_seniority == 'manager' %}selected{% endif %}>Manager</option>
+            </select>
+        </div>
+        </div><!-- End company-discovery-section -->
+
+        <!-- Status -->
+        <div class="mb-3">
+            <label class="form-label required">Status</label>
+            <select name="status" class="form-select" required>
+                <option value="draft" {% if not campaign or campaign.status == 'draft' %}selected{% endif %}>Draft</option>
+                <option value="active" {% if campaign and campaign.status == 'active' %}selected{% endif %}>Active</option>
+                <option value="paused" {% if campaign and campaign.status == 'paused' %}selected{% endif %}>Paused</option>
+                <option value="completed" {% if campaign and campaign.status == 'completed' %}selected{% endif %}>Completed</option>
+                <option value="archived" {% if campaign and campaign.status == 'archived' %}selected{% endif %}>Archived</option>
+            </select>
+        </div>
+
+        <!-- Auto-Enrich Toggle -->
+        <div class="mb-3">
+            <!-- Hidden field ensures false is sent when checkbox unchecked -->
+            <input type="hidden" name="auto_enrich_on_discovery" value="false">
+            <label class="form-check form-switch">
+                <input type="checkbox"
+                       name="auto_enrich_on_discovery"
+                       class="form-check-input"
+                       value="true"
+                       {% if campaign and campaign.auto_enrich_on_discovery %}checked{% endif %}>
+                <span class="form-check-label">
+                    <strong>Auto-enrich prospects on discovery</strong>
+                </span>
+            </label>
+            <small class="form-hint d-block mt-1">
+                <i class="ti ti-info-circle me-1"></i>
+                When enabled, prospects will be automatically enriched with email addresses after discovery.
+                When disabled, you can manually trigger enrichment later to save Hunter.io credits.
+            </small>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="ti ti-x icon"></i>
+            Cancel
+        </button>
+        <button type="submit" class="btn btn-outline-primary">
+            <i class="ti ti-check icon"></i>
+            {% if campaign %}Update Campaign{% else %}Create Campaign{% endif %}
+        </button>
+    </div>
+</form>

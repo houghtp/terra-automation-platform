@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Page header -->
+<div class="page-header d-print-none">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-pretitle">Business Automations</div>
+            <h2 class="page-title">
+                <i class="ti ti-rocket me-2"></i>Sales Outreach Prep
+            </h2>
+        </div>
+        <div class="col-auto ms-auto">
+            <a href="/features/business-automations/sales-outreach-prep/campaigns" class="btn btn-primary">
+                <i class="ti ti-plus icon"></i>
+                New Campaign
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics -->
+<div class="row row-cards mt-3">
+    <div class="col-sm-6 col-lg-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="subheader">Total Campaigns</div>
+                </div>
+                <div class="h1 mb-0">{{ stats.total_campaigns }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="subheader">Active Campaigns</div>
+                </div>
+                <div class="h1 mb-0">{{ stats.active_campaigns }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="subheader">Total Prospects</div>
+                </div>
+                <div class="h1 mb-0">{{ stats.total_prospects }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="subheader">Enrichment Rate</div>
+                </div>
+                <div class="h1 mb-0">{{ stats.enrichment_rate }}%</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick links -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Quick Actions</h3>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="/features/business-automations/sales-outreach-prep/campaigns" class="list-group-item list-group-item-action">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <i class="ti ti-layout-list icon text-blue"></i>
+                        </div>
+                        <div class="col">
+                            <div class="text-truncate">
+                                <strong>Manage Campaigns</strong>
+                            </div>
+                            <div class="text-secondary">Create and manage outreach campaigns</div>
+                        </div>
+                    </div>
+                </a>
+                <a href="/features/business-automations/sales-outreach-prep/prospects" class="list-group-item list-group-item-action">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <i class="ti ti-users icon text-green"></i>
+                        </div>
+                        <div class="col">
+                            <div class="text-truncate">
+                                <strong>View Prospects</strong>
+                            </div>
+                            <div class="text-secondary">Browse and enrich prospect contacts</div>
+                        </div>
+                    </div>
+                </a>
+                <a href="/features/business-automations/sales-outreach-prep/companies" class="list-group-item list-group-item-action">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <i class="ti ti-building icon text-orange"></i>
+                        </div>
+                        <div class="col">
+                            <div class="text-truncate">
+                                <strong>Manage Companies</strong>
+                            </div>
+                            <div class="text-secondary">Add and organize target companies</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -30,17 +30,41 @@ class SecretsCrudService(BaseService[TenantSecret]):
     All operations are automatically tenant-scoped via BaseService.
     """
 
+    def _normalize_tenant_id(self, tenant_id) -> str:
+        """Normalize tenant id for encryption context (global -> 'global')."""
+        if tenant_id is None or tenant_id == "global":
+            return "global"
+        return str(tenant_id)
+
     def _encrypt_secret(self, value: str, tenant_id: str) -> str:
         """Encrypt a secret value using AES-256-GCM encryption."""
-        return encrypt_secret(value, tenant_id)
+        return encrypt_secret(value, self._normalize_tenant_id(tenant_id))
 
     def _decrypt_secret(self, encrypted_value: str, tenant_id: str) -> str:
-        """Decrypt a secret value using AES-256-GCM encryption."""
-        return decrypt_secret(encrypted_value, tenant_id)
+        """
+        Decrypt a secret value using AES-256-GCM encryption.
+
+        Includes a backward-compatible fallback for legacy global secrets that
+        may have been encrypted with a None tenant context.
+        """
+        contexts = [self._normalize_tenant_id(tenant_id)]
+        # Legacy global secrets may have been encrypted with tenant_id=None -> "tenant_None"
+        if contexts[0] == "global":
+            contexts.append("None")
+
+        last_exc = None
+        for ctx in contexts:
+            try:
+                return decrypt_secret(encrypted_value, ctx)
+            except Exception as exc:
+                last_exc = exc
+                continue
+        # If no context succeeded, re-raise the last exception
+        raise last_exc
 
     def _verify_secret_integrity(self, encrypted_value: str, tenant_id: str) -> bool:
         """Verify that encrypted secret data has integrity and can be decrypted."""
-        return verify_secret_encryption(encrypted_value, tenant_id)
+        return verify_secret_encryption(encrypted_value, self._normalize_tenant_id(tenant_id))
 
     async def create_secret(
         self,
@@ -64,20 +88,21 @@ class SecretsCrudService(BaseService[TenantSecret]):
         """
         try:
             effective_tenant_id = target_tenant_id or self.tenant_id
+            normalized_tenant = self._normalize_tenant_id(effective_tenant_id)
 
             # Check if secret name already exists in effective tenant
-            if await self._secret_name_exists_in_tenant(secret_data.name, effective_tenant_id):
+            if await self._secret_name_exists_in_tenant(secret_data.name, normalized_tenant):
                 raise ValueError(f"Secret with name '{secret_data.name}' already exists in this tenant")
 
             # Create audit context
             audit_ctx = AuditContext.from_user(created_by_user)
 
             # Encrypt the secret value using AES-256-GCM
-            encrypted_value = self._encrypt_secret(secret_data.value, effective_tenant_id)
+            encrypted_value = self._encrypt_secret(secret_data.value, normalized_tenant)
 
             # Create the secret record
             secret = TenantSecret(
-                tenant_id=effective_tenant_id,
+                tenant_id=normalized_tenant,
                 name=secret_data.name,
                 description=secret_data.description,
                 secret_type=secret_data.secret_type,
@@ -243,7 +268,7 @@ class SecretsCrudService(BaseService[TenantSecret]):
                 secret.secret_type = update_data.secret_type
 
             if update_data.value is not None:
-                secret.encrypted_value = self._encrypt_secret(update_data.value, self.tenant_id)
+                secret.encrypted_value = self._encrypt_secret(update_data.value, secret.tenant_id)
 
             if update_data.is_active is not None:
                 secret.is_active = update_data.is_active
@@ -369,6 +394,7 @@ class SecretsCrudService(BaseService[TenantSecret]):
             bool: True if name exists, False otherwise
         """
         try:
+            tenant_id = self._normalize_tenant_id(tenant_id)
             query = select(TenantSecret).where(
                 TenantSecret.tenant_id == tenant_id,
                 TenantSecret.name == secret_name,
@@ -444,7 +470,7 @@ class SecretsCrudService(BaseService[TenantSecret]):
                 return None
 
             # Decrypt the secret value
-            decrypted_value = self._decrypt_secret(secret.encrypted_value, self.tenant_id)
+            decrypted_value = self._decrypt_secret(secret.encrypted_value, secret.tenant_id)
 
             # Update access tracking
             # Store as naive datetime to match database column type

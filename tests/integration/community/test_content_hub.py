@@ -2,11 +2,11 @@ import pytest
 from datetime import datetime, timezone
 
 from app.features.community.services import (
-    ContentService,
-    PodcastService,
-    VideoService,
-    NewsService,
-    ContentEngagementService,
+    ArticleCrudService,
+    PodcastCrudService,
+    VideoCrudService,
+    NewsCrudService,
+    ContentEngagementCrudService,
 )
 
 
@@ -21,7 +21,7 @@ TENANT_ID = "tenant_content"
 
 @pytest.mark.asyncio
 async def test_article_crud_flow(test_db_session):
-    service = ContentService(test_db_session, TENANT_ID)
+    service = ArticleCrudService(test_db_session, TENANT_ID)
     actor = DummyUser()
 
     payload = {
@@ -31,30 +31,30 @@ async def test_article_crud_flow(test_db_session):
         "tags": ["growth", "demand"],
     }
 
-    article = await service.create_content(payload, actor)
+    article = await service.create_article(payload, actor)
     assert article.tenant_id == TENANT_ID
     assert article.title == payload["title"]
 
-    articles, total = await service.list_content()
+    articles, total = await service.list_articles()
     assert total == 1
     assert articles[0].title == payload["title"]
 
-    updated = await service.update_content(article.id, {"category": "marketing"}, actor)
+    updated = await service.update_article(article.id, {"category": "marketing"}, actor)
     assert updated.category == "marketing"
 
-    deleted = await service.delete_content(article.id)
+    deleted = await service.delete_article(article.id)
     assert deleted is True
 
-    remaining, remaining_total = await service.list_content()
+    remaining, remaining_total = await service.list_articles()
     assert remaining_total == 0
     assert remaining == []
 
 
 @pytest.mark.asyncio
 async def test_media_services_crud_flow(test_db_session):
-    podcast_service = PodcastService(test_db_session, TENANT_ID)
-    video_service = VideoService(test_db_session, TENANT_ID)
-    news_service = NewsService(test_db_session, TENANT_ID)
+    podcast_service = PodcastCrudService(test_db_session, TENANT_ID)
+    video_service = VideoCrudService(test_db_session, TENANT_ID)
+    news_service = NewsCrudService(test_db_session, TENANT_ID)
     actor = DummyUser()
 
     podcast = await podcast_service.create_podcast(
@@ -106,11 +106,11 @@ async def test_media_services_crud_flow(test_db_session):
 
 @pytest.mark.asyncio
 async def test_engagement_summary(test_db_session):
-    content_service = ContentService(test_db_session, TENANT_ID)
-    engagement_service = ContentEngagementService(test_db_session, TENANT_ID)
+    content_service = ArticleCrudService(test_db_session, TENANT_ID)
+    engagement_service = ContentEngagementCrudService(test_db_session, TENANT_ID)
     actor = DummyUser()
 
-    article = await content_service.create_content(
+    article = await content_service.create_article(
         {
             "title": "Client Segmentation Walkthrough",
             "body_md": "Segment clients by revenue contribution and lifecycle stage.",

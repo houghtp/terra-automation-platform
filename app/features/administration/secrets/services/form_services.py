@@ -38,10 +38,12 @@ class SecretsFormService(BaseService):
             result = await self.db.execute(stmt)
             tenants = result.fetchall()
 
-            tenant_list = [
+            # Include "global" scope for platform-level secrets (client ids, shared creds).
+            tenant_list = [{"id": "global", "name": "Global"}]
+            tenant_list.extend(
                 {"id": str(tenant.id), "name": tenant.name}
                 for tenant in tenants
-            ]
+            )
 
             logger.info(f"Retrieved {len(tenant_list)} active tenants for secrets forms")
             return tenant_list

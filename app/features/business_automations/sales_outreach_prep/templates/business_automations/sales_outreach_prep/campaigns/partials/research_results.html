@@ -1,0 +1,188 @@
+<!-- AI Research Results Modal Content -->
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="ti ti-sparkles me-2"></i>
+        AI Research Results: {{ campaign.name }}
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<div class="modal-body">
+    {% if campaign.research_data %}
+        <!-- Research Summary -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h3 class="card-title">Research Summary</h3>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-3">Research Goal:</dt>
+                    <dd class="col-sm-9">{{ campaign.research_prompt }}</dd>
+
+                    <dt class="col-sm-3">Strategy Used:</dt>
+                    <dd class="col-sm-9">
+                        <span class="badge bg-blue">
+                            {{ campaign.research_data.metadata.strategy_used|default('Unknown') }}
+                        </span>
+                    </dd>
+
+                    <dt class="col-sm-3">Prospects Found:</dt>
+                    <dd class="col-sm-9">
+                        <strong>{{ campaign.research_data.prospects|default(campaign.research_data.organizations)|length }}</strong> potential contacts
+                    </dd>
+
+                    <dt class="col-sm-3">Completed:</dt>
+                    <dd class="col-sm-9">
+                        {{ campaign.research_data.completed_at|default('Unknown') }}
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Strategy Details -->
+        {% if campaign.research_data.strategy %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h3 class="card-title">Search Strategy</h3>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    {% if campaign.research_data.strategy.reasoning %}
+                    <dt class="col-sm-3">AI Reasoning:</dt>
+                    <dd class="col-sm-9">{{ campaign.research_data.strategy.reasoning }}</dd>
+                    {% endif %}
+
+                    {% if campaign.research_data.strategy.target_company %}
+                    <dt class="col-sm-3">Target Company:</dt>
+                    <dd class="col-sm-9"><strong>{{ campaign.research_data.strategy.target_company }}</strong></dd>
+                    {% endif %}
+
+                    {% if campaign.research_data.strategy.target_roles %}
+                    <dt class="col-sm-3">Target Roles:</dt>
+                    <dd class="col-sm-9">{{ campaign.research_data.strategy.target_roles|join(', ') }}</dd>
+                    {% endif %}
+
+                    {% if campaign.research_data.strategy.geography %}
+                    <dt class="col-sm-3">Geography:</dt>
+                    <dd class="col-sm-9">{{ campaign.research_data.strategy.geography }}</dd>
+                    {% endif %}
+
+                    {% if campaign.research_data.strategy.linkedin_queries %}
+                    <dt class="col-sm-3">LinkedIn Searches:</dt>
+                    <dd class="col-sm-9">
+                        <ul class="list-unstyled mb-0">
+                            {% for query in campaign.research_data.strategy.linkedin_queries %}
+                            <li class="mb-1">
+                                <code class="text-muted">{{ query }}</code>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Prospects Found -->
+        {% if campaign.research_data.prospects %}
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Prospects Discovered</h3>
+                <div class="card-actions">
+                    <span class="text-muted">{{ campaign.research_data.prospects|length }} total</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-vcenter card-table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Title</th>
+                                <th>Company</th>
+                                <th>LinkedIn</th>
+                                <th>Source</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for prospect in campaign.research_data.prospects %}
+                            <tr>
+                                <td>
+                                    <strong>{{ prospect.full_name }}</strong>
+                                </td>
+                                <td>
+                                    {{ prospect.job_title|default('N/A') }}
+                                </td>
+                                <td>
+                                    <div>{{ prospect.company_name|default('Unknown') }}</div>
+                                    {% if prospect.company_website %}
+                                    <small>
+                                        <a href="{{ prospect.company_website }}" target="_blank" rel="noopener noreferrer">
+                                            {{ prospect.company_website|truncate(30) }}
+                                            <i class="ti ti-external-link"></i>
+                                        </a>
+                                    </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if prospect.linkedin_url %}
+                                    <a href="{{ prospect.linkedin_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">
+                                        <i class="ti ti-brand-linkedin"></i>
+                                        Profile
+                                    </a>
+                                    {% else %}
+                                    <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ prospect.source|default('AI Research')|truncate(40) }}</small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% elif campaign.research_data.organizations %}
+        <!-- Backward compatibility: Show old organizations format -->
+        <div class="alert alert-warning">
+            <i class="ti ti-alert-triangle me-2"></i>
+            This campaign uses the old organization-based research format. Please re-run the research to use the new prospect-based workflow.
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="ti ti-info-circle me-2"></i>
+            No prospects found in this research.
+        </div>
+        {% endif %}
+
+        <!-- AI Reasoning already shown in Strategy Details card above -->
+
+    {% else %}
+        <!-- No Research Data -->
+        <div class="alert alert-warning">
+            <i class="ti ti-alert-triangle me-2"></i>
+            No research results available yet. Please run the discovery process first.
+        </div>
+    {% endif %}
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+        <i class="ti ti-x icon"></i>
+        Close
+    </button>
+    {% if campaign.research_data and campaign.research_data.prospects %}
+    <button type="button"
+            class="btn btn-outline-primary"
+            hx-post="/features/business-automations/sales-outreach-prep/campaigns/{{ campaign.id }}/import-all-prospects"
+            hx-confirm="This will import {{ campaign.research_data.prospects|length }} prospects and create Company records. Continue?"
+            hx-trigger="click"
+            hx-swap="none">
+        <i class="ti ti-download icon"></i>
+        Import All {{ campaign.research_data.prospects|length }} Prospects
+    </button>
+    {% endif %}
+</div>

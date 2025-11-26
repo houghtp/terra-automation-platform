@@ -1,10 +1,14 @@
 import pytest
 from datetime import datetime, timedelta
 
-from app.features.community.services.group_services import GroupService, GroupPostService
-from app.features.community.services.event_services import EventService
-from app.features.community.services.poll_services import PollService, PollVoteService
-from app.features.community.services.messaging_services import MessageService
+from app.features.community.services import (
+    GroupCrudService,
+    GroupPostCrudService,
+    EventCrudService,
+    PollCrudService,
+    PollVoteCrudService,
+    MessageCrudService,
+)
 
 
 class DummyUser:
@@ -17,8 +21,8 @@ class DummyUser:
 @pytest.mark.asyncio
 async def test_group_creation_flow(test_db_session):
     tenant_id = "tenant-test"
-    group_service = GroupService(test_db_session, tenant_id)
-    post_service = GroupPostService(test_db_session, tenant_id)
+    group_service = GroupCrudService(test_db_session, tenant_id)
+    post_service = GroupPostCrudService(test_db_session, tenant_id)
 
     group = await group_service.create_group({
         "name": "Research Circle",
@@ -41,7 +45,7 @@ async def test_group_creation_flow(test_db_session):
 @pytest.mark.asyncio
 async def test_event_service_create_update(test_db_session):
     tenant_id = "tenant-events"
-    service = EventService(test_db_session, tenant_id)
+    service = EventCrudService(test_db_session, tenant_id)
     start = datetime.utcnow() + timedelta(days=5)
     end = start + timedelta(hours=2)
 
@@ -62,8 +66,8 @@ async def test_event_service_create_update(test_db_session):
 @pytest.mark.asyncio
 async def test_poll_service_vote_summary(test_db_session):
     tenant_id = "tenant-polls"
-    poll_service = PollService(test_db_session, tenant_id)
-    vote_service = PollVoteService(test_db_session, tenant_id)
+    poll_service = PollCrudService(test_db_session, tenant_id)
+    vote_service = PollVoteCrudService(test_db_session, tenant_id)
 
     poll = await poll_service.create_poll({
         "question": "What is your primary growth priority?",
@@ -85,12 +89,15 @@ async def test_poll_service_vote_summary(test_db_session):
 
 @pytest.mark.asyncio
 async def test_message_service_send(test_db_session):
-    service = MessageService(test_db_session, "tenant-msg")
-    message = await service.send_message({
-        "recipient_id": "member-2",
-        "content": "Welcome aboard!",
-        "thread_id": None,
-    }, sender_id="member-1")
+    service = MessageCrudService(test_db_session, "tenant-msg")
+    message = await service.create_message(
+        {
+            "recipient_id": "member-2",
+            "content": "Welcome aboard!",
+            "thread_id": None,
+        },
+        sender_id="member-1",
+    )
 
     assert message.sender_id == "member-1"
     assert message.recipient_id == "member-2"

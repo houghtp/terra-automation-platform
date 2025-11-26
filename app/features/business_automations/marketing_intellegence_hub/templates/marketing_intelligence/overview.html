@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Marketing Intelligence{% endblock %}
+
+{% block content %}
+<div class="page-header mb-3">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Marketing Intelligence</h2>
+      <div class="text-muted">
+        Connect data sources to power analytics and reporting. GA4 is available now; more sources coming soon.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row row-cards">
+  <div class="col-md-6 col-lg-4">
+    <div class="card card-hover-lift">
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex align-items-center mb-2">
+          <div class="avatar bg-blue-lt text-blue">
+            <i class="ti ti-brand-google-analytics"></i>
+          </div>
+          <div class="ms-3">
+            <div class="small text-muted">Data Source</div>
+            <div class="h4 mb-0">Google Analytics 4</div>
+          </div>
+        </div>
+        <p class="text-muted flex-fill">
+          Connect GA4 to ingest traffic and conversion metrics for dashboards and reporting.
+        </p>
+        <div class="d-flex align-items-center justify-content-between">
+          <span class="app-badge app-badge-info">Available</span>
+          <a class="btn btn-primary" href="/features/marketing-intelligence/ga4">
+            Open GA4
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6 col-lg-4">
+    <div class="card card-hover-lift">
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex align-items-center mb-2">
+          <div class="avatar bg-gray-lt text-muted">
+            <i class="ti ti-brand-linkedin"></i>
+          </div>
+          <div class="ms-3">
+            <div class="small text-muted">Data Source</div>
+            <div class="h4 mb-0">LinkedIn</div>
+          </div>
+        </div>
+        <p class="text-muted flex-fill">
+          Campaign analytics and engagement reporting.
+        </p>
+        <span class="app-badge app-badge-neutral">Coming soon</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

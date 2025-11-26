@@ -58,7 +58,7 @@ async def send_message_api(
     current_user: User = Depends(get_current_user),
 ):
     """Send a message via API."""
-    message = await service.send_message(payload.model_dump(), sender_id=current_user.id)
+    message = await service.create_message(payload.model_dump(), sender_id=current_user.id)
     if not message:
         raise HTTPException(status_code=500, detail="Failed to send message")
     return MessageResponse.model_validate(message, from_attributes=True)

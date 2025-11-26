@@ -53,7 +53,8 @@ class Member(Base, AuditMixin):
     tags = Column(JSONB, nullable=False, default=list)
 
     user = relationship("User", backref="community_member", lazy="joined", uselist=False)
-    partner = relationship("Partner", backref=backref("contacts", lazy="selectin"))
+    # Selectin loading avoids async lazy-load errors when serializing partner_name
+    partner = relationship("Partner", backref=backref("contacts", lazy="selectin"), lazy="selectin")
 
     __table_args__ = (
         Index("ix_members_tenant_email_unique", "tenant_id", "email", unique=True),

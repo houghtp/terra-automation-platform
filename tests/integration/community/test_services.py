@@ -1,11 +1,9 @@
 import pytest
 
 from app.features.community.services import (
-    DirectMessageService,
-    MemberService,
-    MessageThreadParticipantService,
-    MessageThreadService,
-    PartnerService,
+    MemberCrudService,
+    MessageCrudService,
+    PartnerCrudService,
 )
 
 
@@ -19,8 +17,18 @@ class DummyUser:
 @pytest.mark.asyncio
 async def test_member_service_crud_flow(test_db_session):
     tenant_id = "tenant_community"
-    service = MemberService(test_db_session, tenant_id)
+    service = MemberCrudService(test_db_session, tenant_id)
+    partner_service = PartnerCrudService(test_db_session, tenant_id)
     actor = DummyUser()
+
+    partner = await partner_service.create_partner(
+        {
+            "name": "Advisor Tech Demo",
+            "category": "technology",
+            "website": "https://advisor.tech",
+        },
+        actor,
+    )
 
     payload = {
         "name": "Jane Advisor",
@@ -31,12 +39,17 @@ async def test_member_service_crud_flow(test_db_session):
         "bio": "Multi-family office specialist.",
         "specialties": ["succession", "tax"],
         "tags": ["midwest", "family office"],
+        "partner_id": partner.id,
     }
 
     member = await service.create_member(payload, actor)
     assert member.id is not None
     assert member.tenant_id == tenant_id
     assert member.specialties == payload["specialties"]
+    assert member.partner_id == partner.id
+
+    contacts = await partner_service.list_partner_contacts(partner.id)
+    assert any(c.id == member.id for c in contacts)
 
     members, total = await service.list_members()
     assert total == 1
@@ -65,7 +78,7 @@ async def test_member_service_crud_flow(test_db_session):
 @pytest.mark.asyncio
 async def test_partner_service_crud_flow(test_db_session):
     tenant_id = "tenant_community"
-    service = PartnerService(test_db_session, tenant_id)
+    service = PartnerCrudService(test_db_session, tenant_id)
     actor = DummyUser()
 
     payload = {
@@ -110,10 +123,8 @@ async def test_messaging_services_crud_flow(test_db_session):
     tenant_id = "tenant_community"
     actor = DummyUser()
 
-    member_service = MemberService(test_db_session, tenant_id)
-    thread_service = MessageThreadService(test_db_session, tenant_id)
-    participant_service = MessageThreadParticipantService(test_db_session, tenant_id)
-    message_service = DirectMessageService(test_db_session, tenant_id)
+    member_service = MemberCrudService(test_db_session, tenant_id)
+    message_service = MessageCrudService(test_db_session, tenant_id)
 
     member_one = await member_service.create_member(
         {
@@ -131,60 +142,27 @@ async def test_messaging_services_crud_flow(test_db_session):
         },
         actor,
     )
-    member_three = await member_service.create_member(
-        {
-            "name": "Caro Connector",
-            "email": "caro@example.com",
-            "firm": "Radium Wealth",
-        },
-        actor,
-    )
-
-    with pytest.raises(ValueError):
-        await thread_service.create_thread(
-            {"subject": "Broken thread"},
-            participant_ids=["missing-member"],
-            user=actor,
-        )
-
-    thread = await thread_service.create_thread(
-        {"subject": "Introductions"},
-        participant_ids=[member_one.id, member_two.id],
-        user=actor,
-    )
-    assert thread.tenant_id == tenant_id
-
-    with pytest.raises(ValueError):
-        await participant_service.add_participant(thread.id, member_one.id, actor)
-
-    participant = await participant_service.add_participant(thread.id, member_three.id, actor)
-    assert participant.member_id == member_three.id
-
-    with pytest.raises(ValueError):
-        await participant_service.add_participant(thread.id, "missing-member", actor)
 
     message = await message_service.create_message(
-        thread.id,
         {
-            "content": "Welcome to the platform!",
-            "sender_id": member_one.id,
             "recipient_id": member_two.id,
+            "content": "Welcome to the platform!",
         },
-        actor,
+        sender_id=member_one.id,
     )
     assert message.content == "Welcome to the platform!"
+    assert message.sender_id == member_one.id
 
-    removed = await participant_service.remove_participant(thread.id, member_three.id)
-    assert removed is True
-    assert await participant_service.remove_participant(thread.id, member_three.id) is False
+    messages, total = await message_service.list_conversations(member_id=member_two.id, limit=10, offset=0)
+    assert total == 1
+    assert messages[0].content == "Welcome to the platform!"
 
-    with pytest.raises(ValueError):
-        await message_service.create_message(
-            thread.id,
-            {
-                "content": "This should fail",
-                "sender_id": member_three.id,
-                "recipient_id": member_one.id,
-            },
-            actor,
-        )
+    await message_service.mark_read([message.id])
+    thread_messages = await message_service.fetch_thread(message.thread_id, member_one.id, limit=10)
+    assert thread_messages[0].is_read is True
+
+    deleted = await message_service.delete_message(message.id)
+    assert deleted is True
+    remaining_messages, remaining_total = await message_service.list_conversations(member_id=member_two.id, limit=5, offset=0)
+    assert remaining_total == 0
+    assert remaining_messages == []

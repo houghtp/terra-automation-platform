@@ -84,11 +84,15 @@ window.initializePollsTable = function initializePollsTable() {
 
   window.pollsTable = table;
   window.appTables["polls-table"] = table;
+  bindRowActionHandlers("#polls-table", {
+    onEdit: "editPoll",
+    onDelete: "deletePoll",
+  });
   return table;
 };
 
 window.editPoll = function editPoll(id) {
-  htmx.ajax("GET", `/features/community/polls/partials/form?poll_id=${id}`, "#modal-body");
+  editTabulatorRow(`/features/community/polls/partials/form?poll_id=${id}`);
 };
 
 window.deletePoll = function deletePoll(id) {

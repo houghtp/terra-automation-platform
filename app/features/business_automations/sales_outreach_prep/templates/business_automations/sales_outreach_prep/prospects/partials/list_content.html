@@ -1,0 +1,32 @@
+<div class="card">
+  <div class="card-header">
+    {% set title = "Prospects" %}
+    {% set description = "Manage prospect contacts, track enrichment status, and view LinkedIn profiles." %}
+    {% set icon = "ti ti-users" %}
+    {% if campaign_id %}
+      {% set add_url = "/features/business-automations/sales-outreach-prep/prospects/partials/form?campaign_id=" ~ campaign_id %}
+    {% else %}
+      {% set add_url = "/features/business-automations/sales-outreach-prep/prospects/partials/form" %}
+    {% endif %}
+    {% set entity_name = "Prospect" %}
+    {% set table_id = "prospects-table" %}
+    {% include 'components/ui/table_actions.html' with context %}
+
+    <!-- Enrichment Button -->
+    {% if campaign_id %}
+    <div class="card-actions">
+      <button type="button"
+              id="enrich-prospects-btn"
+              class="btn btn-outline-success"
+              onclick="enrichProspects('{{ campaign_id }}')"
+              title="Enrich all prospects with email addresses">
+        <i class="ti ti-mail icon"></i>
+        Enrich Prospects
+      </button>
+    </div>
+    {% endif %}
+  </div>
+  <div class="card-body p-0">
+    <div id="prospects-table"></div>
+  </div>
+</div>

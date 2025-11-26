@@ -1,36 +1,31 @@
-"""
-Community services package.
-
-Services are split by responsibility to align with project standards.
-"""
-
-from .member_services import MemberService
-from .partner_services import PartnerService
-from .group_services import GroupService, GroupPostService, GroupCommentService
-from .messaging_services import MessageService
-from .event_services import EventService
-from .poll_services import PollService, PollVoteService
-from .content_services import (
-    ContentService,
-    PodcastService,
-    VideoService,
-    NewsService,
-    ContentEngagementService,
+from .members import MemberCrudService, MemberFormService
+from .partners import PartnerCrudService
+from .groups import GroupCrudService, GroupPostCrudService, GroupCommentCrudService
+from .events import EventCrudService
+from .polls import PollCrudService, PollVoteCrudService
+from .messages import MessageCrudService
+from .content import (
+    ArticleCrudService,
+    PodcastCrudService,
+    VideoCrudService,
+    NewsCrudService,
+    ContentEngagementCrudService,
 )
 
 __all__ = [
-    "MemberService",
-    "PartnerService",
-    "GroupService",
-    "GroupPostService",
-    "GroupCommentService",
-    "MessageService",
-    "EventService",
-    "PollService",
-    "PollVoteService",
-    "ContentService",
-    "PodcastService",
-    "VideoService",
-    "NewsService",
-    "ContentEngagementService",
+    "MemberCrudService",
+    "MemberFormService",
+    "PartnerCrudService",
+    "GroupCrudService",
+    "GroupPostCrudService",
+    "GroupCommentCrudService",
+    "EventCrudService",
+    "PollCrudService",
+    "PollVoteCrudService",
+    "MessageCrudService",
+    "ArticleCrudService",
+    "PodcastCrudService",
+    "VideoCrudService",
+    "NewsCrudService",
+    "ContentEngagementCrudService",
 ]

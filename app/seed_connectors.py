@@ -119,6 +119,47 @@ CONNECTOR_SEEDS = [
         },
     },
     {
+        "key": "ga4",
+        "name": "Google Analytics 4",
+        "description": "Connect GA4 properties, fetch traffic and conversion metrics, and power Marketing Intelligence dashboards.",
+        "category": "Analytics",
+        "icon": "brand-google-analytics",
+        "auth_type": AuthType.OAUTH.value,
+        "capabilities": {
+            "ingest_metrics": True,
+            "multi_property": True,
+            "read_only": True,
+            "supports_backfill": True,
+            "supports_scheduling": True,
+        },
+        "default_config_schema": {
+            "type": "object",
+            "title": "GA4 Connection",
+            "required": [],
+            "properties": {
+                "property_id": {
+                    "type": "string",
+                    "title": "GA4 Property ID",
+                    "description": "Selected after OAuth property picker",
+                },
+                "property_name": {
+                    "type": "string",
+                    "title": "GA4 Property Name",
+                },
+                "connection_id": {
+                    "type": "string",
+                    "title": "Marketing Intelligence Connection ID",
+                    "description": "Internal link to marketing_intelligence ga4_connections",
+                },
+                "last_synced_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "title": "Last Sync",
+                },
+            },
+        },
+    },
+    {
         "key": "linkedin",
         "name": "LinkedIn",
         "description": "Share posts to LinkedIn profiles and company pages. Supports text, images, documents, and articles.",

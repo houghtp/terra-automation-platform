@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -10,6 +11,8 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     LOG_FILE: str = "app.log"
     CORS_ORIGINS: str = "*"
+    GA4_CLIENT_ID: Optional[str] = None
+    GA4_REDIRECT_URI: Optional[str] = None
 
     model_config = {
         "env_file": ".env",

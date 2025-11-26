@@ -66,6 +66,16 @@ window.initializeGroupsTable = function initializeGroupsTable() {
   window.groupPostsTable = postsTable;
   window.appTables["group-posts-table"] = postsTable;
 
+  bindRowActionHandlers("#groups-table", {
+    onEdit: "editGroup",
+    onDelete: "deleteGroup",
+  });
+
+  bindRowActionHandlers("#group-posts-table", {
+    onEdit: "editGroupPost",
+    onDelete: "deleteGroupPost",
+  });
+
   table.on("rowClick", (e, row) => {
     const group = row.getData();
     loadGroupPosts(group.id);
@@ -91,6 +101,8 @@ function enablePostButton(groupId) {
   button.setAttribute("hx-get", `/features/community/groups/${groupId}/posts/partials/form`);
   button.setAttribute("hx-target", "#modal-body");
   button.setAttribute("hx-swap", "innerHTML");
+  button.setAttribute("data-bs-toggle", "modal");
+  button.setAttribute("data-bs-target", "#modal");
   button.setAttribute("href", "javascript:void(0)");
 }
 
@@ -102,6 +114,8 @@ function disablePostButton() {
   button.removeAttribute("hx-get");
   button.removeAttribute("hx-target");
   button.removeAttribute("hx-swap");
+  button.removeAttribute("data-bs-toggle");
+  button.removeAttribute("data-bs-target");
 }
 
 function loadGroupPosts(groupId) {
@@ -114,7 +128,7 @@ function loadGroupPosts(groupId) {
 
 window.editGroup = function editGroup(id) {
   const url = `/features/community/groups/partials/form?group_id=${id}`;
-  htmx.ajax("GET", url, "#modal-body");
+  editTabulatorRow(url);
 };
 
 window.deleteGroup = function deleteGroup(id) {
@@ -126,8 +140,15 @@ window.deleteGroup = function deleteGroup(id) {
 };
 
 window.editGroupPost = function editGroupPost(id) {
-  const url = `/features/community/groups/${window.groupPostsTable.group_id}/posts/partials/form?post_id=${id}`;
-  htmx.ajax("GET", url, "#modal-body");
+  const groupId = window.groupPostsTable?.group_id;
+  if (!groupId) {
+    if (typeof window.showToast === "function") {
+      window.showToast("Please select a group before editing posts.", "warning");
+    }
+    return;
+  }
+  const url = `/features/community/groups/${groupId}/posts/partials/form?post_id=${id}`;
+  editTabulatorRow(url);
 };
 
 window.deleteGroupPost = function deleteGroupPost(id) {

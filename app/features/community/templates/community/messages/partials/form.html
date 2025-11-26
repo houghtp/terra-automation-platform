@@ -4,7 +4,7 @@
 
 <form
   id="message-form"
-  hx-post="/features/community/messages"
+  hx-post="/features/community/messages/"
   hx-target="#modal-body"
   hx-swap="innerHTML"
   hx-disabled-elt="fieldset"
@@ -14,18 +14,26 @@
     <fieldset class="form-fieldset">
       <div class="row g-3">
         <div class="col-12">
-          <label class="form-label required">Recipient Member ID</label>
+          <label class="form-label required">Recipient</label>
+          <input type="hidden" name="recipient_id" id="recipient_id" value="{{ form_data.recipient_id if form_data and form_data.recipient_id is not none else '' }}">
           <input
             type="text"
-            name="recipient_id"
+            id="recipient_input"
+            name="recipient_label"
             value="{{ form_data.recipient_id if form_data and form_data.recipient_id is not none else '' }}"
             class="form-control {{ 'is-invalid' if errors and errors.get('recipient_id') }}"
-            maxlength="36"
+            maxlength="255"
+            placeholder="Type a name or email"
+            hx-get="/features/community/messages/partials/recipients"
+            hx-trigger="keyup changed delay:250ms"
+            hx-target="#recipient-options"
+            hx-swap="innerHTML"
             required
           >
           {% if errors and errors.get('recipient_id') %}
             <div class="invalid-feedback d-block">{{ errors['recipient_id'][0] }}</div>
           {% endif %}
+          <div id="recipient-options"></div>
         </div>
         <div class="col-12">
           <label class="form-label required">Message</label>

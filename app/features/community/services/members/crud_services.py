@@ -48,7 +48,6 @@ class MemberCrudService(BaseService[Member]):
                     or_(
                         func.lower(Member.name).like(like),
                         func.lower(Member.email).like(like),
-                        func.lower(Member.firm).like(like),
                     )
                 )
 

@@ -3,7 +3,7 @@ import pytest
 from types import SimpleNamespace
 
 from app.main import app
-from app.features.community.services import ContentService
+from app.features.community.services import ArticleCrudService
 
 
 def _dummy_admin(tenant_id: str):
@@ -81,6 +81,6 @@ async def test_content_api_crud_flow(test_client, test_db_session):
         app.dependency_overrides.pop(get_current_user, None)
 
     # Ensure tenant data was scoped correctly
-    service = ContentService(test_db_session, tenant_id)
-    items, total = await service.list_content()
+    service = ArticleCrudService(test_db_session, tenant_id)
+    items, total = await service.list_articles()
     assert total == 0

@@ -7,7 +7,7 @@
   {% if group %}
     hx-put="/features/community/groups/{{ group.id }}"
   {% else %}
-    hx-post="/features/community/groups"
+    hx-post="/features/community/groups/"
   {% endif %}
   hx-target="#modal-body"
   hx-swap="innerHTML"

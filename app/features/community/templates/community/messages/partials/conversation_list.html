@@ -1,0 +1,38 @@
+{% if conversations %}
+<div class="list-group list-group-flush conversation-list">
+  {% for convo in conversations %}
+    <a
+      href="javascript:void(0)"
+      class="list-group-item list-group-item-action py-3 d-flex justify-content-between align-items-start"
+      hx-get="/features/community/messages/threads/{{ convo.thread_id }}"
+      hx-target="#thread-pane"
+      hx-swap="innerHTML"
+      hx-push-url="false"
+    >
+      <div class="me-2">
+        <div class="d-flex align-items-center mb-1">
+          <span class="badge bg-azure text-uppercase me-2">{{ (convo.other_party_name or convo.other_party_email or 'User')[0:2] }}</span>
+          <span class="fw-semibold">{{ convo.other_party_name or convo.other_party_email or "Conversation" }}</span>
+          {% if convo.is_unread %}
+            <span class="badge bg-red ms-2">New</span>
+          {% endif %}
+        </div>
+        <div class="text-muted small text-truncate" style="-webkit-line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical;">
+          {{ convo.last_message or "No messages yet." }}
+        </div>
+      </div>
+      <div class="text-muted small">
+        {% if convo.created_at %}
+          {{ convo.created_at.strftime("%b %d %H:%M") }}
+        {% endif %}
+      </div>
+    </a>
+  {% endfor %}
+</div>
+{% else %}
+  <div class="empty">
+    <div class="empty-icon"><i class="ti ti-inbox"></i></div>
+    <p class="empty-title">No conversations yet</p>
+    <p class="empty-subtitle text-muted">Start a new conversation to see it here.</p>
+  </div>
+{% endif %}

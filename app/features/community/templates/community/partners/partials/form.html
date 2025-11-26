@@ -9,10 +9,8 @@
     {% if partner %}
         hx-put="/features/community/partners/{{ partner.id }}"
     {% else %}
-        hx-post="/features/community/partners"
+        hx-post="/features/community/partners/"
     {% endif %}
-    hx-target="#modal-body"
-    hx-swap="innerHTML"
     hx-disabled-elt="fieldset"
     autocomplete="off"
 >

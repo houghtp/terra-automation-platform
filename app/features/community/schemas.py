@@ -432,9 +432,9 @@ class ContentEngagementResponse(BaseModel):
 class GroupBase(BaseModel):
     """Shared fields for community groups."""
 
-    title: constr(strip_whitespace=True, min_length=2, max_length=255)
+    name: constr(strip_whitespace=True, min_length=2, max_length=255)
     description: Optional[str] = None
-    privacy: constr(strip_whitespace=True, max_length=50) = Field(default="public")
+    privacy: constr(strip_whitespace=True, max_length=50) = Field(default="private")
     owner_id: Optional[str] = None
 
 
@@ -445,7 +445,7 @@ class GroupCreate(GroupBase):
 class GroupUpdate(BaseModel):
     """Update payload for a group."""
 
-    title: Optional[constr(strip_whitespace=True, min_length=2, max_length=255)] = None
+    name: Optional[constr(strip_whitespace=True, min_length=2, max_length=255)] = None
     description: Optional[str] = None
     privacy: Optional[constr(strip_whitespace=True, max_length=50)] = None
     owner_id: Optional[str] = None
@@ -484,13 +484,15 @@ class GroupMembershipResponse(BaseModel):
 class GroupPostBase(BaseModel):
     """Shared fields for posts."""
 
-    title: constr(strip_whitespace=True, min_length=2, max_length=255)
+    title: Optional[constr(strip_whitespace=True, min_length=2, max_length=255)] = None
     content: str
-    author_id: str
+    author_id: Optional[str] = None
 
 
 class GroupPostCreate(GroupPostBase):
     """Create post."""
+
+    group_id: str
 
 
 class GroupPostUpdate(BaseModel):
@@ -515,7 +517,8 @@ class GroupCommentCreate(BaseModel):
     """Create a comment."""
 
     content: str
-    author_id: str
+    author_id: Optional[str] = None
+    post_id: str
 
 
 class GroupCommentUpdate(BaseModel):

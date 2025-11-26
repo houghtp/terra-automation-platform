@@ -7,7 +7,7 @@
   {% if poll %}
     hx-put="/features/community/polls/{{ poll.id }}"
   {% else %}
-    hx-post="/features/community/polls"
+    hx-post="/features/community/polls/"
   {% endif %}
   hx-target="#modal-body"
   hx-swap="innerHTML"

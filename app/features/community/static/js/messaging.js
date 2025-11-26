@@ -33,7 +33,8 @@ function renderMessages(messages) {
 }
 
 function loadThreads() {
-  fetch("/features/community/messaging/threads")
+  if (!window.currentMemberId) return;
+  fetch(`/features/community/messages/api?member_id=${window.currentMemberId}`)
     .then((response) => response.json())
     .then((payload) => {
       const tableElement = document.getElementById("threads-table");
@@ -73,28 +74,45 @@ function selectThread(threadId, subject) {
     subjectEl.textContent = subject || "Thread";
   }
 
-  fetch(`/features/community/messaging/threads/${threadId}/messages`)
+  if (!window.currentMemberId) return;
+  const url = new URL("/features/community/messages/api/thread", window.location.origin);
+  url.searchParams.set("member_id", window.currentMemberId);
+  if (threadId) {
+    url.searchParams.set("thread_id", threadId);
+  }
+
+  fetch(url)
     .then((response) => response.json())
     .then((payload) => renderMessages(payload.data || []));
 }
 
 window.sendMessage = function sendMessage(event) {
   event.preventDefault();
-  if (!currentThreadId) return;
+  if (!currentThreadId || !window.currentMemberId) return;
 
   const textarea = document.getElementById("message-input");
   const content = textarea.value.trim();
   if (!content) return;
 
-  fetch(`/features/community/messaging/threads/${currentThreadId}/messages`, {
+  fetch(`/features/community/messages/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content, sender_id: "self", recipient_id: "tenant" }),
+    body: JSON.stringify({
+      content,
+      sender_id: window.currentMemberId,
+      recipient_id: "tenant",
+      thread_id: currentThreadId
+    }),
   })
     .then((response) => {
       if (!response.ok) throw new Error("Failed to send message");
       textarea.value = "";
-      return fetch(`/features/community/messaging/threads/${currentThreadId}/messages`);
+
+      // Reload thread messages
+      const url = new URL("/features/community/messages/api/thread", window.location.origin);
+      url.searchParams.set("member_id", window.currentMemberId);
+      url.searchParams.set("thread_id", currentThreadId);
+      return fetch(url);
     })
     .then((response) => response.json())
     .then((payload) => renderMessages(payload.data || []))
@@ -102,7 +120,7 @@ window.sendMessage = function sendMessage(event) {
 };
 
 window.composeThread = function composeThread() {
-  editTabulatorRow("/features/community/messaging/partials/form");
+  editTabulatorRow("/features/community/messages/partials/form");
 };
 
 document.addEventListener("DOMContentLoaded", () => {

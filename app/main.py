@@ -203,6 +203,7 @@ app.mount("/features/administration/ai_prompts/static", StaticFiles(directory="a
 
 # Mount content broadcaster static files
 app.mount("/features/content-broadcaster/static", StaticFiles(directory="app/features/business_automations/content_broadcaster/static"), name="content_broadcaster_static")
+app.mount("/features/business-automations/sales-outreach-prep/static", StaticFiles(directory="app/features/business_automations/sales_outreach_prep/static"), name="sales_outreach_prep_static")
 app.mount("/features/community/static", StaticFiles(directory="app/features/community/static"), name="community_static")
 app.mount("/features/connectors/static", StaticFiles(directory="app/features/connectors/connectors/static"), name="connectors_static")
 
@@ -245,6 +246,8 @@ from .features.administration.ai_prompts.routes import router as administration_
 
 # Include business automation routes
 from .features.business_automations.content_broadcaster.routes import router as content_broadcaster_router
+from .features.business_automations.marketing_intellegence_hub.routes import router as marketing_intelligence_router
+from .features.business_automations.sales_outreach_prep.routes import router as sales_outreach_prep_router
 from .features.community.routes import router as community_router
 from .features.connectors.connectors.routes import router as connectors_router
 
@@ -264,6 +267,8 @@ app.include_router(admin_logs_router, prefix="/features/administration/logs", ta
 
 # Business automation routes
 app.include_router(content_broadcaster_router, prefix="/features/content-broadcaster", tags=["business-automations"])
+app.include_router(marketing_intelligence_router, prefix="/features/marketing-intelligence", tags=["business-automations"])
+app.include_router(sales_outreach_prep_router, tags=["business-automations"])
 
 # Community routes
 app.include_router(community_router, prefix="/features/community", tags=["community"])

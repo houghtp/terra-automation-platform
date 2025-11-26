@@ -7,118 +7,127 @@ from app.deps.tenant import tenant_dependency
 from app.features.core.database import get_db
 
 from .services import (
-    MemberService,
-    PartnerService,
-    GroupService,
-    GroupPostService,
-    GroupCommentService,
-    MessageService,
-    EventService,
-    PollService,
-    PollVoteService,
-    ContentService,
-    PodcastService,
-    VideoService,
-    NewsService,
-    ContentEngagementService,
+    MemberCrudService,
+    MemberFormService,
+    PartnerCrudService,
+    GroupCrudService,
+    GroupPostCrudService,
+    GroupCommentCrudService,
+    MessageCrudService,
+    EventCrudService,
+    PollCrudService,
+    PollVoteCrudService,
+    ArticleCrudService,
+    PodcastCrudService,
+    VideoCrudService,
+    NewsCrudService,
+    ContentEngagementCrudService,
 )
 
 
 async def get_member_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
-) -> MemberService:
-    """Provide a MemberService scoped to the current tenant."""
-    return MemberService(session, tenant_id)
+) -> MemberCrudService:
+    """Provide a MemberCrudService scoped to the current tenant."""
+    return MemberCrudService(session, tenant_id)
+
+
+async def get_member_form_service(
+    session: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+) -> MemberFormService:
+    """Provide a MemberFormService scoped to the current tenant."""
+    return MemberFormService(session, tenant_id)
 
 
 async def get_partner_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
-) -> PartnerService:
-    """Provide a PartnerService scoped to the current tenant."""
-    return PartnerService(session, tenant_id)
+) -> PartnerCrudService:
+    """Provide a PartnerCrudService scoped to the current tenant."""
+    return PartnerCrudService(session, tenant_id)
 
 
 async def get_group_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
-) -> GroupService:
-    return GroupService(session, tenant_id)
+) -> GroupCrudService:
+    return GroupCrudService(session, tenant_id)
 
 
 async def get_group_post_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
-) -> GroupPostService:
-    return GroupPostService(session, tenant_id)
+) -> GroupPostCrudService:
+    return GroupPostCrudService(session, tenant_id)
 
 
 async def get_group_comment_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
-) -> GroupCommentService:
-    return GroupCommentService(session, tenant_id)
+) -> GroupCommentCrudService:
+    return GroupCommentCrudService(session, tenant_id)
 
 
 async def get_message_service(
     session: AsyncSession = Depends(get_db),
-    tenant_id: str = Depends(tenant_dependency),
-) -> MessageService:
-    return MessageService(session, tenant_id)
+) -> MessageCrudService:
+    # Messaging should span community/global users, so we bypass tenant scoping here.
+    return MessageCrudService(session, tenant_id=None)
 
 
 async def get_event_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
-) -> EventService:
-    return EventService(session, tenant_id)
+) -> EventCrudService:
+    return EventCrudService(session, tenant_id)
 
 
 async def get_poll_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
-) -> PollService:
-    return PollService(session, tenant_id)
+) -> PollCrudService:
+    return PollCrudService(session, tenant_id)
 
 
 async def get_poll_vote_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
-) -> PollVoteService:
-    return PollVoteService(session, tenant_id)
+) -> PollVoteCrudService:
+    return PollVoteCrudService(session, tenant_id)
 
 
-async def get_content_service(
+async def get_article_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
-) -> ContentService:
-    return ContentService(session, tenant_id)
+) -> ArticleCrudService:
+    return ArticleCrudService(session, tenant_id)
 
 
 async def get_podcast_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
-) -> PodcastService:
-    return PodcastService(session, tenant_id)
+) -> PodcastCrudService:
+    return PodcastCrudService(session, tenant_id)
 
 
 async def get_video_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
-) -> VideoService:
-    return VideoService(session, tenant_id)
+) -> VideoCrudService:
+    return VideoCrudService(session, tenant_id)
 
 
 async def get_news_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
-) -> NewsService:
-    return NewsService(session, tenant_id)
+) -> NewsCrudService:
+    return NewsCrudService(session, tenant_id)
 
 
 async def get_content_engagement_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
-) -> ContentEngagementService:
-    return ContentEngagementService(session, tenant_id)
+) -> ContentEngagementCrudService:
+    return ContentEngagementCrudService(session, tenant_id)

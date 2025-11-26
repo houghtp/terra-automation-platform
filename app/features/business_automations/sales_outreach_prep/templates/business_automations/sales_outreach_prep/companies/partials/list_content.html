@@ -1,0 +1,14 @@
+<div class="card">
+  <div class="card-header">
+    {% set title = "Companies" %}
+    {% set description = "Manage target companies, track domains, and organize prospect discovery." %}
+    {% set icon = "ti ti-building" %}
+    {% set add_url = "/features/business-automations/sales-outreach-prep/companies/partials/form" %}
+    {% set entity_name = "Company" %}
+    {% set table_id = "companies-table" %}
+    {% include 'components/ui/table_actions.html' with context %}
+  </div>
+  <div class="card-body p-0">
+    <div id="companies-table"></div>
+  </div>
+</div>

@@ -331,6 +331,11 @@
     }
 }
 
+/* Icon spinning animation */
+.icon-spin {
+    animation: spin 1s linear infinite;
+}
+
 .table-loader-overlay,
 .chart-loader-overlay,
 .widget-loader-overlay,

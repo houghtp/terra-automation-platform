@@ -24,8 +24,9 @@ window.initializeSecretsTable = function () {
                 headerFilter: "input",
                 formatter: function (cell) {
                     const type = cell.getValue();
-                    const color = type === 'api_key' ? 'blue' : 'gray';
-                    return `<span class="badge bg-${color}">${type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>`;
+                    const variant = type === 'api_key' ? 'info' : 'neutral';
+                    const label = type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    return `<span class="app-badge app-badge-${variant}">${label}</span>`;
                 }
             },
             {
@@ -53,7 +54,13 @@ window.initializeSecretsTable = function () {
                         "false": "Inactive"
                     }
                 },
-                formatter: formatStatusBadge
+                formatter: function (cell) {
+                    const raw = cell.getValue();
+                    const isActive = raw === true || raw === "true";
+                    const label = isActive ? "Active" : "Inactive";
+                    const variant = isActive ? "success" : "neutral";
+                    return `<span class="app-badge app-badge-${variant}">${label}</span>`;
+                }
             },
             {
                 title: "Created",

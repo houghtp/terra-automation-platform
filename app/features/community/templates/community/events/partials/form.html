@@ -7,7 +7,7 @@
   {% if event %}
     hx-put="/features/community/events/{{ event.id }}"
   {% else %}
-    hx-post="/features/community/events"
+    hx-post="/features/community/events/"
   {% endif %}
   hx-target="#modal-body"
   hx-swap="innerHTML"

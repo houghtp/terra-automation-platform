@@ -18,11 +18,11 @@ from app.features.community.models import (  # noqa: E402
     VideoResource,
     NewsItem,
 )
-from app.features.community.services.content_services import (  # noqa: E402
-    ContentService,
-    PodcastService,
-    VideoService,
-    NewsService,
+from app.features.community.services import (  # noqa: E402
+    ArticleCrudService,
+    PodcastCrudService,
+    VideoCrudService,
+    NewsCrudService,
 )
 
 TENANT_ID = "tenant_demo"
@@ -165,10 +165,10 @@ async def seed():
     async_session = async_sessionmaker(engine, expire_on_commit=False)
 
     async with async_session() as session:
-        article_service = ContentService(session, TENANT_ID)
-        podcast_service = PodcastService(session, TENANT_ID)
-        video_service = VideoService(session, TENANT_ID)
-        news_service = NewsService(session, TENANT_ID)
+        article_service = ArticleCrudService(session, TENANT_ID)
+        podcast_service = PodcastCrudService(session, TENANT_ID)
+        video_service = VideoCrudService(session, TENANT_ID)
+        news_service = NewsCrudService(session, TENANT_ID)
 
         article_count = await _upsert_records(
             article_service,
