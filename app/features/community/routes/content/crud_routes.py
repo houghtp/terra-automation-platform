@@ -47,6 +47,7 @@ from ...services import (
     NewsCrudService,
     ContentEngagementCrudService,
 )
+from ...services.content.news.ingest_service import NewsIngestService
 
 router = APIRouter()
 
@@ -318,6 +319,28 @@ async def list_news_api(
         "limit": limit,
         "offset": offset,
     }
+
+
+@router.post(
+    "/api/news/ingest",
+    summary="Ingest latest news via Firecrawl search",
+    status_code=201,
+)
+async def ingest_news_api(
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(tenant_dependency),
+):
+    """Fetch latest news for US financial advisors/wealth management and store as news items."""
+    service = NewsIngestService(db, tenant_id=None)
+    try:
+        items = await service.ingest_latest(current_user)
+        await db.commit()
+        return {"ingested": len(items)}
+    except Exception as exc:
+        await db.rollback()
+        handle_route_error("ingest_news_api", exc)
+        raise HTTPException(status_code=500, detail="Failed to ingest news")
 
 
 @router.post(
