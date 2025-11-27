@@ -28,6 +28,11 @@ function loadPollSummary(pollId) {
     .then((payload) => {
       const widget = document.getElementById("poll-results-widget");
       if (!widget) return;
+      // Ensure the widget markup exists (in case it was reset)
+      if (typeof widget.render === "function") {
+        widget.render();
+        chartInitialized = true;
+      }
       const summary = payload.data || [];
       const categories = summary.map((item) => item.label);
       const values = summary.map((item) => item.votes);
