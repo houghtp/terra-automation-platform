@@ -86,29 +86,30 @@
     </div>
 </div>
 
+{% set active_tab = active_tab or 'overview' %}
 <ul class="nav nav-tabs mb-3" role="tablist">
     <li class="nav-item" role="presentation">
-        <a class="nav-link active" data-bs-toggle="tab" href="#content-overview" role="tab" aria-selected="true">Overview</a>
+        <a class="nav-link {% if active_tab == 'overview' %}active{% endif %}" data-bs-toggle="tab" href="#content-overview" role="tab" aria-selected="{{ 'true' if active_tab == 'overview' else 'false' }}">Overview</a>
     </li>
     <li class="nav-item" role="presentation">
-        <a class="nav-link" data-bs-toggle="tab" href="#content-articles" role="tab" aria-selected="false">Articles</a>
+        <a class="nav-link {% if active_tab == 'articles' %}active{% endif %}" data-bs-toggle="tab" href="#content-articles" role="tab" aria-selected="{{ 'true' if active_tab == 'articles' else 'false' }}">Articles</a>
     </li>
     <li class="nav-item" role="presentation">
-        <a class="nav-link" data-bs-toggle="tab" href="#content-podcasts" role="tab" aria-selected="false">Podcasts</a>
+        <a class="nav-link {% if active_tab == 'podcasts' %}active{% endif %}" data-bs-toggle="tab" href="#content-podcasts" role="tab" aria-selected="{{ 'true' if active_tab == 'podcasts' else 'false' }}">Podcasts</a>
     </li>
     <li class="nav-item" role="presentation">
-        <a class="nav-link" data-bs-toggle="tab" href="#content-videos" role="tab" aria-selected="false">Videos</a>
+        <a class="nav-link {% if active_tab == 'videos' %}active{% endif %}" data-bs-toggle="tab" href="#content-videos" role="tab" aria-selected="{{ 'true' if active_tab == 'videos' else 'false' }}">Videos</a>
     </li>
     <li class="nav-item" role="presentation">
-        <a class="nav-link" data-bs-toggle="tab" href="#content-news" role="tab" aria-selected="false">News</a>
+        <a class="nav-link {% if active_tab == 'news' %}active{% endif %}" data-bs-toggle="tab" href="#content-news" role="tab" aria-selected="{{ 'true' if active_tab == 'news' else 'false' }}">News</a>
     </li>
     <li class="nav-item ms-auto" role="presentation">
-        <a class="nav-link" data-bs-toggle="tab" href="#content-manage" role="tab" aria-selected="false">Manage</a>
+        <a class="nav-link {% if active_tab == 'manage' %}active{% endif %}" data-bs-toggle="tab" href="#content-manage" role="tab" aria-selected="{{ 'true' if active_tab == 'manage' else 'false' }}">Manage</a>
     </li>
 </ul>
 
 <div class="tab-content">
-    <div class="tab-pane fade show active" id="content-overview" role="tabpanel">
+    <div class="tab-pane fade {% if active_tab == 'overview' %}show active{% endif %}" id="content-overview" role="tabpanel">
         <div class="row row-cards mb-3">
             <div class="col-lg-8">
                 <div class="card mb-3">
@@ -177,7 +178,7 @@
                             <h3 class="card-title mb-0">Latest Articles</h3>
                             <p class="text-muted mb-0 small">Recent posts for advisors.</p>
                         </div>
-                        <a href="#content-articles" class="btn btn-link p-0" data-bs-toggle="tab" data-bs-target="#content-articles" role="tab" aria-selected="false">View</a>
+                        <a href="/features/community/content?tab=articles#content-articles" class="btn btn-link p-0">View</a>
                     </div>
                     <div class="card-body">
                         {% if articles %}
@@ -204,7 +205,7 @@
                             <h3 class="card-title mb-0">Latest Podcasts</h3>
                             <p class="text-muted mb-0 small">Fresh episodes.</p>
                         </div>
-                        <a href="#content-podcasts" class="btn btn-link p-0" data-bs-toggle="tab" data-bs-target="#content-podcasts" role="tab" aria-selected="false">View</a>
+                        <a href="/features/community/content?tab=podcasts#content-podcasts" class="btn btn-link p-0">View</a>
                     </div>
                     <div class="card-body">
                         {% if podcasts %}
@@ -231,7 +232,7 @@
                             <h3 class="card-title mb-0">Latest Videos</h3>
                             <p class="text-muted mb-0 small">Newest lessons.</p>
                         </div>
-                        <a href="#content-videos" class="btn btn-link p-0" data-bs-toggle="tab" data-bs-target="#content-videos" role="tab" aria-selected="false">View</a>
+                        <a href="/features/community/content?tab=videos#content-videos" class="btn btn-link p-0">View</a>
                     </div>
                     <div class="card-body">
                         {% if videos %}
@@ -258,7 +259,7 @@
                             <h3 class="card-title mb-0">Latest News</h3>
                             <p class="text-muted mb-0 small">Today’s headlines.</p>
                         </div>
-                        <a href="#content-news" class="btn btn-link p-0" data-bs-toggle="tab" data-bs-target="#content-news" role="tab" aria-selected="false">View</a>
+                        <a href="/features/community/content?tab=news#content-news" class="btn btn-link p-0">View</a>
                     </div>
                     <div class="card-body">
                         {% if news_items %}
@@ -281,7 +282,7 @@
         </div>
     </div>
 
-    <div class="tab-pane fade" id="content-articles" role="tabpanel">
+    <div class="tab-pane fade {% if active_tab == 'articles' %}show active{% endif %}" id="content-articles" role="tabpanel">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div>
@@ -316,7 +317,7 @@
         </div>
     </div>
 
-    <div class="tab-pane fade" id="content-podcasts" role="tabpanel">
+    <div class="tab-pane fade {% if active_tab == 'podcasts' %}show active{% endif %}" id="content-podcasts" role="tabpanel">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div>
@@ -349,7 +350,7 @@
         </div>
     </div>
 
-    <div class="tab-pane fade" id="content-videos" role="tabpanel">
+    <div class="tab-pane fade {% if active_tab == 'videos' %}show active{% endif %}" id="content-videos" role="tabpanel">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div>
@@ -382,7 +383,7 @@
         </div>
     </div>
 
-    <div class="tab-pane fade" id="content-news" role="tabpanel">
+    <div class="tab-pane fade {% if active_tab == 'news' %}show active{% endif %}" id="content-news" role="tabpanel">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div>
@@ -415,7 +416,7 @@
         </div>
     </div>
 
-    <div class="tab-pane fade" id="content-manage" role="tabpanel">
+    <div class="tab-pane fade {% if active_tab == 'manage' %}show active{% endif %}" id="content-manage" role="tabpanel">
         <div class="card">
             <div class="card-header">
                 <h3 class="card-title mb-0">Manage Content</h3>

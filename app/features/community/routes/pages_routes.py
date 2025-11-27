@@ -325,6 +325,7 @@ async def polls_page(
 @router.get("/content", response_class=HTMLResponse)
 async def content_page(
     request: Request,
+    tab: str | None = None,
     current_user: User = Depends(get_current_user),
     content_service: ArticleCrudService = Depends(get_article_service),
     podcast_service: PodcastCrudService = Depends(get_podcast_service),
@@ -352,6 +353,7 @@ async def content_page(
             "video_total": video_total,
             "news_total": news_total,
             "engagement_summary": engagement_summary,
+            "active_tab": tab or "overview",
             "page_title": "Content & Learning Hub",
             "page_description": "Publish articles, podcasts, videos, and curated news for your advisors.",
             "page_icon": "book",
