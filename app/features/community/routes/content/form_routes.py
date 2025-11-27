@@ -7,6 +7,8 @@ from typing import Dict, List, Optional
 
 from pydantic import ValidationError
 
+import markdown
+
 from app.features.auth.dependencies import get_admin_user
 from app.features.core.validation import FormHandler
 from app.features.core.route_imports import (
@@ -218,6 +220,29 @@ async def content_article_form_partial(
         "errors": {},
     }
     return templates.TemplateResponse("community/content/partials/article_form.html", context)
+
+
+@router.get("/partials/article_view", response_class=HTMLResponse)
+async def content_article_view_partial(
+    request: Request,
+    content_id: str,
+    content_service: ArticleCrudService = Depends(get_article_service),
+    current_user: User = Depends(get_current_user),
+):
+    """Render read-only article view."""
+    article = await content_service.get_by_id(content_id)
+    if not article:
+        return HTMLResponse("<div class='p-3'>Article not found.</div>", status_code=404)
+    raw_body = article.body_md or ""
+    body_html = raw_body
+    if "<" not in raw_body:
+        body_html = markdown.markdown(raw_body, extensions=["extra", "sane_lists"])
+    article_ns = article.to_dict()
+    article_ns["body_html"] = body_html
+    return templates.TemplateResponse(
+        "community/content/partials/article_view.html",
+        {"request": request, "article": SimpleNamespace(**article_ns)},
+    )
 
 
 @router.post("/partials/article_preview", response_class=HTMLResponse)
