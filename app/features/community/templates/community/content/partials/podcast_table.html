@@ -9,12 +9,15 @@
         {% for podcast in podcasts %}
         <div class="list-group-item">
             <div class="d-flex align-items-start justify-content-between">
-                <div>
+                <div class="me-3 flex-grow-1">
                     <div class="fw-semibold">{{ podcast.title }}</div>
                     <div class="text-muted small">
                         <i class="ti ti-microphone me-1"></i>{{ podcast.host or "Host TBD" }}
                         {% if podcast.published_at %}
                         <span class="ms-2"><i class="ti ti-calendar me-1"></i>{{ podcast.published_at.strftime("%b %d, %Y") }}</span>
+                        {% endif %}
+                        {% if podcast.duration_minutes %}
+                        <span class="ms-2"><i class="ti ti-clock-hour-3 me-1"></i>{{ podcast.duration_minutes }} min</span>
                         {% endif %}
                     </div>
                     {% if podcast.categories %}
@@ -24,11 +27,26 @@
                         {% endfor %}
                     </div>
                     {% endif %}
+                    {% if podcast.description %}
+                    <div class="text-muted small mt-2">
+                        {{ podcast.description[:160] }}{% if podcast.description|length > 160 %}…{% endif %}
+                    </div>
+                    {% endif %}
+                    {% if podcast.link %}
+                    <div class="mt-2">
+                        <audio controls preload="none" style="width: 100%;">
+                            <source src="{{ podcast.link }}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="btn-list">
-                    <a href="{{ podcast.link }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+                    {% if podcast.link %}
+                    <a href="{{ podcast.link }}" target="_blank" class="btn btn-outline-secondary btn-sm" title="Open link">
                         <i class="ti ti-external-link"></i>
                     </a>
+                    {% endif %}
                     <button
                         class="btn btn-outline-primary btn-sm"
                         data-bs-toggle="modal"
@@ -48,11 +66,6 @@
                     </button>
                 </div>
             </div>
-            {% if podcast.description %}
-            <div class="text-muted small mt-2">
-                {{ podcast.description[:160] }}{% if podcast.description|length > 160 %}…{% endif %}
-            </div>
-            {% endif %}
         </div>
         {% endfor %}
     </div>

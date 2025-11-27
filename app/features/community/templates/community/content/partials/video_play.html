@@ -1,0 +1,21 @@
+<div class="modal-header">
+  <h5 class="modal-title">{{ video.title }}</h5>
+</div>
+<div class="modal-body">
+  {% if video.embed_url %}
+  <div class="ratio ratio-16x9 mb-3">
+    <iframe
+      src="{{ video.embed_url }}"
+      title="{{ video.title }}"
+      allowfullscreen
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+    </iframe>
+  </div>
+  {% endif %}
+  {% if video.description %}
+  <div class="text-muted">{{ video.description }}</div>
+  {% endif %}
+</div>
+<div class="modal-footer">
+  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+</div>

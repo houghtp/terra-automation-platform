@@ -9,7 +9,7 @@
         {% for video in videos %}
         <div class="list-group-item">
             <div class="d-flex align-items-start justify-content-between">
-                <div>
+                <div class="me-3 flex-grow-1">
                     <div class="fw-semibold">{{ video.title }}</div>
                     <div class="text-muted small">
                         {% if video.category %}
@@ -31,9 +31,17 @@
                     {% endif %}
                 </div>
                 <div class="btn-list">
-                    <a href="{{ video.embed_url }}" target="_blank" class="btn btn-outline-secondary btn-sm">
-                        <i class="ti ti-external-link"></i>
-                    </a>
+                    {% if video.embed_url %}
+                    <button
+                        class="btn btn-outline-secondary btn-sm"
+                        hx-get="/features/community/content/partials/video_play?video_id={{ video.id }}"
+                        hx-target="#content-form-modal-body"
+                        hx-swap="innerHTML"
+                        data-bs-toggle="modal"
+                        data-bs-target="#content-form-modal">
+                        <i class="ti ti-player-play"></i>
+                    </button>
+                    {% endif %}
                     <button
                         class="btn btn-outline-primary btn-sm"
                         data-bs-toggle="modal"

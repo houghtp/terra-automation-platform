@@ -23,123 +23,132 @@
     </div>
 </div>
 
-<div class="row row-cards mb-4">
-    <div class="col-sm-6 col-lg-3">
-        <div class="card card-sm">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <span class="avatar avatar-sm bg-blue-lt text-blue me-3">
-                        <i class="ti ti-file-description"></i>
-                    </span>
-                    <div>
-                        <div class="fw-semibold text-muted text-uppercase ls-wide small">Published Articles</div>
-                        <div class="h2 mb-0">{{ article_total }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-lg-3">
-        <div class="card card-sm">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <span class="avatar avatar-sm bg-cyan-lt text-cyan me-3">
-                        <i class="ti ti-microphone"></i>
-                    </span>
-                    <div>
-                        <div class="fw-semibold text-muted text-uppercase ls-wide small">Podcasts</div>
-                        <div class="h2 mb-0">{{ podcast_total }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-lg-3">
-        <div class="card card-sm">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <span class="avatar avatar-sm bg-indigo-lt text-indigo me-3">
-                        <i class="ti ti-video"></i>
-                    </span>
-                    <div>
-                        <div class="fw-semibold text-muted text-uppercase ls-wide small">Video Lessons</div>
-                        <div class="h2 mb-0">{{ video_total }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-lg-3">
-        <div class="card card-sm">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <span class="avatar avatar-sm bg-orange-lt text-orange me-3">
-                        <i class="ti ti-news"></i>
-                    </span>
-                    <div>
-                        <div class="fw-semibold text-muted text-uppercase ls-wide small">News Highlights</div>
-                        <div class="h2 mb-0">{{ news_total }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+<ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link active" data-bs-toggle="tab" href="#content-overview" role="tab" aria-selected="true">Overview</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" data-bs-toggle="tab" href="#content-articles" role="tab" aria-selected="false">Articles</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" data-bs-toggle="tab" href="#content-podcasts" role="tab" aria-selected="false">Podcasts</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" data-bs-toggle="tab" href="#content-videos" role="tab" aria-selected="false">Videos</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" data-bs-toggle="tab" href="#content-news" role="tab" aria-selected="false">News</a>
+    </li>
+    <li class="nav-item ms-auto" role="presentation">
+        <a class="nav-link" data-bs-toggle="tab" href="#content-manage" role="tab" aria-selected="false">Manage</a>
+    </li>
+</ul>
 
-{% set engagement = engagement_summary or {} %}
-{% set action_counts = engagement.actions or {} %}
-<div class="row row-cards mb-4">
-    <div class="col-sm-6 col-lg-4">
-        <div class="card card-sm">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <span class="avatar avatar-sm bg-green-lt text-green me-3">
-                        <i class="ti ti-activity"></i>
-                    </span>
-                    <div>
-                        <div class="fw-semibold text-muted text-uppercase ls-wide small">Engagements (All Time)</div>
-                        <div class="h2 mb-0">{{ engagement.total_actions | default(0) }}</div>
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="content-overview" role="tabpanel">
+        <div class="row row-cards mb-3">
+            <div class="col-lg-8">
+                <div class="card mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="card-title mb-0"><i class="ti ti-news me-2"></i>Latest News</h3>
+                            <p class="text-muted mb-0">Curated headlines to bring members back.</p>
+                        </div>
+                        <button
+                            class="btn btn-outline-secondary btn-sm"
+                            data-bs-toggle="modal"
+                            data-bs-target="#content-form-modal"
+                            hx-get="/features/community/content/partials/news_form"
+                            hx-target="#content-form-modal-body"
+                            hx-swap="innerHTML">
+                            <i class="ti ti-news me-1"></i> Add News
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div
+                            id="content-news-feed"
+                            hx-get="/features/community/content/partials/news_feed"
+                            hx-trigger="load, refreshContentTables from:body"
+                            hx-target="#content-news-feed"
+                            hx-swap="outerHTML">
+                            <div class="p-4 text-center text-muted">
+                                <div class="spinner-border text-primary mb-2" role="status"></div>
+                                <div>Loading news items...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                {% set engagement = engagement_summary or {} %}
+                {% set action_counts = engagement.actions or {} %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <span class="avatar avatar-sm bg-blue-lt text-blue me-3">
+                                <i class="ti ti-file-description"></i>
+                            </span>
+                            <div>
+                                <div class="fw-semibold text-muted text-uppercase ls-wide small">Published Articles</div>
+                                <div class="h2 mb-0">{{ article_total }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <span class="avatar avatar-sm bg-cyan-lt text-cyan me-3">
+                                <i class="ti ti-microphone"></i>
+                            </span>
+                            <div>
+                                <div class="fw-semibold text-muted text-uppercase ls-wide small">Podcasts</div>
+                                <div class="h2 mb-0">{{ podcast_total }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <span class="avatar avatar-sm bg-indigo-lt text-indigo me-3">
+                                <i class="ti ti-video"></i>
+                            </span>
+                            <div>
+                                <div class="fw-semibold text-muted text-uppercase ls-wide small">Video Lessons</div>
+                                <div class="h2 mb-0">{{ video_total }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="fw-semibold text-muted text-uppercase ls-wide small mb-1">Engagement</div>
+                        <div class="d-flex justify-content-between text-muted small mb-1">
+                            <span>Total Actions</span>
+                            <span class="fw-semibold">{{ engagement.total_actions | default(0) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between text-muted small mb-3">
+                            <span>Unique Members</span>
+                            <span class="fw-semibold">{{ engagement.unique_members | default(0) }}</span>
+                        </div>
+                        {% if action_counts %}
+                            <ul class="list-unstyled mb-0 small text-muted">
+                                {% for action, count in action_counts.items() %}
+                                <li class="d-flex justify-content-between"><span class="text-capitalize">{{ action }}</span><span>{{ count }}</span></li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="text-muted small">No engagement captured yet.</div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-lg-4">
-        <div class="card card-sm">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <span class="avatar avatar-sm bg-purple-lt text-purple me-3">
-                        <i class="ti ti-users"></i>
-                    </span>
-                    <div>
-                        <div class="fw-semibold text-muted text-uppercase ls-wide small">Unique Members</div>
-                        <div class="h2 mb-0">{{ engagement.unique_members | default(0) }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-12 col-lg-4">
-        <div class="card card-sm">
-            <div class="card-body">
-                <div class="fw-semibold text-muted text-uppercase ls-wide small mb-1">Interaction Breakdown</div>
-                {% if action_counts %}
-                <ul class="list-unstyled mb-0 small text-muted">
-                    {% for action, count in action_counts.items() %}
-                    <li class="d-flex justify-content-between"><span class="text-capitalize">{{ action }}</span><span>{{ count }}</span></li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <div class="text-muted small">No engagement captured yet.</div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="row">
-    <div class="col-xl-7">
-        <div class="card mb-4">
+    <div class="tab-pane fade" id="content-articles" role="tabpanel">
+        <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div>
                     <h3 class="card-title">Articles Library</h3>
@@ -161,7 +170,7 @@
                 <div
                     id="content-articles-wrapper"
                     hx-get="/features/community/content/partials/articles"
-                    hx-trigger="load, refreshContentTables from:body"
+                    hx-trigger="revealed, refreshContentTables from:body"
                     hx-target="#content-articles-wrapper"
                     hx-swap="outerHTML">
                     <div class="p-4 text-center text-muted">
@@ -172,8 +181,9 @@
             </div>
         </div>
     </div>
-    <div class="col-xl-5">
-        <div class="card mb-4">
+
+    <div class="tab-pane fade" id="content-podcasts" role="tabpanel">
+        <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div>
                     <h3 class="card-title">Podcast Episodes</h3>
@@ -193,7 +203,7 @@
                 <div
                     id="content-podcasts-wrapper"
                     hx-get="/features/community/content/partials/podcasts"
-                    hx-trigger="load, refreshContentTables from:body"
+                    hx-trigger="revealed, refreshContentTables from:body"
                     hx-target="#content-podcasts-wrapper"
                     hx-swap="outerHTML">
                     <div class="p-4 text-center text-muted">
@@ -203,7 +213,10 @@
                 </div>
             </div>
         </div>
-        <div class="card mb-4">
+    </div>
+
+    <div class="tab-pane fade" id="content-videos" role="tabpanel">
+        <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div>
                     <h3 class="card-title">Video Library</h3>
@@ -223,7 +236,7 @@
                 <div
                     id="content-videos-wrapper"
                     hx-get="/features/community/content/partials/videos"
-                    hx-trigger="load, refreshContentTables from:body"
+                    hx-trigger="revealed, refreshContentTables from:body"
                     hx-target="#content-videos-wrapper"
                     hx-swap="outerHTML">
                     <div class="p-4 text-center text-muted">
@@ -234,34 +247,67 @@
             </div>
         </div>
     </div>
-</div>
 
-<div class="card mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <div>
-            <h3 class="card-title">Industry News Feed</h3>
-            <p class="card-subtitle text-muted mb-0">Curated headlines and announcements.</p>
+    <div class="tab-pane fade" id="content-news" role="tabpanel">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="card-title">Industry News Feed</h3>
+                    <p class="card-subtitle text-muted mb-0">Curated headlines and announcements.</p>
+                </div>
+                <button
+                    class="btn btn-outline-secondary btn-sm"
+                    data-bs-toggle="modal"
+                    data-bs-target="#content-form-modal"
+                    hx-get="/features/community/content/partials/news_form"
+                    hx-target="#content-form-modal-body"
+                    hx-swap="innerHTML">
+                    <i class="ti ti-news me-1"></i> Add News
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div
+                    id="content-news-wrapper"
+                    hx-get="/features/community/content/partials/news_feed"
+                    hx-trigger="revealed, refreshContentTables from:body"
+                    hx-target="#content-news-wrapper"
+                    hx-swap="outerHTML">
+                    <div class="p-4 text-center text-muted">
+                        <div class="spinner-border text-primary mb-2" role="status"></div>
+                        <div>Loading news items...</div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <button
-            class="btn btn-outline-secondary btn-sm"
-            data-bs-toggle="modal"
-            data-bs-target="#content-form-modal"
-            hx-get="/features/community/content/partials/news_form"
-            hx-target="#content-form-modal-body"
-            hx-swap="innerHTML">
-            <i class="ti ti-news me-1"></i> Add News
-        </button>
     </div>
-    <div class="card-body p-0">
-        <div
-            id="content-news-wrapper"
-            hx-get="/features/community/content/partials/news"
-            hx-trigger="load, refreshContentTables from:body"
-            hx-target="#content-news-wrapper"
-            hx-swap="outerHTML">
-            <div class="p-4 text-center text-muted">
-                <div class="spinner-border text-primary mb-2" role="status"></div>
-                <div>Loading news items...</div>
+
+    <div class="tab-pane fade" id="content-manage" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">Manage Content</h3>
+                <p class="text-muted mb-0">Admin view with filters and inline actions.</p>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-pills mb-3" role="tablist">
+                    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#manage-articles" data-manage-tab="articles">Articles</a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#manage-podcasts" data-manage-tab="podcasts">Podcasts</a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#manage-videos" data-manage-tab="videos">Videos</a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#manage-news" data-manage-tab="news">News</a></li>
+                </ul>
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="manage-articles" role="tabpanel">
+                        <div id="manage-articles-table"></div>
+                    </div>
+                    <div class="tab-pane fade" id="manage-podcasts" role="tabpanel">
+                        <div id="manage-podcasts-table"></div>
+                    </div>
+                    <div class="tab-pane fade" id="manage-videos" role="tabpanel">
+                        <div id="manage-videos-table"></div>
+                    </div>
+                    <div class="tab-pane fade" id="manage-news" role="tabpanel">
+                        <div id="manage-news-table"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -282,4 +328,6 @@
 
 {% block scripts %}
 <script src="/features/community/static/js/content-hub.js"></script>
+<script src="/features/core/static/js/table-base.js"></script>
+<script src="/features/community/static/js/content-manage.js"></script>
 {% endblock %}

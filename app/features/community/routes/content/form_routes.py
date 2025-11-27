@@ -167,6 +167,30 @@ async def content_news_table_partial(
     return templates.TemplateResponse("community/content/partials/news_table.html", context)
 
 
+@router.get("/partials/news_feed", response_class=HTMLResponse)
+async def content_news_feed_partial(
+    request: Request,
+    news_service: NewsCrudService = Depends(get_news_service),
+):
+    """Render news feed (card/list) partial."""
+    news_items, _ = await news_service.list_news(limit=10, offset=0)
+    context = {"request": request, "news_items": news_items}
+    return templates.TemplateResponse("community/content/partials/news_feed.html", context)
+
+
+@router.get("/partials/video_play", response_class=HTMLResponse)
+async def content_video_play_partial(
+    request: Request,
+    video_id: str,
+    video_service: VideoCrudService = Depends(get_video_service),
+):
+    """Render a lightweight video play modal."""
+    video = await video_service.get_by_id(video_id)
+    if not video:
+        return HTMLResponse("<div class='p-3'>Video not found.</div>", status_code=404)
+    return templates.TemplateResponse("community/content/partials/video_play.html", {"request": request, "video": video})
+
+
 # --- Articles ---
 
 @router.get("/partials/article_form", response_class=HTMLResponse)
