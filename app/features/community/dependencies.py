@@ -108,32 +108,37 @@ async def get_article_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
 ) -> ArticleCrudService:
-    return ArticleCrudService(session, tenant_id)
+    # Content hub is global/hub-wide.
+    return ArticleCrudService(session, tenant_id=None)
 
 
 async def get_podcast_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
 ) -> PodcastCrudService:
-    return PodcastCrudService(session, tenant_id)
+    # Hub-wide podcasts.
+    return PodcastCrudService(session, tenant_id=None)
 
 
 async def get_video_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
 ) -> VideoCrudService:
-    return VideoCrudService(session, tenant_id)
+    # Hub-wide videos.
+    return VideoCrudService(session, tenant_id=None)
 
 
 async def get_news_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
 ) -> NewsCrudService:
-    return NewsCrudService(session, tenant_id)
+    # Hub-wide news feed.
+    return NewsCrudService(session, tenant_id=None)
 
 
 async def get_content_engagement_service(
     session: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(tenant_dependency),
 ) -> ContentEngagementCrudService:
-    return ContentEngagementCrudService(session, tenant_id)
+    # Engagement aggregated hub-wide.
+    return ContentEngagementCrudService(session, tenant_id=None)
