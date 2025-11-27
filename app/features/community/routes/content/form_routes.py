@@ -23,6 +23,7 @@ from app.features.core.route_imports import (
     User,
     AsyncSession,
     commit_transaction,
+    get_current_user,
 )
 
 from ...dependencies import (
