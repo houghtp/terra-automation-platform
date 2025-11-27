@@ -22,23 +22,9 @@
               {% endif %}
             </div>
             <div class="btn-list">
-              <button
-                class="btn btn-outline-primary btn-sm"
-                data-bs-toggle="modal"
-                data-bs-target="#content-form-modal"
-                hx-get="/features/community/content/partials/news_form?news_id={{ item.id }}"
-                hx-target="#content-form-modal-body"
-                hx-swap="innerHTML">
-                <i class="ti ti-pencil"></i>
-              </button>
-              <button
-                class="btn btn-outline-danger btn-sm"
-                hx-post="/features/community/content/news/{{ item.id }}/delete"
-                hx-target="closest .list-group-item"
-                hx-swap="none"
-                hx-confirm="Delete this news item?">
-                <i class="ti ti-trash"></i>
-              </button>
+              <a href="{{ item.url }}" target="_blank" class="btn btn-icon btn-outline-secondary" title="Open link">
+                <i class="ti ti-external-link"></i>
+              </a>
             </div>
           </div>
         </div>
