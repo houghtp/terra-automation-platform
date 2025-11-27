@@ -89,38 +89,38 @@
 {% set active_tab = active_tab or 'overview' %}
 <ul class="nav nav-tabs mb-3" role="tablist">
     <li class="nav-item" role="presentation">
-        <a class="nav-link {% if active_tab == 'overview' %}active{% endif %}" data-bs-toggle="tab" href="#content-overview" role="tab" aria-selected="{{ 'true' if active_tab == 'overview' else 'false' }}">
+        <a class="nav-link {% if active_tab == 'overview' %}active{% endif %}" href="/features/community/content?tab=overview#content-overview" role="tab">
             <i class="ti ti-home me-1"></i>Overview
         </a>
     </li>
     <li class="nav-item" role="presentation">
-        <a class="nav-link {% if active_tab == 'articles' %}active{% endif %}" data-bs-toggle="tab" href="#content-articles" role="tab" aria-selected="{{ 'true' if active_tab == 'articles' else 'false' }}">
+        <a class="nav-link {% if active_tab == 'articles' %}active{% endif %}" href="/features/community/content?tab=articles#content-articles" role="tab">
             <i class="ti ti-file-description me-1"></i>Articles
         </a>
     </li>
     <li class="nav-item" role="presentation">
-        <a class="nav-link {% if active_tab == 'podcasts' %}active{% endif %}" data-bs-toggle="tab" href="#content-podcasts" role="tab" aria-selected="{{ 'true' if active_tab == 'podcasts' else 'false' }}">
+        <a class="nav-link {% if active_tab == 'podcasts' %}active{% endif %}" href="/features/community/content?tab=podcasts#content-podcasts" role="tab">
             <i class="ti ti-microphone me-1"></i>Podcasts
         </a>
     </li>
     <li class="nav-item" role="presentation">
-        <a class="nav-link {% if active_tab == 'videos' %}active{% endif %}" data-bs-toggle="tab" href="#content-videos" role="tab" aria-selected="{{ 'true' if active_tab == 'videos' else 'false' }}">
+        <a class="nav-link {% if active_tab == 'videos' %}active{% endif %}" href="/features/community/content?tab=videos#content-videos" role="tab">
             <i class="ti ti-video me-1"></i>Videos
         </a>
     </li>
     <li class="nav-item" role="presentation">
-        <a class="nav-link {% if active_tab == 'news' %}active{% endif %}" data-bs-toggle="tab" href="#content-news" role="tab" aria-selected="{{ 'true' if active_tab == 'news' else 'false' }}">
+        <a class="nav-link {% if active_tab == 'news' %}active{% endif %}" href="/features/community/content?tab=news#content-news" role="tab">
             <i class="ti ti-news me-1"></i>News
         </a>
     </li>
     <li class="nav-item ms-auto" role="presentation">
-        <a class="nav-link {% if active_tab == 'manage' %}active{% endif %}" data-bs-toggle="tab" href="#content-manage" role="tab" aria-selected="{{ 'true' if active_tab == 'manage' else 'false' }}">
+        <a class="nav-link {% if active_tab == 'manage' %}active{% endif %}" href="/features/community/content?tab=manage#content-manage" role="tab">
             <i class="ti ti-settings me-1"></i>Manage
         </a>
     </li>
 </ul>
 
-<div class="tab-content">
+<div class="tab-content tab-content-min-400">
     <div class="tab-pane fade {% if active_tab == 'overview' %}show active{% endif %}" id="content-overview" role="tabpanel">
         <div class="row row-cards mb-3">
             <div class="col-lg-8">
