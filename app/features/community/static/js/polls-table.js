@@ -10,18 +10,27 @@ function loadPollSummary(pollId) {
     .then((payload) => {
       const widget = document.getElementById("poll-results-widget");
       if (!widget) return;
-      const items = (payload.data || []).map((item) => ({
-        name: item.label,
-        value: item.votes,
-      }));
-      widget.setAttribute("data-type", "bar");
-      widget.setAttribute("data-title", "Poll Results");
-      widget.chartData = { items };
-      if (typeof widget.loadData === "function") {
-        widget.loadData();
+      const summary = payload.data || [];
+      const categories = summary.map((item) => item.label);
+      const values = summary.map((item) => item.votes);
+
+      // chart-widget expects categories/values for bar charts
+      if (typeof widget.renderChart === "function") {
+        widget.renderChart({ categories, values });
+      }
+
+      // If no data yet, show a friendly placeholder
+      if (!summary.length && typeof widget.showNoData === "function") {
+        widget.showNoData();
       }
     })
-    .catch((error) => console.error("Failed to load poll summary", error));
+    .catch((error) => {
+      console.error("Failed to load poll summary", error);
+      const widget = document.getElementById("poll-results-widget");
+      if (widget && typeof widget.showError === "function") {
+        widget.showError("Failed to load results");
+      }
+    });
 }
 
 function renderVotePanel(poll) {
