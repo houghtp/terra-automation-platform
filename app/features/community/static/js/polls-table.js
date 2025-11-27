@@ -3,6 +3,24 @@
  */
 
 let selectedPollId = null;
+let chartInitialized = false;
+
+function resetResultsPanel(message = "Select a poll to load results.") {
+  const widget = document.getElementById("poll-results-widget");
+  if (widget && typeof widget.showNoData === "function") {
+    // Ensure the widget has rendered at least once so showNoData targets its container
+    if (!chartInitialized && typeof widget.render === "function") {
+      widget.render();
+      chartInitialized = true;
+    }
+    widget.showNoData();
+  }
+  const panel = document.getElementById("poll-vote-panel");
+  if (panel) {
+    panel.innerHTML = `<div class="text-muted">${message}</div>`;
+  }
+  selectedPollId = null;
+}
 
 function loadPollSummary(pollId) {
   fetch(`/features/community/polls/api/${pollId}/summary`)
@@ -26,10 +44,7 @@ function loadPollSummary(pollId) {
     })
     .catch((error) => {
       console.error("Failed to load poll summary", error);
-      const widget = document.getElementById("poll-results-widget");
-      if (widget && typeof widget.showError === "function") {
-        widget.showError("Failed to load results");
-      }
+      resetResultsPanel("Unable to load poll results.");
     });
 }
 
@@ -38,8 +53,7 @@ function renderVotePanel(poll) {
   if (!panel) return;
 
   if (!poll || !poll.options || poll.options.length === 0) {
-    panel.innerHTML = '<div class="text-muted">Select a poll to vote.</div>';
-    selectedPollId = null;
+    resetResultsPanel("Select a poll to vote.");
     return;
   }
 
@@ -169,6 +183,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const tableElement = document.getElementById("polls-table");
   if (tableElement && !window.pollsTableInitialized) {
     window.pollsTableInitialized = true;
+    resetResultsPanel();
     initializePollsTable();
   }
 });
