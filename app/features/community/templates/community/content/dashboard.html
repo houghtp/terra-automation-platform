@@ -23,6 +23,69 @@
     </div>
 </div>
 
+<div class="row row-cards mb-3">
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <span class="avatar avatar-sm bg-blue-lt text-blue me-3">
+                        <i class="ti ti-file-description"></i>
+                    </span>
+                    <div>
+                        <div class="fw-semibold text-muted text-uppercase ls-wide small">Published Articles</div>
+                        <div class="h2 mb-0">{{ article_total }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <span class="avatar avatar-sm bg-cyan-lt text-cyan me-3">
+                        <i class="ti ti-microphone"></i>
+                    </span>
+                    <div>
+                        <div class="fw-semibold text-muted text-uppercase ls-wide small">Podcasts</div>
+                        <div class="h2 mb-0">{{ podcast_total }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <span class="avatar avatar-sm bg-indigo-lt text-indigo me-3">
+                        <i class="ti ti-video"></i>
+                    </span>
+                    <div>
+                        <div class="fw-semibold text-muted text-uppercase ls-wide small">Video Lessons</div>
+                        <div class="h2 mb-0">{{ video_total }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <span class="avatar avatar-sm bg-orange-lt text-orange me-3">
+                        <i class="ti ti-news"></i>
+                    </span>
+                    <div>
+                        <div class="fw-semibold text-muted text-uppercase ls-wide small">News Highlights</div>
+                        <div class="h2 mb-0">{{ news_total }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <ul class="nav nav-tabs mb-3" role="tablist">
     <li class="nav-item" role="presentation">
         <a class="nav-link active" data-bs-toggle="tab" href="#content-overview" role="tab" aria-selected="true">Overview</a>
@@ -84,45 +147,6 @@
                 {% set action_counts = engagement.actions or {} %}
                 <div class="card mb-3">
                     <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <span class="avatar avatar-sm bg-blue-lt text-blue me-3">
-                                <i class="ti ti-file-description"></i>
-                            </span>
-                            <div>
-                                <div class="fw-semibold text-muted text-uppercase ls-wide small">Published Articles</div>
-                                <div class="h2 mb-0">{{ article_total }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <span class="avatar avatar-sm bg-cyan-lt text-cyan me-3">
-                                <i class="ti ti-microphone"></i>
-                            </span>
-                            <div>
-                                <div class="fw-semibold text-muted text-uppercase ls-wide small">Podcasts</div>
-                                <div class="h2 mb-0">{{ podcast_total }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <span class="avatar avatar-sm bg-indigo-lt text-indigo me-3">
-                                <i class="ti ti-video"></i>
-                            </span>
-                            <div>
-                                <div class="fw-semibold text-muted text-uppercase ls-wide small">Video Lessons</div>
-                                <div class="h2 mb-0">{{ video_total }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="card mb-3">
-                    <div class="card-body">
                         <div class="fw-semibold text-muted text-uppercase ls-wide small mb-1">Engagement</div>
                         <div class="d-flex justify-content-between text-muted small mb-1">
                             <span>Total Actions</span>
@@ -140,6 +164,116 @@
                             </ul>
                         {% else %}
                             <div class="text-muted small">No engagement captured yet.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row row-cards">
+            <div class="col-md-6 col-xl-3">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="card-title mb-0">Latest Articles</h3>
+                            <p class="text-muted mb-0 small">Recent posts for advisors.</p>
+                        </div>
+                        <a href="#content-articles" class="btn btn-link p-0" data-bs-toggle="tab">View</a>
+                    </div>
+                    <div class="card-body">
+                        {% if articles %}
+                            <ul class="list-unstyled mb-0 small">
+                                {% for article in articles[:3] %}
+                                    <li class="mb-2">
+                                        <div class="fw-semibold">{{ article.title }}</div>
+                                        <div class="text-muted">
+                                            {% if article.published_at %}{{ article.published_at.strftime("%b %d") }}{% else %}Draft{% endif %}
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="text-muted">No articles yet.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="card-title mb-0">Latest Podcasts</h3>
+                            <p class="text-muted mb-0 small">Fresh episodes.</p>
+                        </div>
+                        <a href="#content-podcasts" class="btn btn-link p-0" data-bs-toggle="tab">View</a>
+                    </div>
+                    <div class="card-body">
+                        {% if podcasts %}
+                            <ul class="list-unstyled mb-0 small">
+                                {% for podcast in podcasts[:3] %}
+                                    <li class="mb-2">
+                                        <div class="fw-semibold">{{ podcast.title }}</div>
+                                        <div class="text-muted">
+                                            {% if podcast.published_at %}{{ podcast.published_at.strftime("%b %d") }}{% else %}Draft{% endif %}
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="text-muted">No podcasts yet.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="card-title mb-0">Latest Videos</h3>
+                            <p class="text-muted mb-0 small">Newest lessons.</p>
+                        </div>
+                        <a href="#content-videos" class="btn btn-link p-0" data-bs-toggle="tab">View</a>
+                    </div>
+                    <div class="card-body">
+                        {% if videos %}
+                            <ul class="list-unstyled mb-0 small">
+                                {% for video in videos[:3] %}
+                                    <li class="mb-2">
+                                        <div class="fw-semibold">{{ video.title }}</div>
+                                        <div class="text-muted">
+                                            {% if video.published_at %}{{ video.published_at.strftime("%b %d") }}{% else %}Draft{% endif %}
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="text-muted">No videos yet.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="card-title mb-0">Latest News</h3>
+                            <p class="text-muted mb-0 small">Today’s headlines.</p>
+                        </div>
+                        <a href="#content-news" class="btn btn-link p-0" data-bs-toggle="tab">View</a>
+                    </div>
+                    <div class="card-body">
+                        {% if news_items %}
+                            <ul class="list-unstyled mb-0 small">
+                                {% for item in news_items[:3] %}
+                                    <li class="mb-2">
+                                        <div class="fw-semibold">{{ item.headline }}</div>
+                                        <div class="text-muted">
+                                            {% if item.publish_date %}{{ item.publish_date.strftime("%b %d") }}{% endif %}
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="text-muted">No news items yet.</div>
                         {% endif %}
                     </div>
                 </div>
