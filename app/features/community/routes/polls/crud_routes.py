@@ -253,6 +253,7 @@ async def delete_poll_api(
 async def cast_vote_api(
     poll_id: str,
     payload: PollVoteCreate,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     vote_service: PollVoteCrudService = Depends(get_poll_vote_service),
 ):
@@ -262,6 +263,7 @@ async def cast_vote_api(
         option_id=data["option_id"],
         member_id=current_user.id if current_user else None,
     )
+    await commit_transaction(db, "cast_vote_api")
     return PollVoteResponse.model_validate(vote, from_attributes=True)
 
 
