@@ -336,7 +336,8 @@ async def ingest_news_api(
     try:
         items = await service.ingest_latest(current_user)
         await db.commit()
-        return {"ingested": len(items)}
+        headers = {"HX-Trigger": "refreshContentTables, showSuccess"}
+        return Response(status_code=201, content={"ingested": len(items)}, headers=headers)
     except Exception as exc:
         await db.rollback()
         handle_route_error("ingest_news_api", exc)
