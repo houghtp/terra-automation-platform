@@ -23,4 +23,14 @@
       }
     }
   });
+
+  // Ensure "View" links in snapshot cards activate tabs reliably
+  document.addEventListener("click", function (event) {
+    const link = event.target.closest(".view-tab");
+    if (link) {
+      event.preventDefault();
+      const tabTrigger = new bootstrap.Tab(link);
+      tabTrigger.show();
+    }
+  });
 })();
