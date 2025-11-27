@@ -33,7 +33,7 @@
                 <div class="btn-list">
                     {% if video.embed_url %}
                     <button
-                        class="btn btn-icon btn-outline-secondary"
+                        class="btn btn-link btn-icon text-secondary p-0"
                         title="Play video"
                         hx-get="/features/community/content/partials/video_play?video_id={{ video.id }}"
                         hx-target="#content-form-modal-body"
