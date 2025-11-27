@@ -37,34 +37,15 @@
                         {% endif %}
                     </td>
                     <td class="text-end">
-                        <div class="btn-list justify-content-end">
-                            <button
-                                class="btn btn-outline-secondary btn-sm"
-                                data-bs-toggle="modal"
-                                data-bs-target="#content-form-modal"
-                                hx-get="/features/community/content/partials/article_view?content_id={{ article.id }}"
-                                hx-target="#content-form-modal-body"
-                                hx-swap="innerHTML">
-                                <i class="ti ti-eye"></i>
-                            </button>
-                            <button
-                                class="btn btn-outline-primary btn-sm"
-                                data-bs-toggle="modal"
-                                data-bs-target="#content-form-modal"
-                                hx-get="/features/community/content/partials/article_form?content_id={{ article.id }}"
-                                hx-target="#content-form-modal-body"
-                                hx-swap="innerHTML">
-                                <i class="ti ti-pencil"></i>
-                            </button>
-                            <button
-                                class="btn btn-outline-danger btn-sm"
-                                hx-post="/features/community/content/articles/{{ article.id }}/delete"
-                                hx-target="closest tr"
-                                hx-swap="none"
-                                hx-confirm="Delete this article?">
-                                <i class="ti ti-trash"></i>
-                            </button>
-                        </div>
+                        <button
+                            class="btn btn-outline-secondary btn-sm"
+                            data-bs-toggle="modal"
+                            data-bs-target="#content-form-modal"
+                            hx-get="/features/community/content/partials/article_view?content_id={{ article.id }}"
+                            hx-target="#content-form-modal-body"
+                            hx-swap="innerHTML">
+                            <i class="ti ti-eye"></i>
+                        </button>
                     </td>
                 </tr>
                 {% endfor %}
