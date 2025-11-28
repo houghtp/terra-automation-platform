@@ -14,6 +14,7 @@ from app.features.core.route_imports import (
     tenant_dependency,
     get_current_user,
     User,
+    handle_route_error,
 )
 from app.features.auth.dependencies import get_admin_user
 
